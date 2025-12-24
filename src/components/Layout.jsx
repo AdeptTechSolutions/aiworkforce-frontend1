@@ -3,7 +3,8 @@ import { useState } from "react";
 import { navItems, userData, appInfo } from "../data/mockData";
 import { salesAgentNavItems } from "../data/salesAgentData";
 import logo from "../assets/Logo.png";
-import backgroundImage from "../assets/AI Workforce background.png"
+import backgroundImage from "../assets/AI Workforce background.png";
+import { useSearch } from "../context/SearchContext";
 
 // Main Navigation Icons - Exact match to reference
 const navIcons = {
@@ -274,9 +275,13 @@ const SalesNavItem = ({ item, isActive, onClick, isExpanded }) => {
     );
 };
 
+
 export default function Layout({ children, activePage, setActivePage }) {
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
     const [activeSalesTab, setActiveSalesTab] = useState("b2c");
+    const { credits } = useSearch();
+
+   
 
     return (
         // <div className="h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-yellow-100 flex flex-col overflow-hidden">
@@ -302,8 +307,8 @@ export default function Layout({ children, activePage, setActivePage }) {
                 <div className="flex items-center gap-4">
                     <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-gray-900">
                         <span className="text-sm font-semibold text-gray-600 mr-3">
-                            {userData.credits} Credits
-                        </span>
+  {credits} Credits
+</span>
                         <button className="bg-gray-900 text-white text-sm px-4 py-1.5 rounded-full font-medium hover:bg-gray-800 transition-colors">
                             Buy Credits
                         </button>

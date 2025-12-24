@@ -74,12 +74,41 @@
 // }
 
 // App.jsx
+// import { useState } from "react";
+// import Layout from "./components/Layout";
+// import DashboardContent from "./components/DashboardContent";
+// import SalesAgentContent from "./pages/SalesAgentContent";
+
+// function App() {
+//   const [activePage, setActivePage] = useState("analytics");
+
+//   const renderContent = () => {
+//     switch (activePage) {
+//       case "sales":
+//         return <SalesAgentContent />;
+//       case "analytics":
+//       default:
+//         return <DashboardContent />;
+//     }
+//   };
+
+//   return (
+//     <Layout activePage={activePage} setActivePage={setActivePage}>
+//       {renderContent()}
+//     </Layout>
+//   );
+// }
+
+// export default App;
+
+// App.jsx
 import { useState } from "react";
+import { SearchProvider } from "./context/SearchContext";
 import Layout from "./components/Layout";
 import DashboardContent from "./components/DashboardContent";
 import SalesAgentContent from "./pages/SalesAgentContent";
 
-function App() {
+function AppContent() {
   const [activePage, setActivePage] = useState("analytics");
 
   const renderContent = () => {
@@ -96,6 +125,14 @@ function App() {
     <Layout activePage={activePage} setActivePage={setActivePage}>
       {renderContent()}
     </Layout>
+  );
+}
+
+function App() {
+  return (
+    <SearchProvider>
+      <AppContent />
+    </SearchProvider>
   );
 }
 
