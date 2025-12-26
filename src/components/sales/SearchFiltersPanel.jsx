@@ -1,16 +1,8 @@
 // components/sales/SearchFiltersPanel.jsx
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FilterTag } from "../common/CommonComponents";
-import {
-  locationData,
-  departmentData,
-  managementLevels,
-  educationMajors,
-  degreeTypes,
-  preferredContactMethods,
-} from "../../data/salesAgentData";
 
-// Chevron Icons
+// Icons
 const ChevronRight = ({ className = "" }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 18l6-6-6-6" />
@@ -23,10 +15,14 @@ const ChevronDown = ({ className = "" }) => (
   </svg>
 );
 
-const SettingsIcon = ({ className = "" }) => (
+const FilterIcon = ({ className = "" }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-    <circle cx="12" cy="12" r="3" />
+    <line x1="4" y1="6" x2="20" y2="6" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <line x1="4" y1="18" x2="20" y2="18" />
+    <circle cx="8" cy="6" r="2" fill="currentColor" />
+    <circle cx="16" cy="12" r="2" fill="currentColor" />
+    <circle cx="10" cy="18" r="2" fill="currentColor" />
   </svg>
 );
 
@@ -35,10 +31,10 @@ const FilterSection = ({ title, count, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border border-gray-200 rounded-lg mb-3 overflow-hidden bg-white">
+    <div className="border-b border-gray-100 last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-3 px-4 text-left hover:bg-gray-50 transition-all duration-200"
+        className="w-full flex items-center justify-between py-4 px-1 text-left hover:bg-gray-50 transition-all duration-200"
       >
         <div className="flex items-center gap-2">
           <span className="font-medium text-gray-800">{title}</span>
@@ -48,7 +44,7 @@ const FilterSection = ({ title, count, children, defaultOpen = false }) => {
             </span>
           )}
         </div>
-        <span className={`transition-transform duration-200 text-blue-500 ${isOpen ? "rotate-90" : "rotate-180"}`}>
+        <span className={`transition-transform duration-200 text-blue-500 ${isOpen ? "rotate-90" : ""}`}>
           <ChevronRight />
         </span>
       </button>
@@ -57,25 +53,26 @@ const FilterSection = ({ title, count, children, defaultOpen = false }) => {
           isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="px-4 pb-4 pt-1">{children}</div>
+        <div className="px-1 pb-4 pt-1">{children}</div>
       </div>
     </div>
   );
 };
 
-// Text Input
-const TextInput = ({ placeholder, value, onChange }) => (
+// Text Input Filter
+const TextFilterInput = ({ placeholder, value, onChange, onKeyDown }) => (
   <input
     type="text"
     placeholder={placeholder}
     value={value}
     onChange={(e) => onChange(e.target.value)}
+    onKeyDown={onKeyDown}
     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all duration-200"
   />
 );
 
-// Select Input
-const SelectInput = ({ options, value, onChange }) => (
+// Select Input Filter
+const SelectFilterInput = ({ options, value, onChange }) => (
   <div className="relative">
     <select
       value={value}
@@ -83,85 +80,256 @@ const SelectInput = ({ options, value, onChange }) => (
       className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 appearance-none bg-white pr-8 transition-all duration-200"
     >
       {options.map((opt, idx) => (
-        <option key={idx} value={opt}>{opt}</option>
+        <option key={idx} value={typeof opt === "string" ? opt : opt.label}>
+          {typeof opt === "string" ? opt : opt.label}
+        </option>
       ))}
     </select>
     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
   </div>
 );
 
-// Expandable List Item
-const ExpandableListItem = ({ item, isSelected, onToggle, onSelect }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+// Checkbox List Filter (for B2B)
+const CheckboxListFilter = ({
+  filterKey,
+  placeholder,
+  options,
+  selectedValues,
+  onSelect,
+  hasModifier,
+  onUpdateModifier,
+  activeFilters,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showModifierDropdown, setShowModifierDropdown] = useState(null);
+  const modifierRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modifierRef.current && !modifierRef.current.contains(event.target)) {
+        setShowModifierDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter((opt) =>
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div>
-      <div className="flex items-center gap-2 py-1.5 hover:bg-gray-50 rounded-lg px-2 transition-colors duration-150">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-0.5 hover:bg-gray-100 rounded transition-colors duration-150"
-        >
-          <ChevronRight className={`text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
-        </button>
-        <label className="flex items-center gap-2 flex-1 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onSelect(item.name)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm text-gray-700">
-            {item.name} {item.count && <span className="text-gray-400">({item.count})</span>}
-          </span>
-        </label>
-        <button className="p-1 hover:bg-gray-100 rounded transition-colors duration-150">
-          <SettingsIcon className="text-gray-400" />
-        </button>
-      </div>
-      <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
-        isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-      }`}>
-        {item.children && (
-          <div className="ml-8 mt-1 space-y-1">
-            {item.children.map((child, idx) => (
-              <label key={idx} className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-150">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  onChange={() => onToggle({ type: "location", value: child, icon: "location" })}
-                />
-                <span className="text-sm text-gray-600">{child}</span>
-              </label>
-            ))}
-          </div>
-        )}
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all duration-200 mb-3"
+      />
+      <div className="space-y-1 max-h-60 overflow-y-auto">
+        {filteredOptions.map((option) => {
+          const isSelected = selectedValues.some(
+            (v) => v.type === filterKey && v.value === option.label
+          );
+          const selectedFilter = activeFilters.find(
+            (v) => v.type === filterKey && v.value === option.label
+          );
+
+          return (
+            <div key={option.id} className="flex items-center justify-between group">
+              <button
+                onClick={() => onSelect(filterKey, option.label)}
+                className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
+                    isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                  }`}
+                >
+                  {isSelected && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <span className={`text-sm ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
+                  {option.label}
+                </span>
+              </button>
+
+              {/* Modifier Button */}
+              {hasModifier && isSelected && (
+                <div className="relative" ref={modifierRef}>
+                  <button
+                    onClick={() => setShowModifierDropdown(showModifierDropdown === option.id ? null : option.id)}
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <FilterIcon />
+                  </button>
+
+                  {showModifierDropdown === option.id && (
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                      <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase">
+                        Apply Modifier
+                      </div>
+                      <button
+                        onClick={() => {
+                          onUpdateModifier(selectedFilter.id, "exact");
+                          setShowModifierDropdown(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <span>Exact</span>
+                        {selectedFilter?.modifier === "exact" && (
+                          <svg className="w-4 h-4 text-blue-600 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          onUpdateModifier(selectedFilter.id, "not");
+                          setShowModifierDropdown(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <span>Not</span>
+                        {selectedFilter?.modifier === "not" && (
+                          <svg className="w-4 h-4 text-blue-600 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isSelected && (
+                <button className="p-2 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <FilterIcon />
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-// Radius Slider
-const RadiusSlider = ({ value, onChange }) => {
+// Location Filter with Expandable List (for B2C)
+const LocationFilter = ({ placeholder, options, activeFilters, onAddFilter, onRemoveFilter }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLocations, setSelectedLocations] = useState([]);
+  const [expandedItems, setExpandedItems] = useState({});
+  const [radius, setRadius] = useState(0);
+
+  const handleLocationSelect = (locationName) => {
+    const isSelected = selectedLocations.includes(locationName);
+    if (isSelected) {
+      setSelectedLocations((prev) => prev.filter((l) => l !== locationName));
+      const filter = activeFilters.find((f) => f.type === "location" && f.value === locationName);
+      if (filter) onRemoveFilter(filter.id);
+    } else {
+      setSelectedLocations((prev) => [...prev, locationName]);
+      onAddFilter({ type: "location", value: locationName, icon: "location" });
+    }
+  };
+
+  const toggleExpand = (name) => {
+    setExpandedItems((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
   const marks = [0, 25, 50, 75, 100];
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-medium text-gray-700">Radius (mi)</span>
-        <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-400 cursor-help">?</span>
-      </div>
+    <div>
       <input
-        type="range"
-        min="0"
-        max="100"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        type="text"
+        placeholder={placeholder}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all duration-200"
       />
-      <div className="flex justify-between mt-1">
-        {marks.map((mark) => (
-          <span key={mark} className="text-xs text-blue-500 font-medium">{mark}</span>
-        ))}
+      <div className="mt-3 max-h-64 overflow-auto space-y-1">
+        {options
+          .filter((loc) => loc.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map((loc) => (
+            <div key={loc.name}>
+              <div className="flex items-center gap-2 py-1.5 hover:bg-gray-50 rounded-lg px-2 transition-colors duration-150">
+                <button
+                  onClick={() => toggleExpand(loc.name)}
+                  className="p-0.5 hover:bg-gray-100 rounded transition-colors duration-150"
+                >
+                  <ChevronRight
+                    className={`text-gray-400 transition-transform duration-200 ${
+                      expandedItems[loc.name] ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+                <label className="flex items-center gap-2 flex-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedLocations.includes(loc.name)}
+                    onChange={() => handleLocationSelect(loc.name)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">
+                    {loc.name} {loc.count && <span className="text-gray-400">({loc.count})</span>}
+                  </span>
+                </label>
+                <button className="p-1 hover:bg-gray-100 rounded transition-colors duration-150">
+                  <FilterIcon  className="text-gray-400" />
+                </button>
+              </div>
+              {expandedItems[loc.name] && loc.children && (
+                <div className="ml-8 mt-1 space-y-1">
+                  {loc.children.map((child, idx) => (
+                    <label
+                      key={idx}
+                      className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-150"
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        onChange={() => onAddFilter({ type: "location", value: child, icon: "location" })}
+                      />
+                      <span className="text-sm text-gray-600">{child}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+      </div>
+
+      {/* Radius Slider */}
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-medium text-gray-700">Radius (mi)</span>
+          <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-xs text-gray-400 cursor-help">
+            ?
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={radius}
+          onChange={(e) => setRadius(Number(e.target.value))}
+          className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between mt-1">
+          {marks.map((mark) => (
+            <span key={mark} className="text-xs text-blue-500 font-medium">
+              {mark}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -169,33 +337,21 @@ const RadiusSlider = ({ value, onChange }) => {
 
 // Main Component
 export default function SearchFiltersPanel({
-  searchType = "individual",
+  mode = "b2c",
+  config,
+  searchType,
   activeFilters = [],
   onAddFilter,
   onRemoveFilter,
   onClearFilters,
   onSaveSearch,
   onLoadSearch,
+  context,
 }) {
-  const [filters, setFilters] = useState({
-    name: "",
-    location: "",
-    description: "",
-    preferredContact: "- Preferred Contact -",
-    occupation: "",
-    companyName: "",
-    school: "",
-    degree: "",
-    major: "",
-    jobTitle: "",
-    department: "",
-    radius: 0,
-  });
-
-  const [selectedLocations, setSelectedLocations] = useState([]);
+  const [filterValues, setFilterValues] = useState({});
 
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilterValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleInputKeyDown = (e, type, icon) => {
@@ -205,20 +361,22 @@ export default function SearchFiltersPanel({
     }
   };
 
-  const handleLocationSelect = (locationName) => {
-    const isSelected = selectedLocations.includes(locationName);
-    if (isSelected) {
-      setSelectedLocations((prev) => prev.filter((l) => l !== locationName));
+  const handleCheckboxSelect = (type, value) => {
+    const exists = activeFilters.some((f) => f.type === type && f.value === value);
+    if (exists) {
+      const filter = activeFilters.find((f) => f.type === type && f.value === value);
+      onRemoveFilter(filter.id);
     } else {
-      setSelectedLocations((prev) => [...prev, locationName]);
-      onAddFilter({ type: "location", value: locationName, icon: "location" });
+      onAddFilter({ type, value, icon: type });
     }
   };
 
-  const isIndividual = searchType === "individual";
-
-  // Count active filters per section
+  // Get filters for current search type
+  const currentFilters = config.filters[searchType] || [];
   const getFilterCount = (type) => activeFilters.filter((f) => f.type === type).length;
+
+  // Get updateFilterModifier from context if available (B2B)
+  const updateFilterModifier = context?.updateFilterModifier || (() => {});
 
   return (
     <div className="w-80 bg-white flex flex-col h-full rounded-b-2xl">
@@ -246,115 +404,58 @@ export default function SearchFiltersPanel({
 
       {/* Scrollable Filters */}
       <div className="flex-1 overflow-auto px-4">
-        {isIndividual ? (
-          <>
-            <FilterSection title="Name" count={getFilterCount("name")}>
-              <TextInput
-                placeholder="Enter Name..."
-                value={filters.name}
-                onChange={(v) => handleFilterChange("name", v)}
-                onKeyDown={(e) => handleInputKeyDown(e, "name", "user")}
+        {currentFilters.map((filterConfig) => (
+          <FilterSection
+            key={filterConfig.key}
+            title={filterConfig.title}
+            count={getFilterCount(filterConfig.key)}
+          >
+            {filterConfig.type === "text" && (
+              <TextFilterInput
+                placeholder={filterConfig.placeholder}
+                value={filterValues[filterConfig.key] || ""}
+                onChange={(v) => handleFilterChange(filterConfig.key, v)}
+                onKeyDown={(e) => handleInputKeyDown(e, filterConfig.key, filterConfig.icon)}
               />
-            </FilterSection>
+            )}
 
-            <FilterSection title="Location" count={getFilterCount("location")}>
-              <TextInput
-                placeholder="Enter Location..."
-                value={filters.location}
-                onChange={(v) => handleFilterChange("location", v)}
-              />
-              <div className="mt-3 max-h-64 overflow-auto space-y-1">
-                {locationData.map((loc) => (
-                  <ExpandableListItem
-                    key={loc.name}
-                    item={loc}
-                    isSelected={selectedLocations.includes(loc.name)}
-                    onSelect={handleLocationSelect}
-                    onToggle={onAddFilter}
-                  />
-                ))}
-              </div>
-              <RadiusSlider
-                value={filters.radius}
-                onChange={(v) => handleFilterChange("radius", v)}
-              />
-            </FilterSection>
-
-            <FilterSection title="Description" count={getFilterCount("description")}>
-              <TextInput
-                placeholder="Enter LinkedIn Url or Keyword here.."
-                value={filters.description}
-                onChange={(v) => handleFilterChange("description", v)}
-              />
-            </FilterSection>
-          </>
-        ) : (
-          <>
-            <FilterSection title="Preffered Contact Method" count={getFilterCount("contact")}>
-              <SelectInput
-                options={preferredContactMethods}
-                value={filters.preferredContact}
+            {filterConfig.type === "select" && (
+              <SelectFilterInput
+                options={filterConfig.options}
+                value={filterValues[filterConfig.key] || filterConfig.placeholder}
                 onChange={(v) => {
-                  handleFilterChange("preferredContact", v);
-                  if (v !== "- Preferred Contact -") {
-                    onAddFilter({ type: "contact", value: v, icon: "contact" });
+                  handleFilterChange(filterConfig.key, v);
+                  if (v !== filterConfig.placeholder) {
+                    onAddFilter({ type: filterConfig.key, value: v, icon: filterConfig.icon });
                   }
                 }}
               />
-            </FilterSection>
+            )}
 
-            <FilterSection title="Location" count={getFilterCount("location")}>
-              <TextInput
-                placeholder="Enter Location..."
-                value={filters.location}
-                onChange={(v) => handleFilterChange("location", v)}
+            {filterConfig.type === "location" && (
+              <LocationFilter
+                placeholder={filterConfig.placeholder}
+                options={filterConfig.options}
+                activeFilters={activeFilters}
+                onAddFilter={onAddFilter}
+                onRemoveFilter={onRemoveFilter}
               />
-              <div className="mt-3 max-h-48 overflow-auto space-y-1">
-                {locationData.map((loc) => (
-                  <ExpandableListItem
-                    key={loc.name}
-                    item={loc}
-                    isSelected={selectedLocations.includes(loc.name)}
-                    onSelect={handleLocationSelect}
-                    onToggle={onAddFilter}
-                  />
-                ))}
-              </div>
-            </FilterSection>
+            )}
 
-            <FilterSection title="Occupation" count={getFilterCount("occupation")}>
-              <TextInput
-                placeholder="Enter Job Title..."
-                value={filters.jobTitle}
-                onChange={(v) => handleFilterChange("jobTitle", v)}
+            {filterConfig.type === "checkbox-list" && (
+              <CheckboxListFilter
+                filterKey={filterConfig.key}
+                placeholder={filterConfig.placeholder}
+                options={filterConfig.options}
+                selectedValues={activeFilters}
+                onSelect={handleCheckboxSelect}
+                hasModifier={filterConfig.hasModifier}
+                onUpdateModifier={updateFilterModifier}
+                activeFilters={activeFilters}
               />
-            </FilterSection>
-
-            <FilterSection title="Company Name or Domain" count={getFilterCount("company")}>
-              <TextInput
-                placeholder="Enter Company..."
-                value={filters.companyName}
-                onChange={(v) => handleFilterChange("companyName", v)}
-              />
-            </FilterSection>
-
-            <FilterSection title="Education" count={getFilterCount("education")}>
-              <TextInput
-                placeholder="Enter Major..."
-                value={filters.major}
-                onChange={(v) => handleFilterChange("major", v)}
-              />
-            </FilterSection>
-
-            <FilterSection title="Description" count={getFilterCount("description")}>
-              <TextInput
-                placeholder="Enter LinkedIn Url or Keyword here.."
-                value={filters.description}
-                onChange={(v) => handleFilterChange("description", v)}
-              />
-            </FilterSection>
-          </>
-        )}
+            )}
+          </FilterSection>
+        ))}
       </div>
 
       {/* Action Buttons */}

@@ -1,8 +1,6 @@
-// components/modals/Modals.jsx
+// components/modals/B2BModals.jsx
 import { useState } from "react";
-import { useSearch } from "../../context/SearchContext";
-import { Modal, LoadingSpinner, SuccessIcon } from "../common/CommonComponents";
-import { savedSearches, projects } from "../../data/profilesData";
+import { useB2BSearch } from "../../context/B2BSearchContext";
 
 // Save Search Modal
 export const SaveSearchModal = ({ isOpen, onClose, onSave }) => {
@@ -15,131 +13,187 @@ export const SaveSearchModal = ({ isOpen, onClose, onSave }) => {
     }
   };
 
+  const handleClose = () => {
+    setSearchName("");
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md">
-      <h2 className="text-xl font-bold text-gray-800 mb-1">Save your search</h2>
-      <p className="text-gray-500 text-sm mb-6">Fill details for new project</p>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-gray-900">Save This Search</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Search Name
-        </label>
-        <input
-          type="text"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-          placeholder="Enter Search Name"
-          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
-        />
+        <p className="text-gray-500 text-sm mb-6">Save your current search filters for later use</p>
+
+        {/* Search Name Input */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            Search Name
+          </label>
+          <input
+            type="text"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            placeholder="Enter a name for this search"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleClose}
+            className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!searchName.trim()}
+            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
+              searchName.trim()
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Save Search
+          </button>
+        </div>
       </div>
-
-      <button
-        onClick={handleSave}
-        disabled={!searchName.trim()}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Save Search
-      </button>
-    </Modal>
+    </div>
   );
 };
 
 // Load Search Modal
-export const LoadSearchModal = ({ isOpen, onClose, onLoad }) => {
+export const LoadSearchModal = ({ isOpen, onClose, savedSearches, onLoadSearch }) => {
   const [selectedSearch, setSelectedSearch] = useState(null);
 
   const handleLoad = () => {
     if (selectedSearch) {
-      onLoad(selectedSearch);
-      onClose();
+      onLoadSearch(selectedSearch);
+      setSelectedSearch(null);
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md">
-      <h2 className="text-xl font-bold text-gray-800 mb-1">Select Saved Search</h2>
-      <p className="text-gray-500 text-sm mb-6">Load a saved search list.</p>
+  const handleClose = () => {
+    setSelectedSearch(null);
+    onClose();
+  };
 
-      <div className="space-y-3 mb-6">
-        {savedSearches.map((search) => (
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-gray-900">Load Past Search</h2>
           <button
-            key={search.id}
-            onClick={() => setSelectedSearch(search)}
-            className={`w-full p-4 text-left transition-all duration-200 ${
-              selectedSearch?.id === search.id
-                ? "border-blue-600 bg-blue-50"
-                : "border-gray-200 hover:border-gray-300"
-            }`}
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p className="text-gray-500 text-sm mb-6">Select a saved search to load</p>
+
+        {/* Saved Searches List */}
+        <div className="space-y-2 max-h-80 overflow-y-auto mb-6">
+          {savedSearches.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <p>No saved searches yet</p>
+            </div>
+          ) : (
+            savedSearches.map((search) => (
+              <button
+                key={search.id}
+                onClick={() => setSelectedSearch(search)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left ${
                   selectedSearch?.id === search.id
-                    ? "border-blue-600 bg-blue-600"
-                    : "border-gray-300"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
                 }`}
               >
+                <div>
+                  <p className="font-medium text-gray-900">{search.name}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {search.resultCount.toLocaleString()} results • {search.date}
+                  </p>
+                </div>
                 {selectedSearch?.id === search.id && (
-                  <div className="w-2 h-2 bg-white rounded-full" />
+                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
                 )}
-              </div>
-              <span className="font-medium text-gray-800">{search.name}</span>
-            </div>
-          </button>
-        ))}
-      </div>
+              </button>
+            ))
+          )}
+        </div>
 
-      <button
-        onClick={handleLoad}
-        disabled={!selectedSearch}
-        className="w-full bg-gray-200 text-gray-600 py-3 rounded-full font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Load Search
-      </button>
-    </Modal>
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleClose}
+            className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleLoad}
+            disabled={!selectedSearch}
+            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
+              selectedSearch
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Load Search
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
 // Add to Project Modal
-// Add this updated AddToProjectModal to your Modals.jsx file
-// It handles both B2C (profiles) and B2B (companies)
-
-export const AddToProjectModal = ({ 
-  isOpen, 
-  onClose, 
-  profile, 
-  company, 
-  onAddToProject,
-  mode = "b2c",
-  context 
-}) => {
-  // Get projects from context
-  const projects = context?.projects || [];
-  const addProject = context?.addProject;
-  const addToProject = context?.addToProject;
-
+export const AddToProjectModal = ({ isOpen, onClose, company, onAddToProject }) => {
+  const { projects, addProject, addToProject } = useB2BSearch();
   const [selectedProject, setSelectedProject] = useState(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successType, setSuccessType] = useState("");
+  const [successType, setSuccessType] = useState(""); // "added" or "created"
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
 
-  // Get the item (profile or company)
-  const item = mode === "b2b" ? company : profile;
-
   const handleAdd = () => {
-    if (selectedProject && item) {
-      if (addToProject) {
-        addToProject(selectedProject.id, [item.id]);
-      }
+    if (selectedProject && company) {
+      addToProject(selectedProject.id, [company.id]);
       setSuccessType("added");
       setShowSuccess(true);
     }
   };
 
   const handleCreateProject = () => {
-    if (newProjectName.trim() && addProject) {
+    if (newProjectName.trim()) {
       addProject(newProjectName, newProjectDescription);
       setNewProjectName("");
       setNewProjectDescription("");
@@ -159,13 +213,15 @@ export const AddToProjectModal = ({
     onClose();
   };
 
+  // Go back to profiles (close modal completely)
   const handleGoBackToProfiles = () => {
-    if (selectedProject && onAddToProject) {
+    if (selectedProject) {
       onAddToProject(selectedProject.name);
     }
     handleClose();
   };
 
+  // Go back to select project form after creating project
   const handleGoBackToForm = () => {
     setShowSuccess(false);
     setSuccessType("");
@@ -178,6 +234,7 @@ export const AddToProjectModal = ({
       {/* Success Modal - Added to Project */}
       {showSuccess && successType === "added" && (
         <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl text-center">
+          {/* Success Icon */}
           <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
             <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -193,7 +250,7 @@ export const AddToProjectModal = ({
             onClick={handleGoBackToProfiles}
             className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-base"
           >
-            Go Back to {mode === "b2b" ? "Companies" : "Profiles"}
+            Go Back to Profiles
           </button>
         </div>
       )}
@@ -201,6 +258,7 @@ export const AddToProjectModal = ({
       {/* Success Modal - Project Created */}
       {showSuccess && successType === "created" && (
         <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl text-center">
+          {/* Success Icon */}
           <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
             <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -235,6 +293,7 @@ export const AddToProjectModal = ({
 
           <p className="text-gray-500 text-sm mb-6">Fill details for new project</p>
 
+          {/* Project Name */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Project Name
@@ -248,6 +307,7 @@ export const AddToProjectModal = ({
             />
           </div>
 
+          {/* Project Description */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Project Description
@@ -261,6 +321,7 @@ export const AddToProjectModal = ({
             />
           </div>
 
+          {/* Create Button */}
           <button
             onClick={handleCreateProject}
             disabled={!newProjectName.trim()}
@@ -290,9 +351,10 @@ export const AddToProjectModal = ({
             </button>
           </div>
 
-          <p className="text-gray-500 text-sm mb-6">Where you want to move the {mode === "b2b" ? "company" : "profile"}</p>
+          <p className="text-gray-500 text-sm mb-6">Where you want to move the profile</p>
 
-          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+          {/* Project List */}
+          <div className="space-y-2 mb-6">
             {projects.map((project) => (
               <button
                 key={project.id}
@@ -303,6 +365,7 @@ export const AddToProjectModal = ({
                     : "bg-white hover:bg-gray-50 border-2 border-transparent"
                 }`}
               >
+                {/* Radio Button */}
                 <div
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                     selectedProject?.id === project.id
@@ -321,6 +384,7 @@ export const AddToProjectModal = ({
             ))}
           </div>
 
+          {/* Footer */}
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowCreateProject(true)}
@@ -346,60 +410,54 @@ export const AddToProjectModal = ({
     </div>
   );
 };
+
+// Success Modal
+export const SuccessModal = ({ isOpen, onClose, message }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl text-center">
+        {/* Success Icon */}
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-blue-500 flex items-center justify-center">
+          <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Success!</h2>
+        <p className="text-gray-500 mb-8">{message}</p>
+
+        <button
+          onClick={onClose}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-base"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Loading Modal
-export const LoadingModal = ({ isOpen, onClose }) => {
+export const LoadingModal = ({ isOpen, message = "Loading..." }) => {
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <h2 className="text-lg font-bold text-gray-800 mb-1">Loading your Search</h2>
-      <p className="text-gray-500 text-sm mb-8">
-        Do not close the window, we are fetching the information
-      </p>
-      <div className="py-4">
-        <LoadingSpinner />
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl text-center">
+        {/* Spinner */}
+        <div className="w-12 h-12 mx-auto mb-4 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="text-gray-600 font-medium">{message}</p>
       </div>
-    </Modal>
+    </div>
   );
 };
 
-// Success Modal - Search Saved
-export const SearchSavedModal = ({ isOpen, onClose }) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <div className="text-center py-4">
-        <SuccessIcon />
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          Your search is saved!
-        </h2>
-        <button
-          onClick={onClose}
-          className="w-full bg-blue-600 text-white py-3 rounded-full font-medium hover:bg-blue-700 transition-colors"
-        >
-          Search for more profiles
-        </button>
-      </div>
-    </Modal>
-  );
-};
-
-// Success Modal - Added to Project
-export const AddedToProjectModal = ({ isOpen, onClose, projectName }) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <div className="text-center py-4">
-        <SuccessIcon />
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          Successfully added!
-        </h2>
-        <p className="text-gray-500 mb-6">
-          Lead added to "{projectName}" successfully
-        </p>
-        <button
-          onClick={onClose}
-          className="w-full bg-blue-600 text-white py-3 rounded-full font-medium hover:bg-blue-700 transition-colors"
-        >
-          Go Back to Form
-        </button>
-      </div>
-    </Modal>
-  );
+export default {
+  SaveSearchModal,
+  LoadSearchModal,
+  AddToProjectModal,
+  SuccessModal,
+  LoadingModal,
 };

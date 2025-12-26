@@ -1,6 +1,7 @@
 // pages/SalesAgentContent.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearch } from "../context/SearchContext";
+import { useB2BSearch } from "../context/B2BSearchContext";
 import SearchFiltersPanel from "../components/sales/SearchFiltersPanel";
 import SearchResultsView from "../components/sales/SearchResultsView";
 import {
@@ -10,6 +11,7 @@ import {
   LoadingModal,
 } from "../components/modals/Modals";
 import { footerLinks } from "../data/salesAgentData";
+import { getAgentConfig } from "../data/agentConfig";
 import logo from "../assets/Logo.png";
 
 const SearchIcon = () => (
@@ -19,7 +21,14 @@ const SearchIcon = () => (
   </svg>
 );
 
-export default function SalesAgentContent() {
+export default function SalesAgentContent({ mode = "b2c" }) {
+  // Get the appropriate context based on mode
+  const b2cContext = useSearch();
+  const b2bContext = useB2BSearch();
+  
+  const context = mode === "b2b" ? b2bContext : b2cContext;
+  const config = getAgentConfig(mode);
+
   const {
     activeFilters,
     addFilter,
@@ -28,10 +37,16 @@ export default function SalesAgentContent() {
     loadSavedSearch,
     hasSearched,
     setHasSearched,
-  } = useSearch();
+  } = context;
 
-  const [searchType, setSearchType] = useState("individual");
+  // Search type state - uses first option from config
+  const [searchType, setSearchType] = useState(config.searchTypes[0].key);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Reset search type when mode changes
+useEffect(() => {
+  setSearchType(config.searchTypes[0].key);
+}, [mode, config.searchTypes]);
 
   // Modal states
   const [saveSearchModal, setSaveSearchModal] = useState(false);
@@ -40,6 +55,9 @@ export default function SalesAgentContent() {
   const [loadingModal, setLoadingModal] = useState(false);
 
   const handleSaveSearch = (searchName) => {
+    if (context.saveCurrentSearch) {
+      context.saveCurrentSearch(searchName);
+    }
     setSaveSearchModal(false);
     setSearchSavedModal(true);
   };
@@ -71,30 +89,25 @@ export default function SalesAgentContent() {
           {/* Search Type Toggle */}
           <div className="p-4 border-b border-gray-100">
             <div className="inline-flex bg-gray-100 rounded-full p-1">
-              <button
-                onClick={() => setSearchType("individual")}
-                className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
-                  searchType === "individual"
-                    ? "bg-gray-900 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                Individual Search
-              </button>
-              <button
-                onClick={() => setSearchType("bulk")}
-                className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
-                  searchType === "bulk"
-                    ? "bg-gray-900 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                Bulk Search
-              </button>
+              {config.searchTypes.map((type) => (
+                <button
+                  key={type.key}
+                  onClick={() => setSearchType(type.key)}
+                  className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                    searchType === type.key
+                      ? "bg-gray-900 text-white shadow-sm"
+                      : "text-gray-600 hover:text-gray-800"
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
             </div>
           </div>
 
           <SearchFiltersPanel
+            mode={mode}
+            config={config}
             searchType={searchType}
             activeFilters={activeFilters}
             onAddFilter={addFilter}
@@ -102,13 +115,14 @@ export default function SalesAgentContent() {
             onClearFilters={clearFilters}
             onSaveSearch={() => setSaveSearchModal(true)}
             onLoadSearch={() => setLoadSearchModal(true)}
+            context={context}
           />
         </div>
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden">
           {hasSearched ? (
-            <SearchResultsView />
+            <SearchResultsView mode={mode} config={config} context={context} />
           ) : (
             <>
               {/* Search Content */}
@@ -129,7 +143,7 @@ export default function SalesAgentContent() {
                   </h1>
 
                   {/* Search Bar */}
-                  <div className="flex items-center bg-white rounded-full shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="flex items-center bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
                     <input
                       type="text"
                       value={searchQuery}
@@ -140,7 +154,7 @@ export default function SalesAgentContent() {
                     />
                     <button
                       onClick={handleSearch}
-                      className="bg-gray-900 text-white p-4 m-1 rounded-full hover:bg-gray-800 transition-colors"
+                      className="bg-gray-900 text-white p-4 m-0.2 rounded hover:bg-gray-800 transition-colors"
                     >
                       <SearchIcon />
                     </button>
@@ -182,6 +196,7 @@ export default function SalesAgentContent() {
         isOpen={loadSearchModal}
         onClose={() => setLoadSearchModal(false)}
         onLoad={handleLoadSearch}
+        savedSearches={config.savedSearches}
       />
 
       <SearchSavedModal

@@ -102,8 +102,53 @@
 // export default App;
 
 // App.jsx
+// import { useState } from "react";
+// import { SearchProvider } from "./context/SearchContext";
+// import { B2BSearchProvider } from "./context/B2BSearchContext";
+// import Layout from "./components/Layout";
+// import DashboardContent from "./components/DashboardContent";
+// import SalesAgentContent from "./pages/SalesAgentContent";
+// import B2BAgentContent from "./pages/B2BAgentContent";
+
+// function AppContent() {
+//   const [activePage, setActivePage] = useState("analytics");
+
+//  const renderContent = () => {
+//     switch (activePage) {
+//       case "dashboard":
+//         return <DashboardContent />;
+//       case "b2c":
+//         return <SalesAgentContent />;
+//       case "b2b":
+//         return <B2BAgentContent />;
+//       default:
+//         return <SalesAgentContent />;
+//     }
+//   };
+
+//   return (
+//     <Layout activePage={activePage} setActivePage={setActivePage}>
+//       {renderContent()}
+//     </Layout>
+//   );
+// }
+
+// function App() {
+//   return (
+//     <SearchProvider>
+//       <B2BSearchProvider>
+//         <AppContent />
+//       </B2BSearchProvider>
+//     </SearchProvider>
+//   );
+// }
+
+// export default App;
+
+// App.jsx
 import { useState } from "react";
 import { SearchProvider } from "./context/SearchContext";
+import { B2BSearchProvider } from "./context/B2BSearchContext";
 import Layout from "./components/Layout";
 import DashboardContent from "./components/DashboardContent";
 import SalesAgentContent from "./pages/SalesAgentContent";
@@ -113,9 +158,12 @@ function AppContent() {
 
   const renderContent = () => {
     switch (activePage) {
-      case "sales":
-        return <SalesAgentContent />;
       case "analytics":
+        return <DashboardContent />;
+      case "b2c":
+        return <SalesAgentContent mode="b2c" />;
+      case "b2b":
+        return <SalesAgentContent mode="b2b" />;
       default:
         return <DashboardContent />;
     }
@@ -131,7 +179,9 @@ function AppContent() {
 function App() {
   return (
     <SearchProvider>
-      <AppContent />
+      <B2BSearchProvider>
+        <AppContent />
+      </B2BSearchProvider>
     </SearchProvider>
   );
 }

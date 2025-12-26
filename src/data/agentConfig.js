@@ -1,0 +1,189 @@
+// data/agentConfig.js
+import { locationData } from "./salesAgentData";
+import { basicSearchFilters, advancedSearchFilters, b2bCompaniesData, b2bSavedSearches, b2bProjects } from "./b2bData";
+import { profilesData, savedSearches, projects } from "./profilesData";
+
+// B2C Configuration
+export const b2cConfig = {
+  mode: "b2c",
+  title: "Sales Agent",
+  searchTypes: [
+    { key: "individual", label: "Individual Search" },
+    { key: "bulk", label: "Bulk Search" },
+  ],
+  filters: {
+    individual: [
+      {
+        key: "name",
+        title: "Name",
+        type: "text",
+        placeholder: "Enter Name...",
+        icon: "user",
+      },
+      {
+        key: "location",
+        title: "Location",
+        type: "location",
+        placeholder: "Enter Location...",
+        icon: "location",
+        hasRadius: true,
+        options: locationData,
+      },
+      {
+        key: "description",
+        title: "Description",
+        type: "text",
+        placeholder: "Enter LinkedIn Url or Keyword here..",
+        icon: "description",
+      },
+    ],
+    bulk: [
+      {
+        key: "contact",
+        title: "Preferred Contact Method",
+        type: "select",
+        placeholder: "- Preferred Contact -",
+        icon: "contact",
+        options: ["- Preferred Contact -", "Email", "Phone", "LinkedIn", "Twitter"],
+      },
+      {
+        key: "location",
+        title: "Location",
+        type: "location",
+        placeholder: "Enter Location...",
+        icon: "location",
+        options: locationData,
+      },
+      {
+        key: "occupation",
+        title: "Occupation",
+        type: "text",
+        placeholder: "Enter Job Title...",
+        icon: "briefcase",
+      },
+      {
+        key: "company",
+        title: "Company Name or Domain",
+        type: "text",
+        placeholder: "Enter Company...",
+        icon: "building",
+      },
+      {
+        key: "education",
+        title: "Education",
+        type: "text",
+        placeholder: "Enter Major...",
+        icon: "education",
+      },
+      {
+        key: "description",
+        title: "Description",
+        type: "text",
+        placeholder: "Enter LinkedIn Url or Keyword here..",
+        icon: "description",
+      },
+    ],
+  },
+  resultCard: "profile", // Use ProfileCard
+  hasEnrichment: true,
+  savedSearches: savedSearches,
+  projects: projects,
+  data: profilesData,
+};
+
+// B2B Configuration
+export const b2bConfig = {
+  mode: "b2b",
+  title: "B2B Agent",
+  searchTypes: [
+    { key: "basic", label: "Basic Search" },
+    { key: "advanced", label: "Advance Search" },
+  ],
+  filters: {
+    basic: [
+      {
+        key: "businessType",
+        title: "Business Type",
+        type: "checkbox-list",
+        placeholder: "What business are you looking for?",
+        icon: "building",
+        options: basicSearchFilters.businessType.options,
+        hasModifier: true,
+      },
+      {
+        key: "location",
+        title: "Location",
+        type: "checkbox-list",
+        placeholder: "Type Location",
+        icon: "location",
+        options: basicSearchFilters.location.options,
+        hasModifier: true,
+      },
+    ],
+    advanced: [
+      {
+        key: "sicCode",
+        title: "SIC Code",
+        type: "checkbox-list",
+        placeholder: "Enter SIC Code",
+        icon: "code",
+        options: advancedSearchFilters.sicCode.options,
+        hasModifier: true,
+      },
+      {
+        key: "location",
+        title: "Location",
+        type: "checkbox-list",
+        placeholder: "Type Location",
+        icon: "location",
+        options: advancedSearchFilters.location.options,
+        hasModifier: true,
+      },
+      {
+        key: "companyName",
+        title: "Company Name (*includes)",
+        type: "checkbox-list",
+        placeholder: "Enter Company Name",
+        icon: "company",
+        options: advancedSearchFilters.companyName.options,
+        hasModifier: true,
+      },
+      {
+        key: "companyStatus",
+        title: "Company Status",
+        type: "checkbox-list",
+        placeholder: "Select Status",
+        icon: "status",
+        options: advancedSearchFilters.companyStatus.options,
+        hasModifier: true,
+      },
+      {
+        key: "companyType",
+        title: "Company Type",
+        type: "checkbox-list",
+        placeholder: "Select Type",
+        icon: "type",
+        options: advancedSearchFilters.companyType.options,
+        hasModifier: true,
+      },
+      {
+        key: "incorporatedDate",
+        title: "Incorporated Date",
+        type: "checkbox-list",
+        placeholder: "Select Date Range",
+        icon: "calendar",
+        options: advancedSearchFilters.incorporatedDate.options,
+        hasModifier: true,
+      },
+    ],
+  },
+  resultCard: "company", // Use CompanyCard
+  hasEnrichment: false,
+  savedSearches: b2bSavedSearches,
+  projects: b2bProjects,
+  data: b2bCompaniesData,
+};
+
+export const getAgentConfig = (mode) => {
+  return mode === "b2b" ? b2bConfig : b2cConfig;
+};

@@ -265,50 +265,61 @@ export const profilesData = [
   },
 ];
 
+// Add these to your data/profilesData.js if not already present
+
 export const savedSearches = [
   {
     id: 1,
-    name: "NYC Marketing Leads",
-    date: "Dec 20, 2024",
+    name: "Tech Executives NYC",
+    date: "2024-01-15",
     filters: {
+      name: "John",
       location: "New York",
-      industry: "Marketing",
-      title: "Manager"
-    }
+      industry: "Technology",
+    },
+    resultCount: 1250,
   },
   {
     id: 2,
-    name: "Tech Sales Prospects",
-    date: "Dec 18, 2024",
+    name: "Marketing Directors",
+    date: "2024-01-10",
     filters: {
-      industry: "Technology",
-      title: "Sales"
-    }
+      title: "Marketing Director",
+      location: "United States",
+    },
+    resultCount: 890,
   },
   {
     id: 3,
-    name: "Finance Directors",
-    date: "Dec 15, 2024",
+    name: "Sales Managers UK",
+    date: "2024-01-08",
     filters: {
-      title: "Director",
-      industry: "Finance"
-    }
-  }
+      title: "Sales Manager",
+      location: "United Kingdom",
+    },
+    resultCount: 456,
+  },
 ];
 
 export const projects = [
   {
     id: 1,
-    name: "ABC Studio",
-    description: "Marketing campaign leads",
-    profiles: []
+    name: "Tech Leaders Q1",
+    description: "Q1 tech leadership prospects",
+    profileCount: 45,
   },
   {
     id: 2,
-    name: "Abacus Corporate",
-    description: "Enterprise sales prospects",
-    profiles: []
-  }
+    name: "Sales Prospects",
+    description: "Sales team targets",
+    profileCount: 128,
+  },
+  {
+    id: 3,
+    name: "Marketing Contacts",
+    description: "Marketing outreach list",
+    profileCount: 67,
+  },
 ];
 
 export default profilesData;
