@@ -3,16 +3,16 @@ import { useState, useRef, useEffect } from "react";
 import { FilterTag } from "../common/CommonComponents";
 
 // Icons
-// const ChevronRight = ({ className = "" }) => (
-//   <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-//     <path d="M9 18l6-6-6-6" />
-//   </svg>
-// );
+const ChevronRight = ({ className = "" }) => (
+  <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
 const ChevronLeft = ({ className = "" }) => (
   <svg
     className={className}
-    width="16"
-    height="16"
+    width="24"
+    height="24"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -56,7 +56,7 @@ const FilterSection = ({ title, count, children, defaultOpen = false }) => {
             </span>
           )}
         </div>
-        <span className={`transition-transform duration-200 text-blue-500 ${isOpen ? "-rotate-90" : ""}`}>
+        <span className={`transition-transform duration-200 text-[#3C49F7] ${isOpen ? "-rotate-90" : ""}`}>
           <ChevronLeft />
         </span>
       </button>
@@ -314,9 +314,9 @@ const LocationFilter = ({
                     onClick={() => toggleExpand(loc.name)}
                     className="p-0.5 hover:bg-gray-100 rounded transition-colors duration-150"
                   >
-                    <ChevronLeft
-                      className={`text-gray-400 transition-transform duration-200 ${
-                        expandedItems[loc.name] ? "-rotate-90" : ""
+                    <ChevronRight
+                      className={`text-[#3C49F7] transition-transform duration-200 ${
+                        expandedItems[loc.name] ? "rotate-90" : ""
                       }`}
                     />
                   </button>
