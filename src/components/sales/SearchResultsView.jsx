@@ -105,6 +105,7 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
 
     return (
       <div className="relative " ref={dropdownRef}>
+      <div className="relative " ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -253,6 +254,7 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
       </div>
 
       {/* Items List */}
+      <div className="flex-1 h-5 z-[0]">
       <div className="flex-1 h-5 z-[0]">
         <div className="space-y-1">
           {paginatedItems.map((item) => (
