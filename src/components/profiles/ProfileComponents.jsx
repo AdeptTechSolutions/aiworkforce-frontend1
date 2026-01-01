@@ -121,7 +121,7 @@ export const ProfileCard = ({ profile, isSelected, onSelect, onEnrich, onAddToPr
                   e.stopPropagation();
                   onEnrich(profile.id);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 transition-colors"
+                className="px-4 py-1.5 bg-[#3C49F7] text-white text-sm font-medium rounded-full"
               >
                 Enrich Profile
               </button>
@@ -132,7 +132,7 @@ export const ProfileCard = ({ profile, isSelected, onSelect, onEnrich, onAddToPr
                 e.stopPropagation();
                 onAddToProject(profile);
               }}
-              className="px-4 py-2 border-2 border-blue-700 text-blue-700 text-sm font-medium rounded-full hover:border-blue-600 hover:bg-gray-50 transition-colors"
+              className="px-4 py-1.5 border-2 border-[#3C49F7] text-[#3C49F7] text-sm font-medium rounded-full"
             >
               Add to Project
             </button>
@@ -411,13 +411,13 @@ export const SelectAllRow = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onEnrichAll}
-            className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="bg-[#3C49F7] text-white px-4 py-1.5 rounded-full text-sm font-medium"
           >
             Enrich Profile
           </button>
           <button
             onClick={onAddAllToProject}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:border-blue-600 hover:text-blue-600 transition-colors"
+            className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full text-sm font-medium hover:border-[#3C49F7] hover:text-[#3C49F7] transition-colors"
           >
             Add to Project
           </button>

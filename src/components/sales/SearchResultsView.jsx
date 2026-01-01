@@ -168,9 +168,9 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
   return (
     <div className="flex-1 flex flex-col h-full gap-1.5 overflow-y-scroll">
       {/* Header */}
-      <div className="p-4 border overflow-hidden rounded bg-white border-gray-100">
+      <div className="p-2 border overflow-hidden rounded bg-white border-gray-100">
         {/* Results Info Row */}
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-0">
           <div className="flex items-center gap-4">
             <span className="text-[14px] text-[#000000]">
               {startIndex} - {endIndex} of about {(totalResults || 234124).toLocaleString()} results.
@@ -231,14 +231,14 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
               {!isB2B && config.hasEnrichment && (
                 <button
                   onClick={handleEnrichAll}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="bg-[#3C49F7] text-white px-4 py-1.5 rounded-full text-sm font-medium"
                 >
                   Enrich Profile
                 </button>
               )}
               <button
                 onClick={handleAddAllToProject}
-                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:border-blue-600 hover:text-blue-600 transition-colors"
+                className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full text-sm font-medium hover:border-[#3C49F7] hover:text-[#3C49F7] transition-colors"
               >
                 Add to Project
               </button>

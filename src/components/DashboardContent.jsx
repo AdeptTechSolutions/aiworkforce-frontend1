@@ -145,7 +145,7 @@ export default function DashboardContent() {
           </div>
         </div>
         <div className="flex justify-end mt-4">
-          <button className="bg-blue-600 text-white px-6 py-2.5 border-[#3C49F7] rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">
+          <button className="bg-[#3C49F7] text-white px-6 py-2.5 border-[#3C49F7] rounded-full text-sm font-medium">
             View Calendar
           </button>
         </div>

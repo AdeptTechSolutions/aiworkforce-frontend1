@@ -166,7 +166,7 @@ const CheckboxListFilter = ({
                   }`}
               >
                 <div
-                  className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                  className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : ""
                     }`}
                 >
                   {isSelected && (
@@ -384,7 +384,7 @@ const LocationFilter = ({
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all duration-200"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:border-blue-500 transition-all duration-200"
         />
 
         {/* Filter Icon - appears when typing */}
@@ -1101,13 +1101,13 @@ export default function SearchFiltersPanel({
           <>
             <button
               onClick={onSaveSearch}
-              className="w-full bg-blue-600 text-white py-2 rounded-full font-medium hover:bg-blue-700 transition-all duration-200"
+              className="w-full bg-[#3C49F7] text-white py-1.5 text-sm rounded-full "
             >
               Save This Search
             </button>
             <button
               onClick={onLoadSearch}
-              className="w-full bg-white text-blue-700 py-1.5 rounded-full font-medium border-2 border-blue-700 hover:border-blue-800 transition-all duration-200"
+              className="w-full bg-white text-[#3C49F7] py-1.5 rounded-full text-sm border-2 border-[#3C49F7]"
             >
               Load Past Search
             </button>
@@ -1115,7 +1115,7 @@ export default function SearchFiltersPanel({
         ) : (
           <button
             onClick={onLoadSearch}
-            className="w-full bg-blue-600 text-white py-2 rounded-full font-medium hover:bg-blue-700 transition-all duration-200"
+            className="w-full bg-[[#3C49F7] ] text-white text-sm py-1.5 rounded-full font-medium"
           >
             Load Past Search
           </button>
