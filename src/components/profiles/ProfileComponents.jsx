@@ -394,7 +394,7 @@ export const SelectAllRow = ({
   onAddAllToProject,
 }) => {
   return (
-    <div className="flex items-center justify-between py-3 px-4 rounded-lg mb-4">
+    <div className="flex items-center justify-between py-2 px-0 rounded-lg mb-4">
       <div className="flex items-center gap-3">
         <Checkbox checked={isAllSelected} onChange={onSelectAll} />
         <span className="text-sm text-gray-700">
@@ -405,7 +405,11 @@ export const SelectAllRow = ({
             </span>
           )}
         </span>
+        <button className="text-[#3C49F7] px-4 py-1.5 rounded-full text-sm font-medium hover:border-2 hover:border-[#3C49F7] transition-colors">
+            Export Leads
+          </button>
       </div>
+      
 
       {selectedCount > 0 && (
         <div className="flex items-center gap-3">
@@ -421,12 +425,8 @@ export const SelectAllRow = ({
           >
             Add to Project
           </button>
-          <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="12" cy="19" r="2" />
-            </svg>
+          <button className="text-[#3C49F7] px-4 py-1.5 rounded-full text-sm font-medium hover:border-2 hover:border-[#3C49F7] transition-colors">
+            Export Leads
           </button>
         </div>
       )}

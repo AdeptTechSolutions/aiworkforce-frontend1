@@ -48,26 +48,24 @@ export const SaveSearchModal = ({ isOpen, onClose, onSave }) => {
 // ============================================
 // LOAD SEARCH MODAL
 // ============================================
-export const LoadSearchModal = ({ 
-  isOpen, 
-  onClose, 
+export const LoadSearchModal = ({
+  isOpen,
+  onClose,
   savedSearches = [],
-  onLoadSearch 
+  onLoadSearch
 }) => {
   const [selectedSearch, setSelectedSearch] = useState(null);
   const { setHasSearched, loadSavedSearch } = useSearch();
 
   const handleLoad = () => {
-    if (selectedSearch) {
-      loadSavedSearch(selectedSearch);
-      setHasSearched(true);
-      if (onLoadSearch) {
-        onLoadSearch(selectedSearch);
-      }
-      setSelectedSearch(null);
-      onClose();  // Make sure this is called last
+  if (selectedSearch) {
+    if (onLoadSearch) {
+      onLoadSearch(selectedSearch);  // Let parent handle everything
     }
-  };
+    setSelectedSearch(null);
+    // Don't call onClose() here - let handleLoadSearch control the flow
+  }
+};
 
   const handleClose = () => {
     setSelectedSearch(null);
@@ -85,23 +83,22 @@ export const LoadSearchModal = ({
       <p className="text-gray-500 text-sm mb-6">Load a saved search list.</p>
 
       <div className="space-y-3 mb-6">
-  {savedSearches.map((search) => (
-    <button
-      key={search.id}
-      onClick={() => setSelectedSearch(search)}
-      className={`w-full p-4 text-left rounded-lg border transition-all duration-200 ${
-        selectedSearch?.id === search.id
-          ? "border-blue-600 bg-[#F2F2FF]"
-          : "border-white hover:border-blue-600 hover:bg-[#F2F2FF]"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          checked={selectedSearch?.id === search.id}
-          onChange={() => setSelectedSearch(search)}
-          onClick={(e) => e.stopPropagation()}
-          className="
+        {savedSearches.map((search) => (
+          <button
+            key={search.id}
+            onClick={() => setSelectedSearch(search)}
+            className={`w-full p-4 text-left rounded-lg border transition-all duration-200 ${selectedSearch?.id === search.id
+                ? "border-blue-600 bg-[#F2F2FF]"
+                : "border-white hover:border-blue-600 hover:bg-[#F2F2FF]"
+              }`}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selectedSearch?.id === search.id}
+                onChange={() => setSelectedSearch(search)}
+                onClick={(e) => e.stopPropagation()}
+                className="
             appearance-none
             w-[18px] h-[18px]
             rounded-full
@@ -120,13 +117,13 @@ export const LoadSearchModal = ({
             checked:after:rotate-45
             checked:after:translate-x-[5px] checked:after:translate-y-[1px]
           "
-        />
+              />
 
-        <span className="font-medium text-gray-800">{search.name}</span>
+              <span className="font-medium text-gray-800">{search.name}</span>
+            </div>
+          </button>
+        ))}
       </div>
-    </button>
-  ))}
-</div>
 
 
       <button
@@ -143,14 +140,14 @@ export const LoadSearchModal = ({
 // Add this updated AddToProjectModal to your Modals.jsx file
 // It handles both B2C (profiles) and B2B (companies)
 
-export const AddToProjectModal = ({ 
-  isOpen, 
-  onClose, 
-  profile, 
-  company, 
+export const AddToProjectModal = ({
+  isOpen,
+  onClose,
+  profile,
+  company,
   onAddToProject,
   mode = "b2c",
-  context 
+  context
 }) => {
   // Get projects from context
   const projects = context?.projects || [];
@@ -303,11 +300,10 @@ export const AddToProjectModal = ({
           <button
             onClick={handleCreateProject}
             disabled={!newProjectName.trim()}
-            className={`px-6 py-3 rounded-xl font-medium transition-colors ${
-              newProjectName.trim()
+            className={`px-6 py-3 rounded-xl font-medium transition-colors ${newProjectName.trim()
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             Create Project
           </button>
@@ -336,18 +332,16 @@ export const AddToProjectModal = ({
               <button
                 key={project.id}
                 onClick={() => setSelectedProject(project)}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${
-                  selectedProject?.id === project.id
+                className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${selectedProject?.id === project.id
                     ? "bg-[#F2F2FF] border border-blue-600"
                     : "bg-white hover:bg-[#F2F2FF] hover:border hover:border-blue-600"
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-5 h-5  border-2 flex items-center justify-center transition-all ${
-                    selectedProject?.id === project.id
+                  className={`w-5 h-5  border-2 flex items-center justify-center transition-all ${selectedProject?.id === project.id
                       ? "border-blue-500 rounded bg-blue-500"
                       : "border-gray-300 rounded-full bg-white"
-                  }`}
+                    }`}
                 >
                   {selectedProject?.id === project.id && (
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -371,11 +365,10 @@ export const AddToProjectModal = ({
             <button
               onClick={handleAdd}
               disabled={!selectedProject}
-              className={`px-6 py-3 rounded-xl font-medium transition-colors ${
-                selectedProject
+              className={`px-6 py-3 rounded-xl font-medium transition-colors ${selectedProject
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              }`}
+                }`}
             >
               Add to Project
             </button>
@@ -386,20 +379,40 @@ export const AddToProjectModal = ({
   );
 };
 // Loading Modal
+// Loading Modal
 export const LoadingModal = ({ isOpen, onClose }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <h2 className="text-lg font-bold text-gray-800 mb-1">Loading your Search</h2>
-      <p className="text-gray-500 text-sm mb-8">
-        Do not close the window, we are fetching the information
-      </p>
-      <div className="py-4">
-        <LoadingSpinner />
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Loading your Search</h2>
+          <p className="text-gray-500 text-sm">
+            Do not close the window, we are fetching the information
+          </p>
+        </div>
+        {/* <button
+          onClick={onClose}
+          className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button> */}
+      </div>
+
+      {/* 3 Dots Loading Animation */}
+      {/* 3 Dots Loading Animation */}
+      <div className="flex items-center justify-center py-12">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 bg-gray-800 rounded-full animate-pulse"></div>
+          <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+          <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+          <div className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-pulse [animation-delay:0.6s]"></div>
+        </div>
       </div>
     </Modal>
   );
 };
-
 // Success Modal - Search Saved
 export const SearchSavedModal = ({ isOpen, onClose }) => {
   return (
@@ -439,6 +452,86 @@ export const AddedToProjectModal = ({ isOpen, onClose, projectName }) => {
           Go Back to Form
         </button>
       </div>
+    </Modal>
+  );
+};
+
+// Add this to your components/modals/Modals.jsx file
+
+export const ExportLeadsModal = ({ isOpen, onClose, onExport }) => {
+  const [selectedOption, setSelectedOption] = useState("csv");
+
+  const exportOptions = [
+    { id: "csv", label: "Export as .CSV" },
+    { id: "odoo", label: "Export as Odoo" },
+    { id: "hubspot", label: "Export as Hubspot" },
+    { id: "salesforce", label: "Export as Salesforce" },
+    { id: "bullhorn", label: "Export as Bullhorn" },
+    { id: "pipedrive", label: "Export as Pipedrive" },
+  ];
+
+  const handleExport = () => {
+    if (onExport) {
+      onExport(selectedOption);
+    }
+    onClose();
+  };
+
+  const handleClose = () => {
+    setSelectedOption("csv"); // Reset to default
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} size="md">
+      <h2 className="text-xl font-bold text-gray-800 mb-1">Export Leads</h2>
+      <p className="text-gray-500 text-sm mb-6">Pick a way to export leads</p>
+
+      <div className="space-y-1 mb-6">
+        {exportOptions.map((option) => (
+          <button
+            key={option.id}
+            onClick={() => setSelectedOption(option.id)}
+            className={`w-full p-2 text-left rounded-lg transition-all hover:border-blue-600 duration-200 ${
+              selectedOption === option.id
+                ? "border-blue-600 bg-[#F2F2FF]"
+                : "border border-white hover:border-blue-600 hover:bg-[#F2F2FF]"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-[18px] h-[18px] rounded flex items-center justify-center border-2 transition-colors ${
+                  selectedOption === option.id
+                    ? "bg-blue-600 border-blue-600"
+                    : "border-gray-300 bg-white"
+                }`}
+              >
+                {selectedOption === option.id && (
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
+              <span className="font-medium text-sm text-[#000000]">{option.label}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={handleExport}
+        className="bg-gray-300 text-white py-2 px-5 rounded-full font-medium hover:bg-blue-600 transition-colors"
+      >
+        Export Leads
+      </button>
     </Modal>
   );
 };

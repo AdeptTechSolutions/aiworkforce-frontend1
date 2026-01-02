@@ -3,9 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { ProfileCard } from "../profiles/ProfileComponents";
 import { CompanyCard } from "../profiles/CompanyCard";
 import { Pagination } from "../common/CommonComponents";
-import { AddToProjectModal } from "../modals/Modals";
-import { footerLinks } from "../../data/salesAgentData";
-import logofooter from "../../assets/Logo-Only.png";
+import { AddToProjectModal, ExportLeadsModal } from "../modals/Modals";
 
 export default function SearchResultsView({ mode = "b2c", config, context }) {
   const {
@@ -37,23 +35,33 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
   const selectAll = isB2B ? selectAllCompanies : selectAllProfiles;
   const getPaginatedItems = isB2B ? getPaginatedCompanies : getPaginatedProfiles;
 
+  // Modal states
   const [addToProjectModal, setAddToProjectModal] = useState(false);
   const [successModal, setSuccessModal] = useState(false);
   const [selectedProjectName, setSelectedProjectName] = useState("");
   const [targetItemId, setTargetItemId] = useState(null);
   const [targetItem, setTargetItem] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const paginatedItems = getPaginatedItems ? getPaginatedItems() : [];
   const isAllSelected =
     paginatedItems.length > 0 &&
     paginatedItems.every((item) => selectedItems.includes(item.id));
 
+  // Handler for enrich single profile
   const handleEnrich = (itemId) => {
     if (enrichProfile) {
       enrichProfile(itemId);
     }
   };
 
+  // Handler for export
+  const handleExportLeads = (exportType) => {
+    console.log("Exporting as:", exportType);
+    // Add your export logic here
+  };
+
+  // Handler for enrich all selected
   const handleEnrichAll = () => {
     if (enrichMultipleProfiles && !isB2B) {
       const unenrichedSelected = selectedItems.filter(
@@ -63,102 +71,25 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
     }
   };
 
+  // Handler for add single item to project
   const handleAddToProject = (item) => {
     setTargetItem(item);
     setTargetItemId(item.id);
     setAddToProjectModal(true);
   };
 
+  // Handler for add all selected to project
   const handleAddAllToProject = () => {
     setTargetItem(null);
     setTargetItemId(null);
     setAddToProjectModal(true);
   };
 
+  // Handler for project selection
   const handleProjectSelected = (projectName) => {
     setSelectedProjectName(projectName);
     setAddToProjectModal(false);
     setSuccessModal(true);
-  };
-
-  // Export Dropdown Component (B2C only)
-  const ExportDropdown = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleExport = (type) => {
-      console.log(`Exporting as ${type}...`);
-      // Add your export logic here
-      setIsOpen(false);
-    };
-
-    return (
-      <div className="relative " ref={dropdownRef}>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="5" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="12" cy="19" r="2" />
-          </svg>
-        </button>
-
-        {/* Dropdown Menu */}
-        {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-            <button
-              onClick={() => handleExport("csv")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export as .CSV
-            </button>
-            <button
-              onClick={() => handleExport("Odoo")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export to Odoo
-            </button>
-            <button
-              onClick={() => handleExport("hubspot")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export to hubspot
-            </button>
-            <button
-              onClick={() => handleExport("salesforce")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export to Salesforce
-            </button>
-            <button
-              onClick={() => handleExport("Bullhorn")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export to Bullhorn 
-            </button>
-            <button
-              onClick={() => handleExport("salesforce")}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Export to Pipedrive
-            </button>
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Calculate display range
@@ -189,30 +120,29 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
         </div>
 
         {/* Select All Row */}
-        <div className="flex items-center justify-between py-3 px-4 rounded-lg">
+        <div className="flex items-center justify-between py-2 px-0 rounded-lg">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               checked={isAllSelected}
               onChange={selectAll}
               className="
-    appearance-none
-    w-[18px] h-[18px]
-    rounded-[6px]
-    border border-gray-300
-    bg-white
-    hover:border-blue-600
-    focus:outline-none focus:ring-2 focus:ring-blue-500/30
-    cursor-pointer
-
-    checked:bg-blue-600 checked:border-blue-600
-    checked:after:content-['']
-    checked:after:block
-    checked:after:w-[6px] checked:after:h-[10px]
-    checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
-    checked:after:rotate-45
-    checked:after:translate-x-[5px] checked:after:translate-y-[1px]
-  "
+                appearance-none
+                w-[18px] h-[18px]
+                rounded-[6px]
+                border border-gray-300
+                bg-white
+                hover:border-blue-600
+                focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                cursor-pointer
+                checked:bg-blue-600 checked:border-blue-600
+                checked:after:content-['']
+                checked:after:block
+                checked:after:w-[6px] checked:after:h-[10px]
+                checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+                checked:after:rotate-45
+                checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+              "
             />
 
             <span className="text-sm text-gray-700">
@@ -225,37 +155,43 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
             </span>
           </div>
 
-          {selectedItems.length > 0 && (
-            <div className="flex items-center gap-3">
-              {/* Only show Enrich button for B2C */}
-              {!isB2B && config.hasEnrichment && (
+          <div className="flex items-center gap-3">
+            {/* Conditional buttons - only show when items selected */}
+            {selectedItems.length > 0 && (
+              <>
+                {/* Only show Enrich button for B2C */}
+                {!isB2B && config.hasEnrichment && (
+                  <button
+                    onClick={handleEnrichAll}
+                    className="bg-[#3C49F7] text-white px-4 py-1.5 rounded-full text-sm font-medium"
+                  >
+                    Enrich Profile
+                  </button>
+                )}
                 <button
-                  onClick={handleEnrichAll}
-                  className="bg-[#3C49F7] text-white px-4 py-1.5 rounded-full text-sm font-medium"
+                  onClick={handleAddAllToProject}
+                  className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full text-sm font-medium hover:border-[#3C49F7] hover:text-[#3C49F7] transition-colors"
                 >
-                  Enrich Profile
+                  Add to Project
                 </button>
-              )}
-              <button
-                onClick={handleAddAllToProject}
-                className="border border-gray-300 text-gray-700 px-4 py-1.5 rounded-full text-sm font-medium hover:border-[#3C49F7] hover:text-[#3C49F7] transition-colors"
-              >
-                Add to Project
-              </button>
+              </>
+            )}
 
-              {/* Three Dots Menu - Only for B2C */}
-              {!isB2B && (
-                <ExportDropdown />
-              )}
-            </div>
-          )}
+            {/* Export Leads - Always visible */}
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="text-[#3C49F7] px-4 py-1.5 rounded-full text-sm font-medium border border-transparent hover:border-[#3C49F7] transition-colors"
+            >
+              Export Leads
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Items List */}
       <div className="flex-1 h-5 z-[0]">
         <div className="space-y-1">
-          {paginatedItems.map((item) => (
+          {paginatedItems.map((item) =>
             isB2B ? (
               <CompanyCard
                 key={item.id}
@@ -273,16 +209,8 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
                 onEnrich={handleEnrich}
                 onAddToProject={handleAddToProject}
               />
-              //           <ProfileCard
-              //   key={profile.id}
-              //   profile={profile}
-              //   isSelected={selectedProfiles.includes(profile.id)}
-              //   onSelect={handleSelectProfile}
-              //   onEnrich={handleEnrichProfile}
-              //   onAddToProject={handleAddToProject}
-              // />
             )
-          ))}
+          )}
         </div>
 
         {/* Pagination */}
@@ -306,7 +234,12 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
         context={context}
       />
 
-      
+      {/* Export Leads Modal */}
+      <ExportLeadsModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportLeads}
+      />
     </div>
   );
 }
