@@ -248,7 +248,7 @@ export const Pagination = ({
 
 // Loading Spinner
 export const LoadingSpinner = () => (
-  <div className="flex items-center justify-center gap-1">
+  <div className="flex items-center justify-center py-3 gap-1">
     <div className="w-2 h-2 bg-gray-800 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
     <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />

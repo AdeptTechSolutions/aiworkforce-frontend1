@@ -5,7 +5,11 @@ import { CompanyCard } from "../profiles/CompanyCard";
 import { Pagination } from "../common/CommonComponents";
 import { AddToProjectModal, ExportLeadsModal } from "../modals/Modals";
 
-export default function SearchResultsView({ mode = "b2c", config, context }) {
+export default function SearchResultsView({ mode = "b2c", config, context, searchType }) {
+  // Default searchType based on mode
+  const effectiveSearchType = searchType || (mode === "b2b" ? "basic" : "individual");
+  // ↑ Added searchType as a prop with default value
+  
   const {
     selectedProfiles,
     toggleProfileSelection,
@@ -59,7 +63,6 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
   // Handler for export
   const handleExportLeads = (exportType) => {
     console.log("Exporting as:", exportType);
-    // Add your export logic here
   };
 
   const handleEnrichAll = () => {
@@ -173,8 +176,8 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
                     onClick={handleEnrichAll}
                     disabled={isEnrichingAll}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all min-w-[120px] ${isEnrichingAll
-                        ? "bg-[#3C49F7] text-white cursor-wait"
-                        : "bg-[#3C49F7] text-white hover:bg-blue-700"
+                      ? "bg-[#3C49F7] text-white cursor-wait"
+                      : "bg-[#3C49F7] text-white hover:bg-blue-700"
                       }`}
                   >
                     {isEnrichingAll ? (
@@ -219,6 +222,8 @@ export default function SearchResultsView({ mode = "b2c", config, context }) {
                 isSelected={selectedItems.includes(item.id)}
                 onSelect={toggleSelection}
                 onAddToProject={handleAddToProject}
+                searchType={effectiveSearchType}
+                context={context}
               />
             ) : (
               <ProfileCard

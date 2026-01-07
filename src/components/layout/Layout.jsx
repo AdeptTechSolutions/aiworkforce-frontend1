@@ -1,28 +1,28 @@
 // components/Layout.jsx
 import { useState, useEffect, useRef } from "react";
-import { navItems, userData, appInfo } from "../data/mockData";
-import { salesAgentNavItems } from "../data/salesAgentData";
-import logo from "../assets/Logo.png";
-import backgroundImage from "../assets/Background.png";
-import { useSearch } from "../context/SearchContext";
-import { useB2BSearch } from "../context/B2BSearchContext";
+import { navItems, userData, appInfo } from "../../data/mockData";
+import { salesAgentNavItems } from "../../data/salesAgentData";
+import logo from "../../assets/Logo.png";
+import backgroundImage from "../../assets/Background.png";
+// import { useSearch } from "../context/SearchContext";
+// import { useB2BSearch } from "../context/B2BSearchContext";
 
-import AnalyticsIcon from "../assets/icons/analytics.svg?react";
-import SalesIcon from "../assets/icons/salesAgent.svg?react";
-import MarketingIcon from "../assets/icons/marketing.svg?react";
-import SupportIcon from "../assets/icons/support.svg?react";
-import TrainIcon from "../assets/icons/train.svg?react";
-import IntegrationIcon from "../assets/icons/integration.svg?react";
-import SettingsIcon from "../assets/icons/settings.svg?react";
-import BellIcon from "../assets/icons/bell.svg?react";
+import AnalyticsIcon from "../../assets/icons/analytics.svg?react";
+import SalesIcon from "../../assets/icons/salesAgent.svg?react";
+import MarketingIcon from "../../assets/icons/marketing.svg?react";
+import SupportIcon from "../../assets/icons/support.svg?react";
+import TrainIcon from "../../assets/icons/train.svg?react";
+import IntegrationIcon from "../../assets/icons/integration.svg?react";
+import SettingsIcon from "../../assets/icons/settings.svg?react";
+import BellIcon from "../../assets/icons/bell.svg?react";
 
-import OrganicIcon from "../assets/icons/organic.svg?react";
-import CampaignIcon from "../assets/icons/campaign.svg?react";
-import CalendarIcon from "../assets/icons/calender.svg?react";
-import InboxIcon from "../assets/icons/inbox1.svg?react";
-import CallLogsIcon from "../assets/icons/call-logs.svg?react";
+import OrganicIcon from "../../assets/icons/organic.svg?react";
+import CampaignIcon from "../../assets/icons/campaign.svg?react";
+import CalendarIcon from "../../assets/icons/calender.svg?react";
+import InboxIcon from "../../assets/icons/inbox1.svg?react";
+import CallLogsIcon from "../../assets/icons/call-logs.svg?react";
 
-import CreditsPage from "../pages/CreditsPage";
+import CreditsPage from "../../pages/CreditsPage";
 
 const navIcons = {
     analytics: AnalyticsIcon,
@@ -121,9 +121,9 @@ const SalesNavItem = ({ item, isActive, onClick, isExpanded }) => {
     );
 };
 
-export default function Layout({ children, activePage, setActivePage }) {
+export default function Layout({ children, activePage, setActivePage, credits }) {
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
-    const [activeSalesTab, setActiveSalesTab] = useState("b2c");
+    // const [activeSalesTab, setActiveSalesTab] = useState("b2c");
     const [previousPage, setPreviousPage] = useState(null); // Track previous page for back navigation
 
     const profileRef = useRef(null);
@@ -140,12 +140,12 @@ export default function Layout({ children, activePage, setActivePage }) {
     }, []);
 
     // Get credits from both contexts
-    const { credits: b2cCredits } = useSearch();
-    const { credits: b2bCredits } = useB2BSearch();
+    // const { credits: b2cCredits } = useSearch();
+    // const { credits: b2bCredits } = useB2BSearch();
 
     // Determine which credits to show based on active page
-    const displayCredits = activePage === "b2b" ? b2bCredits : b2cCredits;
-
+    // const displayCredits = activePage === "b2b" ? b2bCredits : b2cCredits;
+    const displayCredits = credits ?? 0;
     // Check if we're in a sales agent view (B2C or B2B)
     const isInSalesAgent = activePage === "b2c" || activePage === "b2b";
 
@@ -182,13 +182,19 @@ export default function Layout({ children, activePage, setActivePage }) {
 
                 {/* Right side */}
                 <div className="flex items-center h-[42px] gap-4">
-                    {/* Show "Get Credits now!" text on credits page */}
-                    {isOnCreditsPage && (
-                        <span className="text-sm text-gray-600">Get Credits now!</span>
+                    {/* Show "Get Credits now!" when out of credits OR on credits page - NOW CLICKABLE */}
+                    {(isOnCreditsPage || displayCredits <= 0) && (
+                        <button
+                            onClick={handleBuyCreditsClick}
+                            className="text-sm text-gray-600 hover:text-[#3C49F7] hover:font-bold hover:underline transition-colors cursor-pointer"
+                        >
+                            Get Credits now!
+                        </button>
                     )}
 
                     <div className="flex items-center bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-900">
-                        <span className="text-[14px] font-semibold italic text-gray-900 mr-3">
+                        <span className={`text-[14px] font-semibold italic mr-3 ${displayCredits <= 0 ? "text-red-500" : "text-gray-900"
+                            }`}>
                             {displayCredits} Credits
                         </span>
                         <button
@@ -198,6 +204,8 @@ export default function Layout({ children, activePage, setActivePage }) {
                             Buy Credits
                         </button>
                     </div>
+
+                    {/* Rest of header (bell icon, profile) remains the same */}
                     <button className="bg-white rounded-full p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-all">
                         <Icon name="bell" />
                     </button>

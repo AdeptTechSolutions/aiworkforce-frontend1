@@ -1,118 +1,362 @@
 // components/profiles/CompanyCard.jsx
 import { useState } from "react";
+import VerifiedIcon from "../../assets/icons/Verified.svg";
+// Icons
+const WebsiteIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
 
-export const CompanyCard = ({ company, isSelected, onSelect, onAddToProject }) => {
+const InstagramIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+  </svg>
+);
+
+const LinkedinIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect x="2" y="9" width="4" height="12" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+
+const EmailIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const QRIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+  </svg>
+);
+
+const LoadingDots = () => (
+  <div className="flex items-center justify-center py-1.5 gap-2">
+    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
+    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></span>
+    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
+  </div>
+);
+
+
+
+// Director Card Component
+const DirectorCard = ({ director, onEnrich, isLoading }) => {
+  const isEnriched = director.isEnriched;
+
+  const [isEnriching, setIsEnriching] = useState(false);
+ const handleEnrich = async () => {
+    if (isEnriching || profile.isEnriched) return;
+    
+    setIsEnriching(true);
+    
+    // Simulate loading delay (or wait for actual API call)
+    setTimeout(() => {
+      onEnrich(profile.id);
+      setIsEnriching(false);
+    }, 2000);
+  }
+
+  // Display values based on enrichment status
+  const displayName = isEnriched ? director.name : director.maskedName;
+  const displayPhones = isEnriched ? director.phones : director.maskedPhones;
+  const displayEmail = isEnriched ? director.email : director.maskedEmail;
+  const displaySecondaryEmail = isEnriched ? director.secondaryEmail : director.maskedSecondaryEmail;
+  const domain = director.email?.split('@')[1] || 'company.com';
+
   return (
-    <div
-      className={`bg-white rounded-xl border-2 transition-all duration-200 hover:shadow-md ${
-        isSelected ? "border-blue-500 bg-blue-50/30" : "border-gray-100"
-      }`}
-    >
-      <div className="p-4">
-        <div className="flex items-center gap-4">
-          {/* Checkbox */}
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onSelect(company.id)}
-            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-          />
+    <div className="border-l border-gray-300 p-2 min-w-[240px] flex-shrink-0">
+      {/* Name */}
+      <div className="flex items-center gap-2 mb-3">
+        <EmailIcon />
+        <span className={`text-gray-700 ${!isEnriched ? 'italic' : ''}`}>
+          {displayName}
+        </span>
+      </div>
 
-          {/* Company Logo */}
-          <div className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
-            <img
-              src={company.logo}
-              alt={company.name}
-              className="w-10 h-10 object-contain"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=random&size=80`;
-              }}
-            />
+      {/* Domain */}
+      <div className="flex items-center gap-2 mb-3">
+        <QRIcon />
+        <span className="text-gray-600">@ {domain}</span>
+      </div>
+
+      {/* Phone Numbers */}
+      <div className="flex items-start gap-2 mb-3">
+        <PhoneIcon className="mt-1" />
+        <div className="flex flex-col text-gray-600">
+          {displayPhones?.map((phone, idx) => (
+            <span key={idx} className={!isEnriched ? 'italic' : ''}>
+              {phone}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Emails */}
+      <div className="flex items-start gap-2 mb-4">
+        <EmailIcon className="mt-1" />
+        <div className="flex flex-col">
+          <a
+            href={isEnriched ? `mailto:${displayEmail}` : '#'}
+            className={`text-[#3C49F7] ${!isEnriched ? 'italic pointer-events-none' : 'hover:underline'}`}
+          >
+            {displayEmail}
+          </a>
+          <a
+            href={isEnriched ? `mailto:${displaySecondaryEmail}` : '#'}
+            className={`text-[#3C49F7] ${!isEnriched ? 'italic pointer-events-none' : 'hover:underline'}`}
+          >
+            {displaySecondaryEmail}
+          </a>
+        </div>
+      </div>
+
+      {/* Enrich Button or Enriched Badge */}
+       {/* Enrich Button */}
+                {isEnriched ? (
+                  <button
+                    onClick={handleEnrich}
+                    disabled={isEnriching}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all min-w-[120px] ${
+                      isEnriching
+                        ? "bg-[#3C49F7] text-white cursor-wait"
+                        : "bg-[#3C49F7] text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isEnriching ? <LoadingDots /> : "Enrich Profile"}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F2F2FF] rounded text-[#0028B6]">
+                      <img src={VerifiedIcon} alt="linkedin" className="w-7 h-7" />
+                      <span className="text-[12px] font-semibold">Enriched Contact</span>
+                    </div>
+                )}
+      {/* {isEnriched ? (
+        <div className="flex items-center gap-2 text-[#3C49F7]">
+          <div className="w-5 h-5 bg-[#3C49F7] rounded flex items-center justify-center">
+            <CheckIcon />
           </div>
+          <span className="font-medium">Enriched Contact</span>
+        </div>
+      ) : (
+        <button
+          onClick={onEnrich}
+          disabled={isLoading}
+          className="bg-[#3C49F7] text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Enriching...' : 'Enrich profile'}
+        </button>
+      )} */}
+    </div>
+  );
+};
 
-          {/* Company Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-lg">{company.name}</h3>
-            <p className="text-gray-500 text-sm">{company.location}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-gray-500 text-sm">Company:</span>
-              <span className="text-blue-600 text-sm font-medium">{company.status}</span>
+// Main Company Card Component
+export const CompanyCard = ({
+  company,
+  isSelected,
+  onSelect,
+  onAddToProject,
+  searchType = "basic",
+  context,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [enrichingDirectorId, setEnrichingDirectorId] = useState(null);
+  
+  const isAdvanceMode = searchType === "advance";
 
-              {/* Social Icons */}
-              <div className="flex items-center gap-1.5 ml-2">
-                {/* Website */}
-                <a
-                  href={`https://${company.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </a>
+  // Get enrichment functions from context
+  const { enrichDirector } = context || {};
 
-                {/* Instagram */}
-                {company.hasInstagram && (
-                  <a
-                    href="#"
-                    className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <svg className="w-3.5 h-3.5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                    </svg>
-                  </a>
-                )}
+  // Calculate enriched directors count
+  const enrichedCount = company.directors?.filter(d => d.isEnriched).length || 0;
+  const hasEnriched = enrichedCount > 0;
 
-                {/* LinkedIn */}
-                {company.hasLinkedin && (
-                  <a
-                    href="#"
-                    className="w-6 h-6 rounded-full bg-[#0077B5] flex items-center justify-center hover:bg-[#006097] transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                    </svg>
-                  </a>
-                )}
-              </div>
+  // Handle director enrichment
+  const handleEnrichDirector = async (directorId) => {
+    if (!enrichDirector) return;
+    
+    setEnrichingDirectorId(directorId);
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      enrichDirector(company.id, directorId);
+      setEnrichingDirectorId(null);
+    }, 500);
+  };
+
+  return (
+    <div className="bg-[#FBFBFF] rounded-lg overflow-hidden hover:bg-[#F4F5FB]">
+      {/* Main Card Row */}
+      <div className="flex items-center p-4 gap-4">
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onSelect(company.id)}
+          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+        />
+
+        {/* Company Logo */}
+        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+          <img
+            src={company.logo}
+            alt={company.name}
+            className="w-full h-full object-contain"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = `
+                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-xl">
+                  ${company.name.charAt(0).toUpperCase()}
+                </div>
+              `;
+            }}
+          />
+        </div>
+
+        {/* Company Info */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 text-lg">{company.name}</h3>
+          <p className="text-sm text-gray-600">{company.location}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm text-gray-500">Company:</span>
+            <span className="text-sm font-medium text-[#3C49F7] italic">
+              {company.status}
+            </span>
+            {/* Social Icons */}
+            <div className="flex items-center gap-1 ml-2 text-gray-400">
+              {company.hasWebsite && <WebsiteIcon />}
+              {company.hasInstagram && <InstagramIcon />}
+              {company.hasLinkedin && <LinkedinIcon />}
             </div>
           </div>
+        </div>
 
-          {/* Contact Info & Actions */}
-          <div className="flex items-center gap-6">
-            {/* Phone */}
+        {/* Basic Mode: Phone & Email */}
+        {!isAdvanceMode && (
+          <>
             <div className="flex items-center gap-2 text-gray-600">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
+              <PhoneIcon />
               <span className="text-sm">{company.phone}</span>
             </div>
-
-            {/* Email */}
-            <div className="flex items-center gap-2 text-gray-600">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <a href={`mailto:${company.email}`} className="text-sm text-blue-600 hover:underline">
+            <div className="flex items-center gap-2">
+              <EmailIcon />
+              <a href={`mailto:${company.email}`} className="text-sm text-[#3C49F7]">
                 {company.email}
               </a>
             </div>
+          </>
+        )}
 
-            {/* Add to Project Button */}
+        {/* Advance Mode: Active Since & View Directors */}
+        {isAdvanceMode && (
+          <>
+            <div className="text-gray-600 text-sm">
+              <span>Active Since</span>
+              <span className="font-medium ml-2">{company.incorporatedDate}</span>
+            </div>
+
             <button
-              onClick={() => onAddToProject(company)}
-              className="px-4 py-2 border-2 border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-[#3C49F7] text-sm font-medium hover:underline whitespace-nowrap"
             >
-              Add to Project
+              {isExpanded ? "View Less" : "View Active Directors"}
             </button>
+          </>
+        )}
+
+        {/* Enriched Contact Badge (only in Advance mode when enriched) */}
+        {isAdvanceMode && hasEnriched && (
+          <div className="flex items-center gap-2 text-[#3C49F7]">
+            <div className="w-5 h-5 bg-[#3C49F7] rounded flex items-center justify-center">
+              <CheckIcon />
+            </div>
+            <span className="text-sm font-medium whitespace-nowrap">Enriched Contact</span>
+          </div>
+        )}
+
+        {/* Add to Project Button */}
+        <button
+          onClick={() => onAddToProject(company)}
+          className="px-4 py-2 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-[#3C49F7] hover:text-[#3C49F7] transition-colors whitespace-nowrap"
+        >
+          Add to Project
+        </button>
+      </div>
+
+      {/* Expanded Section (Advance Mode Only) */}
+      {isAdvanceMode && isExpanded && (
+        <div className="border-t border-gray-100 p-6 bg-white">
+          {/* SIC Codes */}
+          <div className="flex gap-8 mb-6 border-b border-gray-300">
+            <div className="w-28 flex-shrink-0">
+              <h4 className="font-semibold text-gray-900">SIC Codes</h4>
+            </div>
+            <ul className="list-disc list-inside text-gray-600 space-y-1 text-sm mb-3">
+              {company.sicCodes?.map((code, idx) => (
+                <li key={idx}>{code}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Active Directors */}
+          <div className="flex gap-4">
+            <div className="w-28 flex-shrink-0">
+              <h4 className="font-semibold text-gray-900">Active</h4>
+              <h4 className="font-semibold text-gray-900">Director &</h4>
+              <h4 className="font-semibold text-gray-900">Contact Info</h4>
+            </div>
+            <div className="flex gap-1 overflow-x-auto pb-2">
+              {company.directors?.map((director) => (
+                <DirectorCard
+                  key={director.id}
+                  director={director}
+                  onEnrich={() => handleEnrichDirector(director.id)}
+                  isLoading={enrichingDirectorId === director.id}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="text-[#3C49F7] text-sm font-medium hover:underline"
+            >
+              View Less
+            </button>
+            {enrichedCount > 0 && (
+              <span className="text-[#3C49F7] text-sm font-medium italic">
+                {enrichedCount} Credit{enrichedCount > 1 ? 's' : ''} Used
+              </span>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

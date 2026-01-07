@@ -9,13 +9,13 @@ import {
   SearchSavedModal,
   LoadingModal,
   ExportLeadsModal,
+  OutOfCreditsModal,
 } from "../components/modals/Modals";
 import { footerLinks } from "../data/salesAgentData";
 import { getAgentConfig } from "../data/agentConfig";
 import logo from "../assets/Logo -.png";
 import logofooter from "../assets/Logo-footer.svg";
 import { useSearch } from "../context/SearchContext";
-
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -24,12 +24,12 @@ const SearchIcon = () => (
   </svg>
 );
 
-export default function SalesAgentContent({ mode = "b2c" }) {
+export default function SalesAgentContent({ mode = "b2c", setActivePage, credits, setCredits }) {
   // Get the appropriate context based on mode
   const b2cContext = useSearch();
   const b2bContext = useB2BSearch();
-  const { hasSearched } = useSearch();
   const context = mode === "b2b" ? b2bContext : b2cContext;
+  const { hasSearched } = context;
   const config = getAgentConfig(mode);
 
   const {
@@ -38,33 +38,33 @@ export default function SalesAgentContent({ mode = "b2c" }) {
     removeFilter,
     clearFilters,
     loadSavedSearch,
-    // hasSearched,
     setHasSearched,
+    showOutOfCreditsModal,
+    setShowOutOfCreditsModal,
   } = context;
 
   // Search type state - uses first option from config
-  const [searchType, setSearchType] = useState(config.searchTypes[0].key);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchType, setLocalSearchType] = useState(config.searchTypes[0].key);
 
+  // For B2B, sync with context's searchType
+  const searchType = mode === "b2b" ? (b2bContext.searchType || localSearchType) : localSearchType;
+  const setSearchType = mode === "b2b" ? b2bContext.setSearchType : setLocalSearchType;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Reset search type when mode changes
   useEffect(() => {
-    setSearchType(config.searchTypes[0].key);
+    if (mode === "b2b") {
+      b2bContext.setSearchType(config.searchTypes[0].key);
+    } else {
+      setLocalSearchType(config.searchTypes[0].key);
+    }
   }, [mode, config.searchTypes]);
 
   // Modal states
-  // const [saveSearchModal, setSaveSearchModal] = useState(false);
-  // // const [loadSearchModal, setLoadSearchModal] = useState(false);
-  // const [searchSavedModal, setSearchSavedModal] = useState(false);
-  // // const [loadingModal, setLoadingModal] = useState(false);
-  // const [showLoadingModal, setShowLoadingModal] = useState(false);
-  // const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
-
- // Modal states
-const [saveSearchModal, setSaveSearchModal] = useState(false);
-const [searchSavedModal, setSearchSavedModal] = useState(false);
-const [showLoadingModal, setShowLoadingModal] = useState(false);
-const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
+  const [saveSearchModal, setSaveSearchModal] = useState(false);
+  const [searchSavedModal, setSearchSavedModal] = useState(false);
+  const [showLoadingModal, setShowLoadingModal] = useState(false);
+  const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
 
   const handleSaveSearch = (searchName) => {
     if (context.saveCurrentSearch) {
@@ -74,36 +74,81 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
     setSearchSavedModal(true);
   };
 
-  // const handleLoadSearch = (savedSearch) => {
-  //   setLoadingModal(true);
-  //   setTimeout(() => {
-  //     loadSavedSearch(savedSearch);
-  //     setLoadingModal(false);
-  //     setHasSearched(true);
-  //   }, 1500);
-  // };
+//   const handleLoadSearch = (selectedSearch) => {
+//     setShowLoadSearchModal(false);
+//     setShowLoadingModal(true);
 
-  const handleLoadSearch = (selectedSearch) => {
-  setShowLoadSearchModal(false);  // Close load search modal
-  setShowLoadingModal(true);       // Show loading modal
-  
+//     setTimeout(() => {
+//       setShowLoadingModal(false);
+//       loadSavedSearch(selectedSearch);
+
+//       // ✅ FIX: Ensure B2B saved searches open in Advanced mode
+//   //     if (mode === "b2b" && selectedSearch.searchType) {
+//   // setSearchType(selectedSearch.searchType);
+// // }
+//     }, 2000);
+//   };
+
+const handleLoadSearch = (selectedSearch) => {
+  setShowLoadSearchModal(false);
+  setShowLoadingModal(true);
+
   setTimeout(() => {
     setShowLoadingModal(false);
+    
+    // For B2B, set searchType BEFORE loading the search
+    if (mode === "b2b" && selectedSearch.searchType) {
+      b2bContext.setSearchType(selectedSearch.searchType);
+    }
+    
     loadSavedSearch(selectedSearch);
-    setHasSearched(true);
   }, 2000);
 };
 
   const handleSearch = () => {
-  if (searchQuery.trim() || activeFilters.length > 0) {
-    setShowLoadingModal(true);
-    setTimeout(() => {
-      setShowLoadingModal(false);
-      setHasSearched(true);
-    }, 1500);
-  }
-};
+    if (searchQuery.trim() || activeFilters.length > 0) {
+      setShowLoadingModal(true);
+      setTimeout(() => {
+        setShowLoadingModal(false);
+        setHasSearched(true);
+      }, 1500);
+    }
+  };
 
+  // ✅ NEW: Handle enriching individual directors
+  const handleEnrichProfile = (company, director, directorIndex) => {
+    // Check if user has credits
+    if (!credits || credits <= 0) {
+      setShowOutOfCreditsModal(true);
+      return;
+    }
+
+    // Deduct 1 credit
+    setCredits(prev => prev - 1);
+
+    // Update the director's enriched status in the appropriate context
+    if (mode === "b2b" && b2bContext.setCompanies) {
+      b2bContext.setCompanies(prevCompanies =>
+        prevCompanies.map(c =>
+          c.id === company.id
+            ? {
+                ...c,
+                directors: c.directors.map((d, idx) =>
+                  idx === directorIndex
+                    ? {
+                        ...d,
+                        enriched: true,
+                        phones: ['+44 - 123 12 332', '+44 - 123 12 332', '+44 - 123 12 332'],
+                        alternateEmails: ['radio@amazon.com', 'radio@amazon.com']
+                      }
+                    : d
+                )
+              }
+            : c
+        )
+      );
+    }
+  };
 
   return (
     <div className="pt-3 flex flex-col h-full overflow-scroll scrollbar-hide">
@@ -117,10 +162,11 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
                 <button
                   key={type.key}
                   onClick={() => setSearchType(type.key)}
-                  className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${searchType === type.key
+                  className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                    searchType === type.key
                       ? "bg-gray-900 text-white shadow-sm"
                       : "text-gray-600 hover:text-gray-800"
-                    }`}
+                  }`}
                 >
                   {type.label}
                 </button>
@@ -145,7 +191,14 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col rounded shadow-sm overflow-auto">
           {hasSearched ? (
-            <SearchResultsView mode={mode} config={config} context={context} />
+            <SearchResultsView 
+              mode={mode} 
+              config={config} 
+              context={context} 
+              searchType={searchType}
+              onEnrichProfile={handleEnrichProfile}
+              credits={credits}
+            />
           ) : (
             <>
               {/* Search Content */}
@@ -154,10 +207,6 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
                   {/* Logo */}
                   <div className="flex items-center justify-center gap-3 mb-0">
                     <img src={logo} alt="Logo" className="w-72 h-32 object-contain" />
-                    {/* <div className="text-left">
-                      <div className="font-bold text-2xl text-gray-800">AI workforce</div>
-                      <div className="text-gray-500">Create an AI employee</div>
-                    </div> */}
                   </div>
 
                   {/* Heading */}
@@ -184,17 +233,15 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
                   </div>
                 </div>
               </div>
-
-
             </>
           )}
         </div>
-
       </div>
+
       {/* Footer */}
       <footer className="bg-white h-[24px] p-5 flex items-center justify-between">
         <div className="flex items-center gap-1 text-[#000000]">
-          <img src={logofooter} alt="Logo" className="w-5 h-4  object-contain" />
+          <img src={logofooter} alt="Logo" className="w-5 h-4 object-contain" />
           <span>© 2025 aiworkforce.co.uk</span>
         </div>
         <nav className="flex items-center gap-6">
@@ -211,29 +258,34 @@ const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
       </footer>
 
       {/* Modals */}
-{/* Modals */}
-<SaveSearchModal
-  isOpen={saveSearchModal}
-  onClose={() => setSaveSearchModal(false)}
-  onSave={handleSaveSearch}
-/>
+      <SaveSearchModal
+        isOpen={saveSearchModal}
+        onClose={() => setSaveSearchModal(false)}
+        onSave={handleSaveSearch}
+      />
 
-<LoadSearchModal
-  isOpen={showLoadSearchModal}
-  onClose={() => setShowLoadSearchModal(false)}
-   onLoadSearch={handleLoadSearch}
-  savedSearches={config.savedSearches}
-/>
+      <LoadSearchModal
+        isOpen={showLoadSearchModal}
+        onClose={() => setShowLoadSearchModal(false)}
+        onLoadSearch={handleLoadSearch}
+        savedSearches={config.savedSearches}
+      />
 
-<SearchSavedModal
-  isOpen={searchSavedModal}
-  onClose={() => setSearchSavedModal(false)}
-/>
+      <SearchSavedModal
+        isOpen={searchSavedModal}
+        onClose={() => setSearchSavedModal(false)}
+      />
 
-<LoadingModal 
-  isOpen={showLoadingModal}
-  onClose={() => setShowLoadingModal(false)}
-/>
+      <LoadingModal
+        isOpen={showLoadingModal}
+        onClose={() => setShowLoadingModal(false)}
+      />
+
+      <OutOfCreditsModal
+        isOpen={showOutOfCreditsModal}
+        onClose={() => setShowOutOfCreditsModal(false)}
+        onGetCredits={() => setActivePage("credits")}
+      />
     </div>
   );
 }

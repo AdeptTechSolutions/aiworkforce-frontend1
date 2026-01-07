@@ -4,6 +4,7 @@ import { profilesData } from "../data/profilesData";
 
 const SearchContext = createContext();
 
+
 export const useSearch = () => {
   const context = useContext(SearchContext);
   if (!context) {
@@ -14,7 +15,8 @@ export const useSearch = () => {
 
 export const SearchProvider = ({ children }) => {
   // Credits state
-  const [credits, setCredits] = useState(3000);
+  const [showOutOfCreditsModal, setShowOutOfCreditsModal] = useState(false);
+  const [credits, setCredits] = useState(5);
 
   // Active filters state
   const [activeFilters, setActiveFilters] = useState([]);
@@ -116,28 +118,95 @@ const updateFilterModifier = useCallback((filterId, modifier) => {
     }
   }, [profiles, currentPage, itemsPerPage, selectedProfiles]);
 
-  // Enrich profile
-  const enrichProfile = useCallback((profileId) => {
-    if (credits < 1) return false;
-    setCredits((prev) => prev - 1);
-    setProfiles((prev) =>
-      prev.map((p) => (p.id === profileId ? { ...p, isEnriched: true } : p))
-    );
-    return true;
-  }, [credits]);
+  // // Enrich profile
+  // const enrichProfile = useCallback((profileId) => {
+  //   if (credits < 1) return false;
+  //   setCredits((prev) => prev - 1);
+  //   setProfiles((prev) =>
+  //     prev.map((p) => (p.id === profileId ? { ...p, isEnriched: true } : p))
+  //   );
+  //   return true;
+  // }, [credits]);
 
-  // Enrich multiple profiles
-  const enrichMultipleProfiles = useCallback((profileIds) => {
-    const cost = profileIds.length;
-    if (credits < cost) return false;
-    setCredits((prev) => prev - cost);
-    setProfiles((prev) =>
-      prev.map((p) =>
-        profileIds.includes(p.id) ? { ...p, isEnriched: true } : p
-      )
-    );
-    return true;
-  }, [credits]);
+  // // Enrich multiple profiles
+  // const enrichMultipleProfiles = useCallback((profileIds) => {
+  //   const cost = profileIds.length;
+  //   if (credits < cost) return false;
+  //   setCredits((prev) => prev - cost);
+  //   setProfiles((prev) =>
+  //     prev.map((p) =>
+  //       profileIds.includes(p.id) ? { ...p, isEnriched: true } : p
+  //     )
+  //   );
+  //   return true;
+  // }, [credits]);
+
+  // 2. Update your enrichProfile function to check credits
+const enrichProfile = (profileId) => {
+  // Check if user has enough credits
+  if (credits <= 0) {
+    setShowOutOfCreditsModal(true);
+    return;
+  }
+
+  setProfiles((prev) =>
+    prev.map((profile) =>
+      profile.id === profileId
+        ? { ...profile, isEnriched: true }
+        : profile
+    )
+  );
+  
+  // Deduct credits
+  setCredits((prev) => {
+    const newCredits = prev - 1;
+    if (newCredits <= 0) {
+      setShowOutOfCreditsModal(true);
+    }
+    return Math.max(0, newCredits);
+  });
+};
+
+// 3. Update enrichMultipleProfiles to check credits
+const enrichMultipleProfiles = (profileIds) => {
+  const unenrichedCount = profileIds.filter(
+    (id) => !profiles.find((p) => p.id === id)?.isEnriched
+  ).length;
+
+  // Check if user has enough credits
+  if (credits <= 0) {
+    setShowOutOfCreditsModal(true);
+    return;
+  }
+
+  // Calculate how many we can actually enrich
+  const canEnrich = Math.min(unenrichedCount, credits);
+  
+  if (canEnrich === 0) {
+    setShowOutOfCreditsModal(true);
+    return;
+  }
+
+  let enrichedCount = 0;
+  setProfiles((prev) =>
+    prev.map((profile) => {
+      if (profileIds.includes(profile.id) && !profile.isEnriched && enrichedCount < canEnrich) {
+        enrichedCount++;
+        return { ...profile, isEnriched: true };
+      }
+      return profile;
+    })
+  );
+
+  // Deduct credits
+  setCredits((prev) => {
+    const newCredits = prev - canEnrich;
+    if (newCredits <= 0) {
+      setShowOutOfCreditsModal(true);
+    }
+    return Math.max(0, newCredits);
+  });
+};
 
   // Add new project
 const addProject = useCallback((name, description) => {
@@ -182,6 +251,8 @@ const addToProject = useCallback((projectId, profileIds) => {
     // Credits
     credits,
     setCredits,
+    showOutOfCreditsModal,
+    setShowOutOfCreditsModal,
 
     // Filters
     activeFilters,

@@ -6,10 +6,10 @@ import VerifiedIcon from "../../assets/icons/Verified.svg";
 // Replace the entire ProfileCard component with this:
 
 const LoadingDots = () => (
-  <div className="flex items-center justify-center gap-2">
-    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '500ms' }}></span>
+  <div className="flex items-center justify-center py-1.5 gap-2">
+    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
     <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></span>
-    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '700ms' }}></span>
+    <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
   </div>
 );
 
@@ -132,7 +132,7 @@ export const ProfileCard = ({ profile, isSelected, onSelect, onEnrich, onAddToPr
             <button
               onClick={handleEnrich}
               disabled={isEnriching}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all min-w-[120px] ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all min-w-[120px] ${
                 isEnriching
                   ? "bg-[#3C49F7] text-white cursor-wait"
                   : "bg-[#3C49F7] text-white hover:bg-blue-700"
@@ -141,7 +141,7 @@ export const ProfileCard = ({ profile, isSelected, onSelect, onEnrich, onAddToPr
               {isEnriching ? <LoadingDots /> : "Enrich Profile"}
             </button>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1 bg-[#F2F2FF] rounded text-[#0028B6]">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F2F2FF] rounded text-[#0028B6]">
                 <img src={VerifiedIcon} alt="linkedin" className="w-7 h-7" />
                 <span className="text-[12px] font-semibold">Enriched Contact</span>
               </div>

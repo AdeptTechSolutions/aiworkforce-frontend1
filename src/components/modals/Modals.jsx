@@ -1,5 +1,6 @@
 // components/modals/Modals.jsx
 import { useState } from "react";
+import { useEffect } from "react";
 import { useSearch } from "../../context/SearchContext";
 import { Modal, LoadingSpinner, SuccessIcon } from "../common/CommonComponents";
 import { savedSearches, projects } from "../../data/profilesData";
@@ -44,6 +45,57 @@ export const SaveSearchModal = ({ isOpen, onClose, onSave }) => {
   );
 };
 
+// Credit Card Icon for the modal
+const CreditCardIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="6" y="12" width="36" height="24" rx="3" stroke="#3C49F7" strokeWidth="2" fill="none"/>
+    <line x1="6" y1="20" x2="42" y2="20" stroke="#3C49F7" strokeWidth="2"/>
+    <line x1="12" y1="28" x2="24" y2="28" stroke="#3C49F7" strokeWidth="2"/>
+    <circle cx="36" cy="12" r="8" fill="#EEF0FF" stroke="#3C49F7" strokeWidth="2"/>
+    <line x1="36" y1="8" x2="36" y2="16" stroke="#3C49F7" strokeWidth="2"/>
+    <line x1="32" y1="12" x2="40" y2="12" stroke="#3C49F7" strokeWidth="2"/>
+  </svg>
+);
+
+// Out of Credits Modal Component
+export const OutOfCreditsModal = ({ isOpen, onClose, onGetCredits }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+        {/* Icon */}
+        <div className="flex justify-center mb-6">
+          <div className="w-20 h-20 bg-[#EEF0FF] rounded-full flex items-center justify-center">
+            <CreditCardIcon />
+          </div>
+        </div>
+
+        {/* Title */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          It seems you ran out<br />of credits!
+        </h2>
+
+        {/* Subtitle */}
+        <p className="text-gray-600 mb-8">
+          Do not worry, we got you covered.
+        </p>
+
+        {/* Button */}
+        <button
+          onClick={() => {
+            onClose();
+            onGetCredits();
+          }}
+          className="w-full bg-[#3C49F7] text-white py-4 rounded-full font-medium text-lg hover:bg-[#2D3AD9] transition-colors"
+        >
+          Get more credits
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Load Search Modal
 // ============================================
 // LOAD SEARCH MODAL
@@ -52,84 +104,79 @@ export const LoadSearchModal = ({
   isOpen,
   onClose,
   savedSearches = [],
-  onLoadSearch
+  onLoadSearch,
 }) => {
   const [selectedSearch, setSelectedSearch] = useState(null);
-  const { setHasSearched, loadSavedSearch } = useSearch();
 
   const handleLoad = () => {
-  if (selectedSearch) {
-    if (onLoadSearch) {
-      onLoadSearch(selectedSearch);  // Let parent handle everything
-    }
+    if (!selectedSearch) return;
+
+    onLoadSearch?.(selectedSearch);
     setSelectedSearch(null);
-    // Don't call onClose() here - let handleLoadSearch control the flow
-  }
-};
+  };
 
   const handleClose = () => {
     setSelectedSearch(null);
     onClose();
   };
 
-  // Reset selection when modal opens/closes
-  if (!isOpen && selectedSearch) {
-    setSelectedSearch(null);
-  }
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedSearch(null);
+    }
+  }, [isOpen]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="md">
-      <h2 className="text-xl font-bold text-gray-800 mb-1">Select Saved Search</h2>
-      <p className="text-gray-500 text-sm mb-6">Load a saved search list.</p>
+      <h2 className="text-xl font-bold mb-1">Select Saved Search</h2>
+      <p className="text-gray-500 text-sm mb-6">
+        Load a saved search list.
+      </p>
 
       <div className="space-y-3 mb-6">
         {savedSearches.map((search) => (
           <button
             key={search.id}
             onClick={() => setSelectedSearch(search)}
-            className={`w-full p-4 text-left rounded-lg border transition-all duration-200 ${selectedSearch?.id === search.id
+            className={`w-full p-4 text-left rounded-lg border ${
+              selectedSearch?.id === search.id
                 ? "border-blue-600 bg-[#F2F2FF]"
                 : "border-white hover:border-blue-600 hover:bg-[#F2F2FF]"
-              }`}
+            }`}
           >
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 checked={selectedSearch?.id === search.id}
-                onChange={() => setSelectedSearch(search)}
-                onClick={(e) => e.stopPropagation()}
-                className="
-            appearance-none
-            w-[18px] h-[18px]
-            rounded-full
-            border border-gray-300
-            bg-white
-            hover:border-blue-600
-            focus:outline-none focus:ring-2 focus:ring-blue-500/30
-            cursor-pointer
+                readOnly
+                className="appearance-none
+    w-[18px] h-[18px]
+    rounded-[6px]
+    border border-gray-300
+    bg-white
+    hover:border-blue-600
+    focus:outline-none focus:ring-2 focus:ring-blue-500/30
+    cursor-pointer
 
-            checked:bg-blue-600 checked:border-blue-600
-            checked:after:content-['']
-            checked:after:block
-            checked:after:w-[6px] checked:after:h-[10px]
-            checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
-            checked:rounded
-            checked:after:rotate-45
-            checked:after:translate-x-[5px] checked:after:translate-y-[1px]
-          "
+    checked:bg-blue-600 checked:border-blue-600
+    checked:after:content-['']
+    checked:after:block
+    checked:after:w-[6px] checked:after:h-[10px]
+    checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+    checked:after:rotate-45
+    checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+  "
               />
-
-              <span className="font-medium text-gray-800">{search.name}</span>
+              <span className="font-medium">{search.name}</span>
             </div>
           </button>
         ))}
       </div>
 
-
       <button
         onClick={handleLoad}
         disabled={!selectedSearch}
-        className="w-full bg-blue-500 text-white py-3 rounded-full font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-blue-500 text-white py-3 rounded-full disabled:opacity-50"
       >
         Load Search
       </button>

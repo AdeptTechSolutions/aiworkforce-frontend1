@@ -146,31 +146,42 @@
 // export default App;
 
 // App.jsx
+// App.jsx - Updated imports
 import { useState } from "react";
 import { SearchProvider } from "./context/SearchContext";
 import { B2BSearchProvider } from "./context/B2BSearchContext";
-import Layout from "./components/Layout";
-import DashboardContent from "./components/DashboardContent";
+import Layout from "./components/layout/Layout";           // ← Updated path
+import DashboardContent from "./pages/DashboardContent";   // ← Updated path
 import SalesAgentContent from "./pages/SalesAgentContent";
+import { useSearch } from "./context/SearchContext";
+import { useB2BSearch } from "./context/B2BSearchContext";
+
 
 function AppContent() {
   const [activePage, setActivePage] = useState("analytics");
 
-  const renderContent = () => {
-    switch (activePage) {
-      case "analytics":
-        return <DashboardContent setActivePage={setActivePage} />;
-      case "b2c":
-        return <SalesAgentContent mode="b2c" />;
-      case "b2b":
-        return <SalesAgentContent mode="b2b" />;
-      default:
-        return <DashboardContent setActivePage={setActivePage} />;
-    }
-  };
+  const b2cContext = useSearch();
+const b2bContext = useB2BSearch();
+const credits =
+  activePage === "b2b"
+    ? b2bContext.credits
+    : b2cContext.credits;
+
+ const renderContent = () => {
+  switch (activePage) {
+    case "analytics":
+      return <DashboardContent setActivePage={setActivePage} />;
+    case "b2c":
+      return <SalesAgentContent mode="b2c" setActivePage={setActivePage} />;  // ← Add setActivePage
+    case "b2b":
+      return <SalesAgentContent mode="b2b" setActivePage={setActivePage} />;  // ← Add setActivePage
+    default:
+      return <DashboardContent setActivePage={setActivePage} />;
+  }
+};
 
   return (
-    <Layout activePage={activePage} setActivePage={setActivePage}>
+    <Layout activePage={activePage} setActivePage={setActivePage} credits={credits}>
       {renderContent()}
     </Layout>
   );
