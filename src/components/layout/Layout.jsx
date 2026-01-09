@@ -23,6 +23,7 @@ import InboxIcon from "../../assets/icons/inbox1.svg?react";
 import CallLogsIcon from "../../assets/icons/call-logs.svg?react";
 
 import CreditsPage from "../../pages/CreditsPage";
+import OrganicLeadBuilder from "../../pages/OrganicLeadBuilder"; // Add this import
 
 const navIcons = {
     analytics: AnalyticsIcon,
@@ -123,8 +124,7 @@ const SalesNavItem = ({ item, isActive, onClick, isExpanded }) => {
 
 export default function Layout({ children, activePage, setActivePage, credits }) {
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
-    // const [activeSalesTab, setActiveSalesTab] = useState("b2c");
-    const [previousPage, setPreviousPage] = useState(null); // Track previous page for back navigation
+    const [previousPage, setPreviousPage] = useState(null);
 
     const profileRef = useRef(null);
 
@@ -139,30 +139,36 @@ export default function Layout({ children, activePage, setActivePage, credits })
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Get credits from both contexts
-    // const { credits: b2cCredits } = useSearch();
-    // const { credits: b2bCredits } = useB2BSearch();
-
-    // Determine which credits to show based on active page
-    // const displayCredits = activePage === "b2b" ? b2bCredits : b2cCredits;
     const displayCredits = credits ?? 0;
-    // Check if we're in a sales agent view (B2C or B2B)
-    const isInSalesAgent = activePage === "b2c" || activePage === "b2b";
+    
+    // Check if we're in a sales agent view (B2C, B2B, or Organic)
+    const isInSalesAgent = activePage === "b2c" || activePage === "b2b" || activePage === "organic";
 
     // Check if we're on credits page
     const isOnCreditsPage = activePage === "credits";
+    
+    // Check if we're on organic lead builder page
+    const isOnOrganicPage = activePage === "organic";
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     // Handle navigation to credits page
     const handleBuyCreditsClick = () => {
-        setPreviousPage(activePage); // Store current page before navigating
+        setPreviousPage(activePage);
         setActivePage("credits");
     };
 
     // Handle back from credits page
     const handleBackFromCredits = () => {
-        setActivePage(previousPage || "b2c"); // Go back to previous page or default to b2c
+        setActivePage(previousPage || "b2c");
+    };
+
+    // Get sidebar title based on active page
+    const getSidebarTitle = () => {
+        if (isOnCreditsPage) return "Credits";
+        if (isOnOrganicPage) return "Sales Agent";
+        if (activePage === "b2b") return "Sales Agent";
+        return "Sales Agent";
     };
 
     return (
@@ -182,7 +188,6 @@ export default function Layout({ children, activePage, setActivePage, credits })
 
                 {/* Right side */}
                 <div className="flex items-center h-[42px] gap-4">
-                    {/* Show "Get Credits now!" when out of credits OR on credits page - NOW CLICKABLE */}
                     {(isOnCreditsPage || displayCredits <= 0) && (
                         <button
                             onClick={handleBuyCreditsClick}
@@ -193,8 +198,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                     )}
 
                     <div className="flex items-center bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-900">
-                        <span className={`text-[14px] font-semibold italic mr-3 ${displayCredits <= 0 ? "text-red-500" : "text-gray-900"
-                            }`}>
+                        <span className={`text-[14px] font-semibold italic mr-3 ${displayCredits <= 0 ? "text-red-500" : "text-gray-900"}`}>
                             {displayCredits} Credits
                         </span>
                         <button
@@ -205,10 +209,10 @@ export default function Layout({ children, activePage, setActivePage, credits })
                         </button>
                     </div>
 
-                    {/* Rest of header (bell icon, profile) remains the same */}
                     <button className="bg-white rounded-full p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-all">
                         <Icon name="bell" />
                     </button>
+                    
                     {/* Profile Dropdown */}
                     <div className="relative" ref={profileRef}>
                         <button
@@ -222,24 +226,20 @@ export default function Layout({ children, activePage, setActivePage, credits })
                             />
                         </button>
 
-                        {/* Dropdown */}
                         {isProfileOpen && (
                             <div className="absolute right-0 mt-3 w-40 bg-white rounded-xl shadow-lg border z-50">
                                 <button
                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                                     onClick={() => {
                                         setIsProfileOpen(false);
-                                        // navigate to profile
                                     }}
                                 >
                                     Profile
                                 </button>
-
                                 <button
                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                                     onClick={() => {
                                         setIsProfileOpen(false);
-                                        // logout logic
                                     }}
                                 >
                                     Logout
@@ -285,11 +285,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                             </span>
                             {sidebarExpanded && (
                                 <span className="text-[18px] font-bold text-gray-900 whitespace-nowrap px-2 py-1.5 rounded-full group-hover:border-gray-300 transition-all duration-200">
-                                    {isOnCreditsPage
-                                        ? "Credits"
-                                        : activePage === "b2b"
-                                            ? "B2B Agent"
-                                            : "Sales Agent"}
+                                    {getSidebarTitle()}
                                 </span>
                             )}
                         </button>
@@ -298,9 +294,8 @@ export default function Layout({ children, activePage, setActivePage, credits })
                     {/* Navigation */}
                     <nav className="flex flex-col flex-1">
                         {isOnCreditsPage ? (
-                            // Credits Page - Show minimal sidebar or same as sales
+                            // Credits Page Navigation
                             <>
-                                {/* Divider */}
                                 <div className="my-1.5 mx-2">
                                     <div className="h-px bg-gray-300"></div>
                                 </div>
@@ -314,7 +309,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                     </span>
                                     {sidebarExpanded && (
                                         <span className="text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100">
-                                            B2C Agent
+                                            B2C Lead Builder Agent
                                         </span>
                                     )}
                                 </button>
@@ -329,28 +324,35 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                     </span>
                                     {sidebarExpanded && (
                                         <span className="text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100">
-                                            B2B Agent
+                                            B2B Lead Builder Agent
                                         </span>
                                     )}
                                 </button>
 
+                                {/* Organic Lead Builder */}
+                                <SalesNavItem
+                                    item={{ key: "organic", name: "Organic Lead Builder Agent", icon: "organic" }}
+                                    isActive={false}
+                                    onClick={() => setActivePage("organic")}
+                                    isExpanded={sidebarExpanded}
+                                />
+
                                 {/* Other Sales Nav Items */}
                                 {salesAgentNavItems
-                                    .filter((item) => item.key !== "b2c" && item.key !== "b2b")
+                                    .filter((item) => item.key !== "b2c" && item.key !== "b2b" && item.key !== "organic")
                                     .map((item) => (
                                         <SalesNavItem
                                             key={item.key}
                                             item={item}
                                             isActive={false}
-                                            onClick={() => { }}
+                                            onClick={() => {}}
                                             isExpanded={sidebarExpanded}
                                         />
                                     ))}
                             </>
                         ) : isInSalesAgent ? (
-                            // Sales Agent Navigation (B2C/B2B)
+                            // Sales Agent Navigation (B2C/B2B/Organic)
                             <>
-                                {/* Divider */}
                                 <div className="my-1.5 mx-2">
                                     <div className="h-px bg-gray-300"></div>
                                 </div>
@@ -374,7 +376,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                                 : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100"
                                                 }`}
                                         >
-                                            B2C Agent
+                                            B2C Lead Builder Agent
                                         </span>
                                     )}
                                 </button>
@@ -399,20 +401,36 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                                 : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100"
                                                 }`}
                                         >
-                                            B2B Agent
+                                            B2B Lead Builder Agent
                                         </span>
                                     )}
                                 </button>
 
+                                {/* Organic Lead Builder - NOW CLICKABLE */}
+                                <SalesNavItem
+                                    item={{ key: "organic", name: "Organic Lead Builder Agent", icon: "organic" }}
+                                    isActive={activePage === "organic"}
+                                    onClick={() => setActivePage("organic")}
+                                    isExpanded={sidebarExpanded}
+                                />
+
+                                {/* Campaign Manager */}
+                                <SalesNavItem
+                                    item={{ key: "campaign", name: "Campaign Manager", icon: "campaign" }}
+                                    isActive={activePage === "campaign"}
+                                    onClick={() => {}}
+                                    isExpanded={sidebarExpanded}
+                                />
+
                                 {/* Other Sales Nav Items */}
                                 {salesAgentNavItems
-                                    .filter((item) => item.key !== "b2c" && item.key !== "b2b")
+                                    .filter((item) => !["b2c", "b2b", "organic", "campaign"].includes(item.key))
                                     .map((item) => (
                                         <SalesNavItem
                                             key={item.key}
                                             item={item}
                                             isActive={false}
-                                            onClick={() => { }}
+                                            onClick={() => {}}
                                             isExpanded={sidebarExpanded}
                                         />
                                     ))}
@@ -421,12 +439,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                             // Main Navigation
                             <>
                                 {navItems.map((item, idx) => (
-                                    <div
-                                        key={item.key}
-                                        style={{
-                                            marginTop: idx === navItems.length - 1 ? 0 : 0,
-                                        }}
-                                    >
+                                    <div key={item.key}>
                                         <NavItem
                                             item={item}
                                             isActive={activePage === item.key}
@@ -451,6 +464,8 @@ export default function Layout({ children, activePage, setActivePage, credits })
                     <div className="rounded-3xl h-full shadow-sm">
                         {isOnCreditsPage ? (
                             <CreditsPage userName={userData.name || "Max"} />
+                        ) : isOnOrganicPage ? (
+                            <OrganicLeadBuilder />
                         ) : (
                             children
                         )}
