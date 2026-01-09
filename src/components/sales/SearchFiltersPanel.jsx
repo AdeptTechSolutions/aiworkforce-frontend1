@@ -285,7 +285,7 @@ export default function SearchFiltersPanel({
   };
 
   return (
-    <div className="w-80 bg-white flex flex-col gap-1 rounded-b-2xl">
+    <div className="w-96 bg-white flex flex-col gap-1 rounded-b-2xl">
       {/* Header */}
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">

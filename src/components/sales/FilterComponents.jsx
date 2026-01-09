@@ -2,21 +2,41 @@
 import { useState, useRef, useEffect } from "react";
 import FilterIcon from "../../assets/icons/FilterIcon.svg";
 
+// Reusable checkbox style class
+const checkboxClassName = `
+  appearance-none
+  w-[18px] h-[18px]
+  rounded-[6px]
+  border border-gray-300
+  bg-white
+  hover:border-blue-600
+  focus:outline-none focus:ring-2 focus:ring-blue-500/30
+  cursor-pointer
+  checked:bg-blue-600 checked:border-blue-600
+  checked:after:content-['']
+  checked:after:block
+  checked:after:w-[6px] checked:after:h-[10px]
+  checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+  checked:after:rotate-45
+  checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+  flex-shrink-0
+`;
+
 // Icons
 export const ChevronLeft = ({ className = "" }) => (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M15 18l-6-6 6-6" />
     </svg>
 );
 
 export const ChevronDown = ({ className = "" }) => (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M6 9l6 6 6-6" />
     </svg>
 );
 
 export const ChevronRight = ({ className = "" }) => (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M9 18l6-6-6-6" />
     </svg>
 );
@@ -90,9 +110,9 @@ export const ModifierButton = ({ filterId, filterKey, value, icon, isSelected, a
             <button
                 ref={btnRef}
                 onClick={() => setShowModifier(!showModifier)}
-                className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-1 hover:bg-gray-200 rounded opacity-100 group-hover:opacity-100 transition-opacity"
             >
-                <img src={FilterIcon} alt="filter" className="w-4 h-4" />
+                <img src={FilterIcon} alt="filter" className="w-6 h-6" />
             </button>
             <ModifierDropdown
                 isOpen={showModifier}
@@ -135,7 +155,7 @@ export const FilterSection = ({ title, count, children, defaultOpen = false }) =
                 </span>
             </button>
             <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}>
-                <div className="px-3 pb-4 pt-2">{children}</div>
+                <div className="px-1 pb-4 pt-2">{children}</div>
             </div>
         </div>
     );
@@ -215,12 +235,27 @@ export const SelectedFilterItem = ({ filter, hasModifier, onRemove, onUpdateModi
     const btnRef = useRef(null);
 
     return (
-        <div className="flex items-center justify-between py-2 px-2 bg-gray-50 rounded-lg group">
-            <button onClick={onRemove} className="flex items-center gap-2 flex-1 text-left">
-                <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center">
+        <div className="flex items-center gap-0 px-2 hover:bg-gray-50 rounded-lg group flex-nowrap whitespace-nowrap [&>*]:shrink-0">
+            <button onClick={onRemove} className="flex items-center gap-2 appearance-none
+  w-[18px] h-[18px]
+  rounded-[6px]
+  border border-gray-300
+  bg-white
+  hover:border-blue-600
+  focus:outline-none focus:ring-2 focus:ring-blue-500/30
+  cursor-pointer
+  checked:bg-blue-600 checked:border-blue-600
+  checked:after:content-['']
+  checked:after:block
+  checked:after:w-[6px] checked:after:h-[10px]
+  checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+  checked:after:rotate-45
+  checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+  flex-shrink-0">
+                {/* <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center">
                     <CheckIcon />
-                </div>
-                <span className="text-sm text-gray-700">{filter.value}</span>
+                </div> */}
+                <span className="text-[14px] text-[#0C1112]">{filter.value}</span>
             </button>
             {hasModifier && (
                 <div className="relative">
@@ -348,9 +383,9 @@ export const ExpandableCheckboxItem = ({ option, isSelected, isExpanded, hasModi
     const btnRef = useRef(null);
 
     return (
-        <div className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-lg group">
+        <div className="flex items-center gap-0 px-2 hover:bg-gray-50 rounded-lg group flex-nowrap whitespace-nowrap [&>*]:shrink-0">
             {/* Left side: Chevron + Checkbox + Label */}
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-0 flex-1">
                 {/* Chevron for expandable items */}
                 {option.hasChildren ? (
                     <button onClick={onToggleExpand} className="p-0.5">
@@ -361,15 +396,24 @@ export const ExpandableCheckboxItem = ({ option, isSelected, isExpanded, hasModi
                 )}
 
                 {/* Checkbox + Label */}
-                <button onClick={onSelect} className="flex items-center gap-2 flex-1 text-left">
-                    <div className={`w-5 h-5 rounded flex items-center justify-center border-2 ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
+                <button onClick={onSelect} className="flex items-center gap-6 appearance-none
+  w-[18px] h-[18px]
+  rounded-[6px]
+  border border-gray-300
+  bg-white
+  hover:border-blue-600
+  focus:outline-none focus:ring-2 focus:ring-blue-500/30
+  cursor-pointer
+ 
+  flex-shrink-0">
+                    <div className={`w-5 h-5 rounded flex items-center justify-center  ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
                         {isSelected && (
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                         )}
                     </div>
-                    <span className={`text-sm ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
+                    <span className={`text-[14px] ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
                         {option.label} {option.count && <span className="text-gray-400">({option.count})</span>}
                     </span>
                 </button>
@@ -381,9 +425,9 @@ export const ExpandableCheckboxItem = ({ option, isSelected, isExpanded, hasModi
                     <button
                         ref={btnRef}
                         onClick={() => setShowModifier(!showModifier)}
-                        className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="p-1 hover:bg-gray-200 rounded opacity-100 group-hover:opacity-100 transition-opacity"
                     >
-                        <img src={FilterIcon} alt="filter" className="w-4 h-4" />
+                        <img src={FilterIcon} alt="filter" className="w-6 h-6" />
                     </button>
                     <ModifierDropdown
                         isOpen={showModifier}
@@ -404,34 +448,34 @@ export const CheckboxItem = ({ label, count, isSelected, hasModifier, currentFil
     const btnRef = useRef(null);
 
     return (
-        <div className="flex items-center justify-between py-2 px-2 hover:bg-gray-50 rounded-lg group">
-            <button onClick={onSelect} className="flex items-center gap-2 flex-1 text-left">
-                <div className={`w-5 h-5 rounded flex items-center justify-center border-2 ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
-                    {isSelected && <CheckIcon />}
-                </div>
-                <span className={`text-sm ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
-                    {label} {count && <span className="text-gray-400">({count})</span>}
-                </span>
-            </button>
-            {hasModifier && (
-                <div className="relative">
-                    <button
-                        ref={btnRef}
-                        onClick={() => setShowModifier(!showModifier)}
-                        className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                        <img src={FilterIcon} alt="filter" className="w-4 h-4" />
-                    </button>
-                    <ModifierDropdown
-                        isOpen={showModifier}
-                        onClose={() => setShowModifier(false)}
-                        onSelect={(mod) => { onModifierClick(mod); setShowModifier(false); }}
-                        currentModifier={currentFilter?.modifier}
-                        buttonRef={btnRef}
-                    />
-                </div>
-            )}
+        <div className="flex items-center justify-between px-2 hover:bg-gray-50 rounded-lg group flex-nowrap whitespace-nowrap">
+    <button onClick={onSelect} className="flex items-center gap-2">
+        <div className={`w-[18px] h-[18px] rounded-[6px] border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white hover:border-blue-600"}`}>
+            {isSelected && <CheckIcon />}
         </div>
+        <span className={`text-[14px] ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
+            {label} {count && <span className="text-gray-400">({count})</span>}
+        </span>
+    </button>
+    {hasModifier && (
+        <div className="relative">
+            <button
+                ref={btnRef}
+                onClick={() => setShowModifier(!showModifier)}
+                className="p-1 hover:bg-gray-200 rounded opacity-100 group-hover:opacity-100 transition-opacity"
+            >
+                <img src={FilterIcon} alt="filter" className="w-6 h-6" />
+            </button>
+            <ModifierDropdown
+                isOpen={showModifier}
+                onClose={() => setShowModifier(false)}
+                onSelect={(mod) => { onModifierClick(mod); setShowModifier(false); }}
+                currentModifier={currentFilter?.modifier}
+                buttonRef={btnRef}
+            />
+        </div>
+    )}
+</div>
     );
 };
 
@@ -572,37 +616,52 @@ export const LocationFilter = ({ filterKey, placeholder, options, hasRadius, has
 
                     return (
                         <div key={loc.name}>
-                            <div className="flex items-center gap-2 py-2 px-2 hover:bg-gray-50 rounded-lg group">
-                                {loc.children && (
-                                    <button onClick={() => setExpandedItems(p => ({ ...p, [loc.name]: !p[loc.name] }))} className="p-0.5">
-                                        <ChevronRight className={`text-blue-600 transition-transform ${expandedItems[loc.name] ? "rotate-90" : ""}`} />
-                                    </button>
-                                )}
-                                <button onClick={() => handleParentSelect(loc)} className="flex items-center gap-2 flex-1 text-left">
-                                    <div className={`w-5 h-5 rounded flex items-center justify-center border-2 ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
-                                        {isSelected && <CheckIcon />}
-                                    </div>
-                                    <span className="text-sm text-gray-700">{loc.name} {loc.count && <span className="text-gray-400">({loc.count})</span>}</span>
-                                </button>
-                                {hasModifier && (
-                                    <ModifierButtonInline
-                                        currentFilter={currentFilter}
-                                        onModifierClick={(mod) => handleModifierClick(loc.name, mod)}
-                                    />
-                                )}
-                            </div>
+                            <div className="flex items-center justify-between px-2 hover:bg-gray-50 rounded-lg group flex-nowrap whitespace-nowrap">
+    <div className="flex items-center gap-2 flex-1">
+        {loc.children && (
+            <button onClick={() => setExpandedItems(p => ({ ...p, [loc.name]: !p[loc.name] }))} className="p-0.5">
+                <ChevronRight className={`text-blue-600 transition-transform ${expandedItems[loc.name] ? "rotate-90" : ""}`} />
+            </button>
+        )}
+        <button 
+            onClick={() => handleParentSelect(loc)} 
+            className="flex items-center gap-2"
+        >
+            <div className={`w-[18px] h-[18px] rounded-[6px] border flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white hover:border-blue-600"}`}>
+                {isSelected && <CheckIcon />}
+            </div>
+            <span className="text-[14px] text-[#0C1112]">
+                {loc.name} {loc.count && <span className="text-gray-400">({loc.count})</span>}
+            </span>
+        </button>
+    </div>
+    {hasModifier && (
+        <ModifierButtonInline
+            currentFilter={currentFilter}
+            onModifierClick={(mod) => handleModifierClick(loc.name, mod)}
+        />
+    )}
+</div>
                             {expandedItems[loc.name] && loc.children && (
-                                <div className="ml-8 space-y-1">
+                                <div className="ml-4 space-y-1">
                                     {loc.children.map((child) => {
                                         const isChildSelected = activeFilters.some(f => f.type === filterKey && f.value === child);
                                         const childFilter = activeFilters.find(f => f.type === filterKey && f.value === child);
                                         return (
-                                            <div key={child} className="flex items-center gap-2 py-2 px-2 hover:bg-gray-50 rounded-lg group">
-                                                <button onClick={() => handleChildSelect(child)} className="flex items-center gap-2 flex-1 text-left">
-                                                    <div className={`w-5 h-5 rounded flex items-center justify-center border-2 ${isChildSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
+                                            <div key={child} className="flex items-center gap-0 px-2 hover:bg-gray-50 rounded-lg group flex-nowrap whitespace-nowrap [&>*]:shrink-0">
+                                                <button onClick={() => handleChildSelect(child)} className="flex items-center gap-2 appearance-none
+  w-[18px] h-[18px]
+  rounded-[6px]
+  border border-gray-300
+  bg-white
+  hover:border-blue-600
+  focus:outline-none focus:ring-2 focus:ring-blue-500/30
+  cursor-pointer
+  flex-shrink-0">
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center ${isChildSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>
                                                         {isChildSelected && <CheckIcon />}
                                                     </div>
-                                                    <span className="text-sm text-gray-600">{child}</span>
+                                                    <span className="text-[14px] text-[#0C1112]">{child}</span>
                                                 </button>
                                                 {hasModifier && (
                                                     <ModifierButtonInline
@@ -620,45 +679,45 @@ export const LocationFilter = ({ filterKey, placeholder, options, hasRadius, has
                 })}
             </div>
             {hasRadius && (
-                <div className="p-8 bg-gray-50 max-w-lg">
-                <div className="flex items-center gap-3 mb-5">
-                    <span className="text-xl font-semibold text-gray-800">Radius (mi)</span>
-                    <span className="w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold">?</span>
+                <div className="py-2 max-w-lg">
+                    <div className="flex items-center gap-3 mb-1">
+                        <span className="text-[15px] font-semibold text-gray-800">Radius (mi)</span>
+                        <span className="w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold">?</span>
+                    </div>
+
+                    <div className="relative h-6 flex items-center">
+
+                        <div className="absolute left-0 right-0 h-[2px] bg-gray-400 rounded-full" />
+
+
+                        {steps.map((step, index) => (
+                            <div
+                                key={step}
+                                className={`absolute h-5 w-[3px] rounded-sm ${index === 0 ? 'bg-blue-600' : 'bg-gray-400'}`}
+                                style={{
+                                    left: index === 1 ? '25%' : index === steps.length - 1 ? '100%' : `${index * 25}%`,
+                                    transform: index === steps.length - 1 ? 'translateX(-100%)' : index === 0 ? 'none' : 'translateX(-100%)'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Labels */}
+                    <div className="flex justify-between text-base font-semibold text-gray-700 mt-2">
+                        {steps.map((step, index) => (
+                            <span
+                                key={step}
+                                className={index === 0 ? 'text-blue-600' : ''}
+                            >
+                                {step}
+                            </span>
+                        ))}
+                    </div>
                 </div>
-      
-            <div className="relative h-6 flex items-center">
-               
-                <div className="absolute left-0 right-0 h-[3px] bg-gray-400 rounded-full" />
-
-               
-                {steps.map((step, index) => (
-                    <div
-                        key={step}
-                        className={`absolute h-5 w-[3px] rounded-sm ${index === 0 ? 'bg-blue-600' : 'bg-gray-400'}`}
-                        style={{
-                            left: index === 0 ? '0%' : index === steps.length - 1 ? '100%' : `${index * 25}%`,
-                            transform: index === steps.length - 1 ? 'translateX(-100%)' : index === 0 ? 'none' : 'translateX(-50%)'
-                        }}
-                    />
-                ))}
-            </div>
-
-            {/* Labels */}
-            <div className="flex justify-between text-base font-semibold text-gray-700 mt-2">
-                {steps.map((step, index) => (
-                    <span
-                        key={step}
-                        className={index === 0 ? 'text-blue-600' : ''}
-                    >
-                        {step}
-                    </span>
-                ))}
-            </div>
+            )
+            }
         </div>
-    )
-}
-        </div>
-        
+
     );
 };
 
@@ -672,9 +731,9 @@ const ModifierButtonInline = ({ currentFilter, onModifierClick }) => {
             <button
                 ref={btnRef}
                 onClick={() => setShowModifier(!showModifier)}
-                className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-1 hover:bg-gray-200 rounded opacity-100 group-hover:opacity-100 transition-opacity"
             >
-                <img src={FilterIcon} alt="filter" className="w-4 h-4" />
+                <img src={FilterIcon} alt="filter" className="w-6 h-6" />
             </button>
             <ModifierDropdown
                 isOpen={showModifier}

@@ -74,6 +74,7 @@ export const b2cConfig = {
         placeholder: "Enter Job Title...",
         icon: "briefcase",
         hasModifier: true,
+        suggestions: ["Software Engineer", "Product Manager", "Data Analyst", "Marketing Manager", "Sales Representative", "UX Designer", "Project Manager", "Business Analyst", "Accountant", "HR Manager"],
       },
       {
         key: "role",
@@ -87,6 +88,7 @@ export const b2cConfig = {
             type: "text-with-checkbox",
             placeholder: "Enter Job Title...",
             hasModifier: true,
+            suggestions: ["Abogada", "Abogado", "Able Seaman", "Data Abstractor", "NED Abrantix Ag", "Software Engineer", "Product Manager", "CEO", "CTO", "Director"],
           },
           department: {
             label: "Department",
@@ -129,12 +131,12 @@ export const b2cConfig = {
             type: "select",
             placeholder: "Select one...",
             options: [
-              { id: 1, label: "Select one...", value: "" },
-              { id: 2, label: "30 days", value: "30" },
-              { id: 3, label: "60 days", value: "60" },
-              { id: 4, label: "90 days", value: "90" },
-              { id: 5, label: "6 months", value: "180" },
-              { id: 6, label: "1 year", value: "365" },
+              { id: 1, label: "Select One...", value: "" },
+              { id: 2, label: "Last 3 Months", value: "90" },
+              { id: 3, label: "Last 6 Months", value: "180" },
+              { id: 4, label: "Last Year", value: "365" },
+              { id: 5, label: "Last 2 Years", value: "730" },
+              { id: 6, label: "Last 3 Years", value: "1095" },
             ],
           },
         },
@@ -146,6 +148,7 @@ export const b2cConfig = {
         placeholder: "Enter Skills...",
         icon: "skills",
         hasModifier: true,
+        suggestions: ["JavaScript", "Python", "React", "Node.js", "SQL", "Project Management", "Data Analysis", "Machine Learning", "AWS", "Communication"],
       },
       {
         key: "experience",
@@ -155,11 +158,11 @@ export const b2cConfig = {
         icon: "experience",
         hasModifier: true,
         options: [
-          { id: 1, label: "Select one...", value: "" },
+          { id: 1, label: "Select One...", value: "" },
           { id: 2, label: "0 - 3", value: "0-3" },
-          { id: 3, label: "3 - 5", value: "3-5" },
-          { id: 4, label: "5 - 10", value: "5-10" },
-          { id: 5, label: "10+", value: "10+" },
+          { id: 3, label: "3 - 10", value: "3-10" },
+          { id: 4, label: "10+", value: "10+" },
+          { id: 5, label: "Custom", value: "custom" },
         ],
       },
       {
@@ -169,6 +172,7 @@ export const b2cConfig = {
         placeholder: "Enter Company Name and Domain...",
         icon: "building",
         hasModifier: true,
+        suggestions: ["Google", "Microsoft", "Amazon", "Apple", "Meta", "Netflix", "Tesla", "IBM", "Oracle", "Salesforce"],
       },
       {
         key: "education",
@@ -182,6 +186,7 @@ export const b2cConfig = {
             type: "text-with-checkboxes",
             placeholder: "Enter Major...",
             hasModifier: true,
+            suggestions: ["Computer Science", "Business Administration", "Management", "Marketing", "Accounting", "Engineering", "Economics"],
             options: [
               { id: 1, label: "Computer Science" },
               { id: 2, label: "Business Administration" },
@@ -192,15 +197,17 @@ export const b2cConfig = {
           },
           school: {
             label: "School",
-            type: "text",
+            type: "text-with-suggestions",
             placeholder: "Enter School...",
-            hasModifier: false,
+            hasModifier: true,
+            suggestions: ["Australia University", "University of Alabama", "Maharashtra Amity University", "Athenes University", "Harvard University", "Stanford University", "MIT", "Oxford University"],
           },
           degree: {
             label: "Degree",
             type: "text-with-checkboxes",
             placeholder: "Enter Degree...",
             hasModifier: true,
+            suggestions: ["Master of Business Administration", "Competition of Business", "Associate in Computer Science", "Bachelor of Science", "Master of Science"],
             options: [
               { id: 1, label: "Bachelors" },
               { id: 2, label: "Masters" },
@@ -219,6 +226,7 @@ export const b2cConfig = {
         placeholder: "Enter LinkedIn Url or Keyword here..",
         icon: "description",
         hasModifier: true,
+        suggestions: [],
       },
     ],
   },
