@@ -217,7 +217,7 @@ export const CompanyCard = ({
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(company.id)}
-          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+          className="w-5 h-5 rounded border-gray-100 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
         />
 
         {/* Company Logo */}
