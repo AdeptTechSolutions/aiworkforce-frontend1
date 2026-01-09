@@ -338,7 +338,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                 />
 
                                 {/* Other Sales Nav Items */}
-                                {salesAgentNavItems
+                                {/* {salesAgentNavItems
                                     .filter((item) => item.key !== "b2c" && item.key !== "b2b" && item.key !== "organic")
                                     .map((item) => (
                                         <SalesNavItem
@@ -348,7 +348,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                             onClick={() => {}}
                                             isExpanded={sidebarExpanded}
                                         />
-                                    ))}
+                                    ))} */}
                             </>
                         ) : isInSalesAgent ? (
                             // Sales Agent Navigation (B2C/B2B/Organic)
@@ -423,7 +423,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                 />
 
                                 {/* Other Sales Nav Items */}
-                                {salesAgentNavItems
+                                {/* {salesAgentNavItems
                                     .filter((item) => !["b2c", "b2b", "organic", "campaign"].includes(item.key))
                                     .map((item) => (
                                         <SalesNavItem
@@ -433,7 +433,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                             onClick={() => {}}
                                             isExpanded={sidebarExpanded}
                                         />
-                                    ))}
+                                    ))} */}
                             </>
                         ) : (
                             // Main Navigation
