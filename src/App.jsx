@@ -146,39 +146,84 @@
 // export default App;
 
 // App.jsx
-// App.jsx - Updated imports
+// App.jsx - Updated with Authentication
 import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { SearchProvider } from "./context/SearchContext";
 import { B2BSearchProvider } from "./context/B2BSearchContext";
-import Layout from "./components/layout/Layout";           // ← Updated path
-import DashboardContent from "./pages/DashboardContent";   // ← Updated path
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Layout from "./components/layout/Layout";
+import DashboardContent from "./pages/DashboardContent";
 import SalesAgentContent from "./pages/SalesAgentContent";
+import LoginPage from "./pages/auth/LoginPage";
+import SignUpPage from "./pages/auth/SignUpPage";
 import { useSearch } from "./context/SearchContext";
 import { useB2BSearch } from "./context/B2BSearchContext";
 
+// Protected Route - Requires authentication
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#4F46E5]"></div>
+          <p className="text-gray-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Public Route - Redirects to app if already authenticated
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#4F46E5]"></div>
+          <p className="text-gray-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// Main App Content (Your existing app wrapped in Layout)
 function AppContent() {
   const [activePage, setActivePage] = useState("analytics");
 
   const b2cContext = useSearch();
-const b2bContext = useB2BSearch();
-const credits =
-  activePage === "b2b"
-    ? b2bContext.credits
-    : b2cContext.credits;
+  const b2bContext = useB2BSearch();
+  const credits = activePage === "b2b" ? b2bContext.credits : b2cContext.credits;
 
- const renderContent = () => {
-  switch (activePage) {
-    case "analytics":
-      return <DashboardContent setActivePage={setActivePage} />;
-    case "b2c":
-      return <SalesAgentContent mode="b2c" setActivePage={setActivePage} />;  // ← Add setActivePage
-    case "b2b":
-      return <SalesAgentContent mode="b2b" setActivePage={setActivePage} />;  // ← Add setActivePage
-    default:
-      return <DashboardContent setActivePage={setActivePage} />;
-  }
-};
+  const renderContent = () => {
+    switch (activePage) {
+      case "analytics":
+        return <DashboardContent setActivePage={setActivePage} />;
+      case "b2c":
+        return <SalesAgentContent mode="b2c" setActivePage={setActivePage} />;
+      case "b2b":
+        return <SalesAgentContent mode="b2b" setActivePage={setActivePage} />;
+      default:
+        return <DashboardContent setActivePage={setActivePage} />;
+    }
+  };
 
   return (
     <Layout activePage={activePage} setActivePage={setActivePage} credits={credits}>
@@ -187,13 +232,50 @@ const credits =
   );
 }
 
+// App with all providers and routing
 function App() {
   return (
-    <SearchProvider>
-      <B2BSearchProvider>
-        <AppContent />
-      </B2BSearchProvider>
-    </SearchProvider>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Routes - Auth Pages */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicRoute>
+                <SignUpPage />
+              </PublicRoute>
+            }
+          />
+
+          {/* Protected Routes - Main App */}
+          <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
+                <SearchProvider>
+                  <B2BSearchProvider>
+                    <AppContent />
+                  </B2BSearchProvider>
+                </SearchProvider>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default Redirects */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

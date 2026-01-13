@@ -7,6 +7,9 @@ import backgroundImage from "../../assets/Background.png";
 // import { useSearch } from "../context/SearchContext";
 // import { useB2BSearch } from "../context/B2BSearchContext";
 
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
 import AnalyticsIcon from "../../assets/icons/analytics.svg?react";
 import SalesIcon from "../../assets/icons/salesAgent.svg?react";
 import MarketingIcon from "../../assets/icons/marketing.svg?react";
@@ -15,12 +18,11 @@ import TrainIcon from "../../assets/icons/train.svg?react";
 import IntegrationIcon from "../../assets/icons/integration.svg?react";
 import SettingsIcon from "../../assets/icons/settings.svg?react";
 import BellIcon from "../../assets/icons/bell.svg?react";
-
 import OrganicIcon from "../../assets/icons/organic.svg?react";
 import CampaignIcon from "../../assets/icons/campaign.svg?react";
 import CalendarIcon from "../../assets/icons/calender.svg?react";
 import InboxIcon from "../../assets/icons/inbox1.svg?react";
-import CallLogsIcon from "../../assets/icons/call-logs.svg?react";
+import CallLogsIcon from "../../assets/icons/calll-logs.svg?react";
 
 import CreditsPage from "../../pages/CreditsPage";
 import OrganicLeadBuilder from "../../pages/OrganicLeadBuilder"; // Add this import
@@ -30,6 +32,9 @@ const navIcons = {
     sales: SalesIcon,
     marketing: MarketingIcon,
     support: SupportIcon,
+    calander: CalendarIcon,
+    inbox: InboxIcon,
+    callLogs: CallLogsIcon,
     train: TrainIcon,
     integration: IntegrationIcon,
     settings: SettingsIcon,
@@ -39,46 +44,49 @@ const navIcons = {
 const salesIconMap = {
     organic: <OrganicIcon />,
     campaign: <CampaignIcon />,
-    calendar: <CalendarIcon />,
-    inbox: <InboxIcon />,
-    callLogs: <CallLogsIcon />,
 };
 
-const Icon = ({ name, className = "" }) => {
+const Icon = ({ name, className = "", isActive = false }) => {
     const IconComponent = navIcons[name];
+    const activeFilter = isActive ? "brightness-0 invert" : "";
+    
     return IconComponent ? (
-        <span className={className}>
+        <span className={`${className} ${activeFilter}`}>
             <IconComponent />
         </span>
     ) : null;
 };
 
+
+
 // Main Navigation Item - With circular background
 const NavItem = ({ item, isActive, onClick, isExpanded }) => (
     <button
-        onClick={onClick}
-        className="flex items-center gap-3 px-2 py-1.5 text-left transition-all duration-200 ease-in-out w-full group"
+    onClick={onClick}
+    className="flex items-center gap-3 px-2 py-1.5 text-left transition-all duration-200 ease-in-out w-full group"
+>
+    <span
+        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+            ? "bg-gray-900 text-white shadow-md"
+            : "bg-white text-gray-500 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
+            }`}
     >
+        <Icon name={item.key} isActive={isActive} />
+    </span>
+    {isExpanded && (
         <span
-            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+            className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out ${isActive
                 ? "bg-gray-900 text-white shadow-md"
-                : "bg-white text-gray-500 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
+                : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
                 }`}
         >
-            <Icon name={item.key} />
+            {item.name}
         </span>
-        {isExpanded && (
-            <span
-                className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out ${isActive
-                    ? "bg-gray-900 text-white shadow-md"
-                    : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
-                    }`}
-            >
-                {item.name}
-            </span>
-        )}
-    </button>
+    )}
+</button>
 );
+
+
 
 // Sales Agent Navigation Item
 const SalesNavItem = ({ item, isActive, onClick, isExpanded }) => {
@@ -140,17 +148,20 @@ export default function Layout({ children, activePage, setActivePage, credits })
     }, []);
 
     const displayCredits = credits ?? 0;
-    
+
     // Check if we're in a sales agent view (B2C, B2B, or Organic)
     const isInSalesAgent = activePage === "b2c" || activePage === "b2b" || activePage === "organic";
 
     // Check if we're on credits page
     const isOnCreditsPage = activePage === "credits";
-    
+
     // Check if we're on organic lead builder page
     const isOnOrganicPage = activePage === "organic";
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+    const navigate = useNavigate();
+    const { logout } = useAuth();
 
     // Handle navigation to credits page
     const handleBuyCreditsClick = () => {
@@ -169,6 +180,13 @@ export default function Layout({ children, activePage, setActivePage, credits })
         if (isOnOrganicPage) return "Sales Agent";
         if (activePage === "b2b") return "Sales Agent";
         return "Sales Agent";
+    };
+
+    // Handle logout function
+    const handleLogout = async () => {
+        setIsProfileOpen(false);
+        await logout(); // Clears auth state and localStorage
+        navigate('/login'); // Redirects to login page
     };
 
     return (
@@ -212,7 +230,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                     <button className="bg-white rounded-full p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-all">
                         <Icon name="bell" />
                     </button>
-                    
+
                     {/* Profile Dropdown */}
                     <div className="relative" ref={profileRef}>
                         <button
@@ -236,11 +254,10 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                 >
                                     Profile
                                 </button>
+
                                 <button
                                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                                    onClick={() => {
-                                        setIsProfileOpen(false);
-                                    }}
+                                    onClick={handleLogout}
                                 >
                                     Logout
                                 </button>
@@ -418,7 +435,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                 <SalesNavItem
                                     item={{ key: "campaign", name: "Campaign Manager", icon: "campaign" }}
                                     isActive={activePage === "campaign"}
-                                    onClick={() => {}}
+                                    onClick={() => { }}
                                     isExpanded={sidebarExpanded}
                                 />
 

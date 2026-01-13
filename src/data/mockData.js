@@ -19,6 +19,9 @@ export const navItems = [
   { key: "sales", name: "Sales Agent" },
   { key: "marketing", name: "Marketing Agent" },
   { key: "support", name: "Support Agent" },
+  { key: "calander", name: "Calander" },
+  { key: "inbox", name: "Inbox" },
+  { key: "callLogs", name: "Call Logs" },
   { key: "train", name: "Train" },
   { key: "integration", name: "Integration" },
   { key: "settings", name: "Settings" },  // Now after integration, not at bottom
