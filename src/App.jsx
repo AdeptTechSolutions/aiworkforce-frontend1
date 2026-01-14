@@ -42,7 +42,7 @@
 // function App() {
 //   const [currentPage, setCurrentPage] = useState("dashboard");
 
-  // You can replace this with React Router later
+// You can replace this with React Router later
 //   const renderPage = () => {
 //     switch (currentPage) {
 //       case "sales":
@@ -147,6 +147,7 @@
 
 // App.jsx
 // App.jsx - Updated with Authentication
+// App.jsx - Updated with Authentication
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { SearchProvider } from "./context/SearchContext";
@@ -157,8 +158,13 @@ import DashboardContent from "./pages/DashboardContent";
 import SalesAgentContent from "./pages/SalesAgentContent";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
+import ChoosePlanPage from "./pages/auth/ChoosePlanPage";
+import CartPage from "./pages/auth/CartPage";
 import { useSearch } from "./context/SearchContext";
 import { useB2BSearch } from "./context/B2BSearchContext";
+import IntegrationHubPage from "./pages/auth/IntegrationHubPage";
+import WelcomePage from "./pages/auth/WelcomePage";
+import OnboardingPage from "./pages/auth/OnboardingPage";
 
 // Protected Route - Requires authentication
 const ProtectedRoute = ({ children }) => {
@@ -186,15 +192,10 @@ const ProtectedRoute = ({ children }) => {
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
+  // Don't show loading spinner for public routes - just render children
+  // This prevents flickering and unwanted redirects during signup flow
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#4F46E5]"></div>
-          <p className="text-gray-500 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
+    return children; // Show the page while checking auth
   }
 
   if (isAuthenticated) {
@@ -255,7 +256,46 @@ function App() {
               </PublicRoute>
             }
           />
-
+          <Route
+            path="/choose-plan"
+            element={
+              <PublicRoute>
+                <ChoosePlanPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/cart"
+            element={
+              <PublicRoute>
+                <CartPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/integration-hub"
+            element={
+              <PublicRoute>
+                <IntegrationHubPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <PublicRoute>
+                <OnboardingPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/welcome"
+            element={
+              <PublicRoute>
+                <WelcomePage />
+              </PublicRoute>
+            }
+          />
           {/* Protected Routes - Main App */}
           <Route
             path="/dashboard/*"

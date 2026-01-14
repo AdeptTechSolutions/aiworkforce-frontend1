@@ -20,27 +20,6 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-// Logo component
-const Logo = () => (
-  <div className="flex items-center gap-3 mb-8">
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <rect x="22" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <rect x="8" y="24" width="24" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <path d="M11 13H15M25 13H29M16 29H24" stroke="#1F2937" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="32" cy="6" r="4" fill="#4F46E5" />
-    </svg>
-    <div>
-      <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        AI workforce
-      </h1>
-      <p className="text-sm text-gray-500" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        Create an AI employee
-      </p>
-    </div>
-  </div>
-);
-
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, loading } = useAuth();

@@ -3,6 +3,43 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { useAuth } from '../../context/AuthContext';
+import LogoIcon from '../../assets/Logo -.png';
+import Success from '../../assets/icons/success.png'
+
+// Success Icon Component
+const SuccessIcon = () => (
+  <div className="w-20 h-20 rounded-full bg-[#EEF2FF] flex items-center justify-center mx-auto mb-6">
+    <img src={Success} alt="" className='w-10 h-10' />
+  </div>
+);
+
+// Profile Created Success Screen
+const ProfileCreatedScreen = ({ onContinue }) => (
+  <AuthLayout>
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+      <SuccessIcon />
+      <h2 
+        className="text-[32px] font-semibold text-gray-900 mb-3"
+        style={{ fontFamily: 'DM Sans, sans-serif' }}
+      >
+        We have successfully created your profile.
+      </h2>
+      <p 
+        className="text-gray-600 mb-8"
+        style={{ fontFamily: 'DM Sans, sans-serif' }}
+      >
+        Now you have to pick a plan so that we can setup your account.
+      </p>
+      <button
+        onClick={onContinue}
+        className="w-full max-w-[400px] h-12 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-medium rounded-full transition-all duration-200"
+        style={{ fontFamily: 'DM Sans, sans-serif' }}
+      >
+        Pick a Plan
+      </button>
+    </div>
+  </AuthLayout>
+);
 
 // Eye icons
 const EyeIcon = () => (
@@ -26,25 +63,25 @@ const ChevronDownIcon = () => (
 );
 
 // Logo component
-const Logo = () => (
-  <div className="flex items-center gap-3 mb-6">
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <rect x="22" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <rect x="8" y="24" width="24" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
-      <path d="M11 13H15M25 13H29M16 29H24" stroke="#1F2937" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="32" cy="6" r="4" fill="#4F46E5" />
-    </svg>
-    <div>
-      <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        AI workforce
-      </h1>
-      <p className="text-sm text-gray-500" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        Create an AI employee
-      </p>
-    </div>
-  </div>
-);
+// const Logo = () => (
+//   <div className="flex items-center gap-3 mb-6">
+//     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+//       <rect x="4" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
+//       <rect x="22" y="8" width="14" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
+//       <rect x="8" y="24" width="24" height="10" rx="2" stroke="#1F2937" strokeWidth="2" fill="none" />
+//       <path d="M11 13H15M25 13H29M16 29H24" stroke="#1F2937" strokeWidth="2" strokeLinecap="round" />
+//       <circle cx="32" cy="6" r="4" fill="#4F46E5" />
+//     </svg>
+//     <div>
+//       <h1 className="text-xl font-semibold text-gray-900" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+//         AI workforce
+//       </h1>
+//       <p className="text-sm text-gray-500" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+//         Create an AI employee
+//       </p>
+//     </div>
+//   </div>
+// );
 
 // Country codes data
 const countryCodes = [
@@ -79,6 +116,7 @@ const locations = [
 const SignUpPage = () => {
   const navigate = useNavigate();
   const { signUp, loading } = useAuth();
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -173,13 +211,17 @@ const SignUpPage = () => {
     if (Object.keys(newErrors).length > 0) return;
 
     try {
+      setSubmitError(''); // Clear any previous errors
       const result = await signUp(formData);
+      console.log('SignUp result:', result); // Debug log
       if (result.success) {
-        navigate('/login', { state: { message: result.message } });
+        console.log('Setting showSuccess to true'); // Debug log
+        setShowSuccess(true); // Show success screen instead of navigating
       } else {
         setSubmitError(result.error || 'Sign up failed. Please try again.');
       }
     } catch (err) {
+      console.error('SignUp error:', err); // Debug log
       setSubmitError('An unexpected error occurred. Please try again.');
     }
   };
@@ -193,9 +235,18 @@ const SignUpPage = () => {
       }`;
   };
 
+  // If signup successful, show success screen
+  if (showSuccess) {
+    return (
+      <ProfileCreatedScreen 
+        onContinue={() => navigate('/choose-plan')} 
+      />
+    );
+  }
+
   return (
     <AuthLayout>
-      <Logo />
+      <img src={LogoIcon} alt="" className='w-56 h-16' />
 
       <h2 
         className="text-[32px] font-medium text-gray-900 mb-2"

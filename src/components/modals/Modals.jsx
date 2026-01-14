@@ -582,3 +582,486 @@ export const ExportLeadsModal = ({ isOpen, onClose, onExport }) => {
     </Modal>
   );
 };
+
+// ============================================
+// INTEGRATION HUB MODALS
+// ============================================
+
+// Reusable Success Icon Component (Badge style with checkmark)
+export const BadgeSuccessIcon = () => (
+  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#EEF0FF] flex items-center justify-center">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L14.09 4.26L17 3.34L17.34 6.41L20.24 7.47L19.13 10.27L21.19 12.64L18.88 14.56L19.13 17.64L16.13 18.03L14.85 20.82L12 19.52L9.15 20.82L7.87 18.03L4.87 17.64L5.12 14.56L2.81 12.64L4.87 10.27L3.76 7.47L6.66 6.41L7 3.34L9.91 4.26L12 2Z" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9 12L11 14L15 10" stroke="#4F46E5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </div>
+);
+
+// Reusable Error Icon Component
+export const BadgeErrorIcon = () => (
+  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#FEE2E2] flex items-center justify-center">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="#EF4444" strokeWidth="1.5"/>
+      <path d="M15 9L9 15M9 9L15 15" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  </div>
+);
+
+// Generic Connecting/Loading Modal (Reusable)
+export const ConnectingModal = ({ 
+  isOpen, 
+  onClose, 
+  title = "Connecting and importing...",
+  message = "We are importing your contact. Please wait and do not close this window."
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-2">
+          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-gray-500 text-sm mb-8">{message}</p>
+        
+        {/* Loading Dots */}
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 bg-gray-800 rounded-full animate-pulse"></div>
+            <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+            <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+            <div className="w-2.5 h-2.5 bg-gray-300 rounded-full animate-pulse [animation-delay:0.6s]"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Generic Success Modal (Reusable for all integrations)
+export const IntegrationSuccessModal = ({ 
+  isOpen, 
+  onClose, 
+  title = "Successfully Imported!",
+  message = "We have successfully imported all of your contacts.",
+  buttonText = "Cancel",
+  onButtonClick
+}) => {
+  if (!isOpen) return null;
+
+  const handleClick = () => {
+    if (onButtonClick) {
+      onButtonClick();
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-xl">
+        <BadgeSuccessIcon />
+        
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">{title}</h2>
+        <p className="text-gray-500 mb-8">{message}</p>
+        
+        <button
+          onClick={handleClick}
+          className="px-12 py-3 bg-[#4F46E5] text-white rounded-full font-medium hover:bg-[#4338CA] transition-colors"
+        >
+          {buttonText}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Generic Error/Failed Modal (Reusable)
+export const IntegrationErrorModal = ({ 
+  isOpen, 
+  onClose, 
+  title = "Failed to import",
+  message = "Please ensure that you have filled correct info.",
+  buttonText = "Retry Importing",
+  onRetry
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-xl">
+        <BadgeErrorIcon />
+        
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">{title}</h2>
+        <p className="text-gray-500 mb-8">{message}</p>
+        
+        <button
+          onClick={onRetry || onClose}
+          className="px-12 py-3 bg-[#4F46E5] text-white rounded-full font-medium hover:bg-[#4338CA] transition-colors"
+        >
+          {buttonText}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Twilio Number Modal (Specific integration form)
+export const TwilioNumberModal = ({ 
+  isOpen, 
+  onClose, 
+  onImport,
+  isLoading = false
+}) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    number: '',
+    accountSid: '',
+    authToken: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (formData.name && formData.number && formData.accountSid && formData.authToken) {
+      onImport(formData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({ name: '', number: '', accountSid: '', authToken: '' });
+    onClose();
+  };
+
+  const isFormValid = formData.name && formData.number && formData.accountSid && formData.authToken;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-2xl font-bold text-gray-900">Add your Twilio Number</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-gray-500 text-sm mb-6">Please fill your details.</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Name <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Enter name"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Number <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.number}
+              onChange={(e) => handleChange('number', e.target.value)}
+              placeholder="Enter number"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Account SID <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.accountSid}
+              onChange={(e) => handleChange('accountSid', e.target.value)}
+              placeholder="Enter Account SID"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Auth Token <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.authToken}
+              onChange={(e) => handleChange('authToken', e.target.value)}
+              placeholder="Enter Auth Token"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={!isFormValid || isLoading}
+          className={`mt-6 px-10 py-3 rounded-full font-medium transition-colors ${
+            isFormValid && !isLoading
+              ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {isLoading ? 'Importing...' : 'Import'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Vonage Number Modal (Similar to Twilio)
+export const VonageNumberModal = ({ 
+  isOpen, 
+  onClose, 
+  onImport,
+  isLoading = false
+}) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    number: '',
+    apiKey: '',
+    apiSecret: ''
+  });
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (formData.name && formData.number && formData.apiKey && formData.apiSecret) {
+      onImport(formData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({ name: '', number: '', apiKey: '', apiSecret: '' });
+    onClose();
+  };
+
+  const isFormValid = formData.name && formData.number && formData.apiKey && formData.apiSecret;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-2xl font-bold text-gray-900">Add your Vonage Number</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-gray-500 text-sm mb-6">Please fill your details.</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Name <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Enter name"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Number <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.number}
+              onChange={(e) => handleChange('number', e.target.value)}
+              placeholder="Enter number"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              API Key <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.apiKey}
+              onChange={(e) => handleChange('apiKey', e.target.value)}
+              placeholder="Enter API Key"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              API Secret <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.apiSecret}
+              onChange={(e) => handleChange('apiSecret', e.target.value)}
+              placeholder="Enter API Secret"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={!isFormValid || isLoading}
+          className={`mt-6 px-10 py-3 rounded-full font-medium transition-colors ${
+            isFormValid && !isLoading
+              ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {isLoading ? 'Importing...' : 'Import'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Check Icon
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+// Upgrade SEO Modal
+
+export const UpgradeSEOModal = ({ isOpen, onClose, onSelect }) => {
+	  const [selectedTier, setSelectedTier] = useState(null);
+	  const tiers = [
+	    { id: 1, name: 'Tier - 1', price: 15, words: '15,000 Words.' },
+	    { id: 2, name: 'Tier - 2', price: 29, words: '15,000 Words.' },
+	    { id: 3, name: 'Tier - 3', price: 49, words: '15,000 Words.' },
+	  ];
+	
+	  if (!isOpen) return null;
+	
+	  return (
+	    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+	      <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+	        <div className="flex justify-between items-start mb-4">
+	          <div>
+	            <h3 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'DM Sans, sans-serif' }}>Book a Consultation</h3>
+	            <p className="text-gray-500" style={{ fontFamily: 'DM Sans, sans-serif' }}>Please fill your details.</p>
+	          </div>
+	          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+	            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+	          </button>
+	        </div>
+	
+	        <div className="space-y-3 mb-6">
+	          {tiers.map(tier => (
+	            <button
+	              key={tier.id}
+	              onClick={() => setSelectedTier(tier.id)}
+              className={`w-full p-4 rounded-xl border-2 text-left transition-all ${selectedTier === tier.id ? 'border-[#4F46E5] bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}
+	            >
+	              <div className="flex items-center gap-3">
+	                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedTier === tier.id ? 'border-[#4F46E5]' : 'border-gray-300'}`}>
+	                  {selectedTier === tier.id && <div className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"/>}
+	                </div>
+	                <span className="font-medium text-gray-900">{tier.name}</span>
+	              </div>
+	              <div className="ml-8 mt-1">
+	                <span className="text-2xl font-bold text-[#4F46E5]">£{tier.price}</span>
+	                <span className="text-gray-500">/ month</span>
+	              </div>
+	              <div className="ml-8 mt-1 flex items-center gap-2 text-sm text-gray-600">
+	                <CheckIcon /> {tier.words}
+	              </div>
+	            </button>
+	          ))}
+        </div>
+	
+	        <button
+	          onClick={() => { onSelect(selectedTier); onClose(); }}
+	          disabled={!selectedTier}
+	          className="px-8 py-3 bg-[#4F46E5] text-white rounded-full font-medium hover:bg-[#4338CA] transition-colors disabled:opacity-50"
+	        >
+	          Switch Plan
+	        </button>
+	      </div>
+	    </div>
+	  );
+	};
+
+
+// Generic OAuth Connect Modal (For CRM, Email, Social integrations)
+// This simulates OAuth flow - in real app, it would redirect to provider
+export const OAuthConnectModal = ({
+  isOpen,
+  onClose,
+  provider, // 'salesforce', 'google', 'linkedin', etc.
+  providerName,
+  onConnect,
+  isConnecting = false
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-xl">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+          {/* Provider icon would go here */}
+          <span className="text-2xl font-bold text-gray-600">{providerName?.charAt(0)}</span>
+        </div>
+        
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Connect to {providerName}</h2>
+        <p className="text-gray-500 text-sm mb-6">
+          You will be redirected to {providerName} to authorize the connection.
+        </p>
+        
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConnect(provider)}
+            disabled={isConnecting}
+            className="px-6 py-3 bg-[#4F46E5] text-white rounded-full font-medium hover:bg-[#4338CA] transition-colors disabled:opacity-50"
+          >
+            {isConnecting ? 'Connecting...' : 'Connect'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

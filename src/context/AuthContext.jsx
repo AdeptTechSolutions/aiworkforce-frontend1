@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.signUp(userData);
       if (response.success) {
+        // Don't set isAuthenticated here - user needs to complete plan selection first
         return { success: true, message: response.message };
       }
       return response;

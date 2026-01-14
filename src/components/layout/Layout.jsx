@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { navItems, userData, appInfo } from "../../data/mockData";
 import { salesAgentNavItems } from "../../data/salesAgentData";
-import logo from "../../assets/Logo.png";
 import backgroundImage from "../../assets/Background.png";
+import Header from "./Header";
 // import { useSearch } from "../context/SearchContext";
 // import { useB2BSearch } from "../context/B2BSearchContext";
 
@@ -49,7 +49,7 @@ const salesIconMap = {
 const Icon = ({ name, className = "", isActive = false }) => {
     const IconComponent = navIcons[name];
     const activeFilter = isActive ? "brightness-0 invert" : "";
-    
+
     return IconComponent ? (
         <span className={`${className} ${activeFilter}`}>
             <IconComponent />
@@ -62,28 +62,28 @@ const Icon = ({ name, className = "", isActive = false }) => {
 // Main Navigation Item - With circular background
 const NavItem = ({ item, isActive, onClick, isExpanded }) => (
     <button
-    onClick={onClick}
-    className="flex items-center gap-3 px-2 py-1.5 text-left transition-all duration-200 ease-in-out w-full group"
->
-    <span
-        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
-            ? "bg-gray-900 text-white shadow-md"
-            : "bg-white text-gray-500 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
-            }`}
+        onClick={onClick}
+        className="flex items-center gap-3 px-2 py-1.5 text-left transition-all duration-200 ease-in-out w-full group"
     >
-        <Icon name={item.key} isActive={isActive} />
-    </span>
-    {isExpanded && (
         <span
-            className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out ${isActive
+            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
                 ? "bg-gray-900 text-white shadow-md"
-                : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
+                : "bg-white text-gray-500 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
                 }`}
         >
-            {item.name}
+            <Icon name={item.key} isActive={isActive} />
         </span>
-    )}
-</button>
+        {isExpanded && (
+            <span
+                className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out ${isActive
+                    ? "bg-gray-900 text-white shadow-md"
+                    : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-200"
+                    }`}
+            >
+                {item.name}
+            </span>
+        )}
+    </button>
 );
 
 
@@ -195,77 +195,14 @@ export default function Layout({ children, activePage, setActivePage, credits })
             style={{ backgroundImage: `url(${backgroundImage})` }}
         >
             {/* Fixed Full-Width Header */}
-            <header className="bg-gradient-to-b from-[#DFE3F5] to-[#DFE3F5] flex justify-between items-center px-4 py-2 h-[62px] flex-shrink-0 border-b border-[#DFE3F5] z-10">
-                {/* Logo */}
-                <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={() => setActivePage(previousPage || "b2c")}
-                >
-                    <img src={logo} alt="Logo" className="w-[148px] h-[46px] object-contain" />
-                </div>
-
-                {/* Right side */}
-                <div className="flex items-center h-[42px] gap-4">
-                    {(isOnCreditsPage || displayCredits <= 0) && (
-                        <button
-                            onClick={handleBuyCreditsClick}
-                            className="text-sm text-gray-600 hover:text-[#3C49F7] hover:font-bold hover:underline transition-colors cursor-pointer"
-                        >
-                            Get Credits now!
-                        </button>
-                    )}
-
-                    <div className="flex items-center bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-900">
-                        <span className={`text-[14px] font-semibold italic mr-3 ${displayCredits <= 0 ? "text-red-500" : "text-gray-900"}`}>
-                            {displayCredits} Credits
-                        </span>
-                        <button
-                            onClick={handleBuyCreditsClick}
-                            className="bg-gray-900 text-white text-[14px] px-2.5 py-1 rounded-full hover:bg-white hover:text-blue-700 transition-colors"
-                        >
-                            Buy Credits
-                        </button>
-                    </div>
-
-                    <button className="bg-white rounded-full p-3 text-gray-500 hover:bg-gray-100 rounded-full transition-all">
-                        <Icon name="bell" />
-                    </button>
-
-                    {/* Profile Dropdown */}
-                    <div className="relative" ref={profileRef}>
-                        <button
-                            onClick={() => setIsProfileOpen((prev) => !prev)}
-                            className="w-10 h-10 rounded-full overflow-hidden focus:outline-none"
-                        >
-                            <img
-                                src={userData.avatar}
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
-                        </button>
-
-                        {isProfileOpen && (
-                            <div className="absolute right-0 mt-3 w-40 bg-white rounded-xl shadow-lg border z-50">
-                                <button
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                                    onClick={() => {
-                                        setIsProfileOpen(false);
-                                    }}
-                                >
-                                    Profile
-                                </button>
-
-                                <button
-                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                                    onClick={handleLogout}
-                                >
-                                    Logout
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
+            <Header
+                variant="full"
+                credits={displayCredits}
+                onBuyCredits={handleBuyCreditsClick}
+                onLogoClick={() => setActivePage(previousPage || "b2c")}
+                showGetCredits={isOnCreditsPage || displayCredits <= 0}
+                userData={userData}
+            />
 
             {/* Content Area Below Navbar */}
             <div className="flex flex-1 overflow-hidden">
