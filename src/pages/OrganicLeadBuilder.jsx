@@ -5,6 +5,7 @@ import RemoveAccountModal from "../components/organic/RemoveAccountModal";
 import BuildProfileModal from "../components/organic/BuildProfileModal";
 import CampaignModals from "../components/organic/CampaignModals";
 import { ProfileCard } from "../components/profiles/ProfileComponents";
+import linkedin from "../assets/icons/LinkedIn.png";
 
 // Sample campaign data
 // Sample leads data for completed campaigns
@@ -298,7 +299,7 @@ const OrganicLeadBuilder = () => {
             {isCompleted && (
               <button
                 onClick={() => handleViewLeads(campaign)}
-                className="text-[#3C49F7] font-medium text-sm hover:underline"
+                className="text-[#3C49F7] bg-[#F7F7F7] px-2 py-2.5 rounded-full hover:border-2 hover:border-[#3C49F7] font-medium text-sm hover:underline"
               >
                 View Leads
               </button>
@@ -406,7 +407,24 @@ const OrganicLeadBuilder = () => {
         <div className="flex items-center gap-3 mb-4">
           <input 
             type="checkbox" 
-            className="w-[18px] h-[18px] rounded-md border border-gray-300"
+            className="
+    appearance-none
+    w-[18px] h-[18px]
+    rounded-[6px]
+    border border-gray-300
+    bg-white
+    hover:border-blue-600
+    focus:outline-none focus:ring-2 focus:ring-blue-500/30
+    cursor-pointer
+
+    checked:bg-blue-600 checked:border-blue-600
+    checked:after:content-['']
+    checked:after:block
+    checked:after:w-[6px] checked:after:h-[10px]
+    checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+    checked:after:rotate-45
+    checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+  "
             onChange={(e) => {
               if (e.target.checked) {
                 setSelectedLeads(SAMPLE_LEADS.map(l => l.id));
@@ -523,10 +541,8 @@ const OrganicLeadBuilder = () => {
 
             <div className="bg-[#F2F2FF] rounded-lg p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#0A66C2] rounded-lg flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                  </svg>
+                <div className="w-14 h-14rounded-lg flex items-center justify-center">
+                  <img src={linkedin} alt="" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-[#1a1a1a]">Connect your Linkedin Profile</h3>

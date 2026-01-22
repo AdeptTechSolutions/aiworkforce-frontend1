@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import bgImage from "../assets/Background.png";
 import { competitorArticles } from "../data/blogMockData";
+import ContentEditor from "./Contenteditor";
 
 export default function CompetitorArticles({ onBack }) {
   const [selectedArticles, setSelectedArticles] = useState([
@@ -27,6 +28,8 @@ export default function CompetitorArticles({ onBack }) {
     });
   };
 
+  const [showContentEditor, setShowContentEditor] = useState(false);
+
   const calculateAverageWordCount = () => {
     if (selectedArticles.length === 0) return 0;
     const total = selectedArticles.reduce((sum, id) => {
@@ -39,6 +42,10 @@ export default function CompetitorArticles({ onBack }) {
   const formatWordCount = (count) => {
     return count.toLocaleString();
   };
+  // If showing ContentEditor, render that instead
+  if (showContentEditor) {
+    return <ContentEditor onBack={() => setShowContentEditor(false)} selectedArticles={selectedArticles} />;
+  }
 
   return (
     <div
@@ -69,7 +76,14 @@ export default function CompetitorArticles({ onBack }) {
             </div>
             {/* Continue Button */}
             <div className="flex justify-end mb-6">
-              <button className="bg-blue-700 text-white px-6 py-2 rounded-full text-sm">
+              <button
+                onClick={() => setShowContentEditor(true)}
+                disabled={selectedArticles.length === 0}
+                className={`px-6 py-2 rounded-full text-sm ${selectedArticles.length > 0
+                    ? 'bg-blue-700 text-white hover:bg-blue-800'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+              >
                 Continue with {selectedArticles.length} Articles
               </button>
             </div>
@@ -109,74 +123,74 @@ export default function CompetitorArticles({ onBack }) {
           <div className="space-y-3">
             {isLoading
               ? // Skeleton Loading Cards
-                Array.from({ length: 5 }).map((_, index) => (
+              Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="bg-white rounded-lg p-5 animate-pulse"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 pt-1">
+                      <div className="w-5 h-5 bg-gray-300 rounded"></div>
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="h-6 bg-gray-300 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                      <div className="h-4 bg-gray-300 rounded w-full"></div>
+                      <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className="h-8 w-24 bg-gray-300 rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+              : // Actual Articles
+              competitorArticles.map((article) => {
+                const isSelected = selectedArticles.includes(article.id);
+                return (
                   <div
-                    key={`skeleton-${index}`}
-                    className="bg-white rounded-lg p-5 animate-pulse"
+                    key={article.id}
+                    className="bg-white rounded-lg p-5 transition-all"
                   >
                     <div className="flex items-start gap-4">
+                      {/* Checkbox */}
                       <div className="flex-shrink-0 pt-1">
-                        <div className="w-5 h-5 bg-gray-300 rounded"></div>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleArticleSelection(article.id)}
+                          className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
                       </div>
-                      <div className="flex-1 space-y-3">
-                        <div className="h-6 bg-gray-300 rounded w-3/4"></div>
-                        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                        <div className="h-4 bg-gray-300 rounded w-full"></div>
-                        <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+
+                      {/* Content */}
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {article.title}
+                        </h3>
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-500 font-semibold text-sm mb-2 block truncate"
+                        >
+                          {article.url}
+                        </a>
+                        <p className="text-gray-700 text-sm">
+                          {article.excerpt}
+                        </p>
                       </div>
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-24 bg-gray-300 rounded-full"></div>
+
+                      {/* Word Count */}
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-green-600 font-semibold text-base bg-green-50 px-3 py-1 rounded-full">
+                          {formatWordCount(article.wordCount)} words
+                        </p>
                       </div>
                     </div>
                   </div>
-                ))
-              : // Actual Articles
-                competitorArticles.map((article) => {
-                  const isSelected = selectedArticles.includes(article.id);
-                  return (
-                    <div
-                      key={article.id}
-                      className="bg-white rounded-lg p-5 transition-all"
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Checkbox */}
-                        <div className="flex-shrink-0 pt-1">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleArticleSelection(article.id)}
-                            className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">
-                            {article.title}
-                          </h3>
-                          <a
-                            href={article.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-indigo-500 font-semibold text-sm mb-2 block truncate"
-                          >
-                            {article.url}
-                          </a>
-                          <p className="text-gray-700 text-sm">
-                            {article.excerpt}
-                          </p>
-                        </div>
-
-                        {/* Word Count */}
-                        <div className="flex-shrink-0 text-right">
-                          <p className="text-green-600 font-semibold text-base bg-green-50 px-3 py-1 rounded-full">
-                            {formatWordCount(article.wordCount)} words
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                );
+              })}
           </div>
 
           {/* Right Column - Stats */}
