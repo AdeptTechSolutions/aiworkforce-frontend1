@@ -1,79 +1,25 @@
 // src/services/authService.js
 
-const API_BASE_URL = 'http://localhost:8000/api/platform/auth';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const authService = {
   /**
    * Login user with email and password
-   * @param {string} email 
-   * @param {string} password 
+   * @param {string} email
+   * @param {string} password
    * @returns {Promise<{success: boolean, user?: object, token?: string, error?: string}>}
    */
 
-  
-login: async (email, password) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.message || data.detail || 'Login failed. Please check your credentials.',
-      };
-    }
-
-    // Check subscription status from response
-    const hasSubscription = !!(data.service_ids && data.service_ids.length > 0);
-    
-    return {
-      success: true,
-      user: data.user,
-      token: data.access_token,
-      organization: data.organization,
-      seatId: data.seat_id,
-      serviceIds: data.service_ids,
-      serviceDetails: data.service_details,
-      hasSubscription: hasSubscription,
-    };
-  } catch (error) {
-    console.error('Login error:', error);
-    return {
-      success: false,
-      error: 'Network error. Please try again.',
-    };
-  }
-},
-
-  /**
-   * Register new user
-   * @param {object} userData - { firstName, lastName, email, password, organisation, location, phone, countryCode }
-   * @returns {Promise<{success: boolean, message?: string, error?: string}>}
-   */
-  signUp: async (userData) => {
+  login: async (email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/owner/register`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/platform/auth/login`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: userData.email,
-          password: userData.password,
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          organization_name: userData.organisation,
-          organization_type: 'solo', // Default value
+          email,
+          password,
         }),
       });
 
@@ -82,20 +28,84 @@ login: async (email, password) => {
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.detail || 'Registration failed. Please try again.',
+          error:
+            data.message ||
+            data.detail ||
+            "Login failed. Please check your credentials.",
+        };
+      }
+
+      // Check subscription status from response
+      const hasSubscription = !!(
+        data.service_ids && data.service_ids.length > 0
+      );
+
+      return {
+        success: true,
+        user: data.user,
+        token: data.access_token,
+        organization: data.organization,
+        seatId: data.seat_id,
+        serviceIds: data.service_ids,
+        serviceDetails: data.service_details,
+        hasSubscription: hasSubscription,
+      };
+    } catch (error) {
+      console.error("Login error:", error);
+      return {
+        success: false,
+        error: "Network error. Please try again.",
+      };
+    }
+  },
+
+  /**
+   * Register new user
+   * @param {object} userData - { firstName, lastName, email, password, organisation, location, phone, countryCode }
+   * @returns {Promise<{success: boolean, message?: string, error?: string}>}
+   */
+  signUp: async (userData) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/platform/auth/owner/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userData.email,
+            password: userData.password,
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            organization_name: userData.organisation,
+            organization_type: "solo", // Default value
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error:
+            data.message ||
+            data.detail ||
+            "Registration failed. Please try again.",
         };
       }
 
       return {
         success: true,
-        message: data.message || 'Account created successfully.',
+        message: data.message || "Account created successfully.",
         user: data.user || data,
       };
     } catch (error) {
-      console.error('SignUp error:', error);
+      console.error("SignUp error:", error);
       return {
         success: false,
-        error: 'Network error. Please try again.',
+        error: "Network error. Please try again.",
       };
     }
   },
@@ -118,22 +128,22 @@ login: async (email, password) => {
 
       return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       return { success: true }; // Still return success to clear local state
     }
   },
 
   /**
    * Request password reset
-   * @param {string} email 
+   * @param {string} email
    * @returns {Promise<{success: boolean, message?: string}>}
    */
   forgotPassword: async (email) => {
     try {
       const response = await fetch(`${API_BASE_URL}/forgot-password`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email }),
       });
@@ -143,19 +153,19 @@ login: async (email, password) => {
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.detail || 'Failed to send reset email.',
+          error: data.message || data.detail || "Failed to send reset email.",
         };
       }
 
       return {
         success: true,
-        message: data.message || 'Password reset link sent to your email.',
+        message: data.message || "Password reset link sent to your email.",
       };
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error("Forgot password error:", error);
       return {
         success: false,
-        error: 'Network error. Please try again.',
+        error: "Network error. Please try again.",
       };
     }
   },
@@ -166,14 +176,14 @@ login: async (email, password) => {
    */
   verifyToken: async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) return { valid: false };
 
       const response = await fetch(`${API_BASE_URL}/verify`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -187,7 +197,7 @@ login: async (email, password) => {
         user: data.user || data,
       };
     } catch (error) {
-      console.error('Token verification error:', error);
+      console.error("Token verification error:", error);
       return { valid: false };
     }
   },
