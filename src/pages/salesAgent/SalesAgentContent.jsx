@@ -1,8 +1,8 @@
 // pages/SalesAgentContent.jsx
 import { useState, useEffect } from "react";
-import { useB2BSearch } from "../context/B2BSearchContext";
-import SearchFiltersPanel from "../components/sales/SearchFiltersPanel";
-import SearchResultsView from "../components/sales/SearchResultsView";
+import { useB2BSearch } from "../../context/B2BSearchContext";
+import SearchFiltersPanel from "../../components/sales/SearchFiltersPanel";
+import SearchResultsView from "../../components/sales/SearchResultsView";
 import {
   SaveSearchModal,
   LoadSearchModal,
@@ -10,12 +10,12 @@ import {
   LoadingModal,
   ExportLeadsModal,
   OutOfCreditsModal,
-} from "../components/modals/Modals";
-import { footerLinks } from "../data/salesAgentData";
-import { getAgentConfig } from "../data/agentConfig";
-import logo from "../assets/Logo -.png";
-import logofooter from "../assets/Logo-footer.svg";
-import { useSearch } from "../context/SearchContext";
+} from "../../components/modals/Modals";
+import { footerLinks } from "../../data/salesAgentData";
+import { getAgentConfig } from "../../data/agentConfig";
+import logo from "../../assets/Logo -.png";
+import logofooter from "../../assets/Logo-footer.svg";
+import { useSearch } from "../../context/SearchContext";
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

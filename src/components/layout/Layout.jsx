@@ -23,12 +23,14 @@ import InboxIcon from "../../assets/icons/inbox1.svg?react";
 import CallLogsIcon from "../../assets/icons/calll-logs.svg?react";
 
 import CreditsPage from "../../pages/CreditsPage";
-import OrganicLeadBuilder from "../../pages/OrganicLeadBuilder";
-import CampaignManager from "../../pages/CampaignManager";
-import BlogContentEngine from "../../pages/BlogContentEngine";
-import SettingsPage from "../../pages/SettingsPage";
-import InboxPage from "../../pages/InboxPage";
-import CallLogsPage from "../../pages/CallLogsPage";
+import OrganicLeadBuilder from "../../pages/salesAgent/OrganicLeadBuilder";
+import CampaignManager from "../../pages/salesAgent/CampaignManager";
+import BlogContentEngine from "../../pages/marketingAgent/BlogContentEngine";
+import SettingsPage from "../../pages/settings/SettingsPage";
+import InboxPage from "../../pages/inbox/InboxPage";
+import CallLogsPage from "../../pages/call-logs/CallLogsPage";
+import BrochureCreationEngine from "../../pages/marketingAgent/BrochureCreationEngine";
+import SupportAgentPage from "../../pages/supportAgent/SupportAgentPage";
 
 // Updated nav icons mapping
 const navIcons = {
@@ -53,6 +55,11 @@ const salesIconMap = {
 const settingsIconMap = {
     train: <TrainIcon />,
     integration: <IntegrationIcon />,
+};
+
+const supportIconMap = {
+    personal: null, // Will use SVG icon
+    meeting: null,  // Will use SVG icon
 };
 
 const marketingIconMap = {};
@@ -246,6 +253,56 @@ const SettingsNavItem = ({ item, isActive, onClick, isExpanded }) => {
     );
 };
 
+// Support Agent Navigation Item
+const SupportNavItem = ({ item, isActive, onClick, isExpanded }) => {
+    const hasShortName = item.shortName;
+
+    // Icon SVGs for support items
+    const getIcon = (iconKey) => {
+        if (iconKey === "personal") {
+            return (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            );
+        }
+        if (iconKey === "meeting") {
+            return (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+            );
+        }
+        return null;
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            className="flex items-center gap-3 px-2 py-1.5 text-left transition-all duration-200 ease-in-out w-full group"
+        >
+            <span
+                className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+                    ? "bg-gray-900 text-white shadow-md"
+                    : "bg-white text-gray-500 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100"
+                    }`}
+            >
+                {getIcon(item.icon)}
+            </span>
+            {isExpanded && (
+                <span
+                    className={`text-sm font-medium whitespace-nowrap px-3 py-1.5 rounded-full transition-all duration-200 ease-in-out ${isActive
+                        ? "bg-gray-900 text-white shadow-md"
+                        : "bg-white text-gray-700 border border-gray-200 group-hover:border-gray-300 group-hover:bg-gray-100"
+                        }`}
+                >
+                    {item.name}
+                </span>
+            )}
+        </button>
+    );
+};
+
 // Main navigation items in correct order matching screenshot
 const mainNavItems = [
     { key: "analytics", name: "Analytics" },
@@ -286,6 +343,10 @@ export default function Layout({ children, activePage, setActivePage, credits })
     // Check if we're in marketing agent view
     const isInMarketingAgent = activePage === "seo" || activePage === "template";
 
+    // Add this check for Support Agent view
+    const isInSupportAgent = activePage === "support" || activePage === "support-personal" || activePage === "support-meeting";
+
+
     // Check if we're on specific pages
     const isOnCreditsPage = activePage === "credits";
     const isOnOrganicPage = activePage === "organic";
@@ -295,7 +356,9 @@ export default function Layout({ children, activePage, setActivePage, credits })
     const isOnInboxPage = activePage === "inbox";
     const isOnCallLogsPage = activePage === "callLogs";
     const isOnSettingsPage = activePage === "settings" || activePage === "settings-train" || activePage === "settings-integration" || activePage === "settings-callAgent" || activePage === "settings-template";
-    const isOnSupportPage = activePage === "support";
+    // Update isOnSupportPage check
+    const isOnSupportPage = activePage === "support" || activePage === "support-personal" || activePage === "support-meeting";
+
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -315,6 +378,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
         if (isOnCreditsPage) return "Credits";
         if (isInSettings) return "Settings";
         if (isInMarketingAgent) return "Marketing Agent";
+        if (isInSupportAgent) return "Support Agent";
         if (isInSalesAgent) return "Sales Agent";
         return "Sales Agent";
     };
@@ -340,6 +404,8 @@ export default function Layout({ children, activePage, setActivePage, credits })
             setActivePage("seo");
         } else if (key === "settings") {
             setActivePage("settings-train");
+        } else if (key === "support") {
+            setActivePage("support-personal");
         } else {
             setActivePage(key);
         }
@@ -370,7 +436,8 @@ export default function Layout({ children, activePage, setActivePage, credits })
                     style={{ width: sidebarExpanded ? "280px" : "72px" }}
                 >
                     {/* Back Button - Show when in sales agent, marketing agent, or credits page */}
-                    {(isInSalesAgent || isInMarketingAgent || isOnCreditsPage || isInSettings) && (
+                    {(isInSalesAgent || isInMarketingAgent || isOnCreditsPage || isInSettings || isInSupportAgent) && (
+
                         <button
                             onClick={handleBackClick}
                             className="flex items-center px-2 py-1.5 transition-all duration-200 ease-in-out w-full group"
@@ -481,6 +548,26 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                 />
                             </>
 
+                        ) : isInSupportAgent ? (
+                            // Support Agent Navigation
+                            <>
+                                <div className="my-1.5 mx-2">
+                                    <div className="h-px bg-gray-300"></div>
+                                </div>
+                                <SupportNavItem
+                                    item={{ key: "support-personal", name: "Personal Assistant Agent", icon: "personal" }}
+                                    isActive={activePage === "support-personal" || activePage === "support"}
+                                    onClick={() => setActivePage("support-personal")}
+                                    isExpanded={sidebarExpanded}
+                                />
+                                <SupportNavItem
+                                    item={{ key: "support-meeting", name: "Meeting Notetaker Agent", icon: "meeting" }}
+                                    isActive={activePage === "support-meeting"}
+                                    onClick={() => setActivePage("support-meeting")}
+                                    isExpanded={sidebarExpanded}
+                                />
+                            </>
+
                         ) : isInSalesAgent ? (
                             // Sales Agent Navigation (B2C/B2B/Organic/Campaign)
                             <>
@@ -573,19 +660,11 @@ export default function Layout({ children, activePage, setActivePage, credits })
                                             "train"
                             } />
                         ) : isOnSupportPage ? (
-                            <div className="flex items-center justify-center h-full bg-white/50">
-                                <div className="text-center">
-                                    <h2 className="text-2xl font-semibold text-gray-700">Support Agent</h2>
-                                    <p className="text-gray-500 mt-2">Coming Soon</p>
-                                </div>
-                            </div>
+                            <SupportAgentPage activeSettingsTab={
+                                activePage === "support-meeting" ? "meeting" : "personal"
+                            } />
                         ) : activePage === "template" ? (
-                            <div className="flex items-center justify-center h-full bg-white/50">
-                                <div className="text-center">
-                                    <h2 className="text-2xl font-semibold text-gray-700">Template/ Brochure Agent</h2>
-                                    <p className="text-gray-500 mt-2">Coming Soon</p>
-                                </div>
-                            </div>
+                            <BrochureCreationEngine />
                         ) : (
                             children
                         )}

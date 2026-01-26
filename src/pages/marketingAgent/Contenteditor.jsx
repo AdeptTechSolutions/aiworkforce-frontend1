@@ -48,7 +48,7 @@ import {
   relatedQuestions,
   competitorArticles,
   generatedArticleData,
-} from "../data/blogMockData";
+} from "../../data/blogMockData";
 
 const MenuBar = ({ editor }) => {
   const [showTooltip, setShowTooltip] = useState(false);

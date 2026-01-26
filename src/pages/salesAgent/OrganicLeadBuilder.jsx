@@ -1,11 +1,11 @@
 // pages/OrganicLeadBuilder.jsx
 import { useState } from "react";
-import SetAccountModal from "../components/organic/SetAccountModal";
-import RemoveAccountModal from "../components/organic/RemoveAccountModal";
-import BuildProfileModal from "../components/organic/BuildProfileModal";
-import CampaignModals from "../components/organic/CampaignModals";
-import { ProfileCard } from "../components/profiles/ProfileComponents";
-import linkedin from "../assets/icons/LinkedIn.png";
+import SetAccountModal from "../../components/organic/SetAccountModal";
+import RemoveAccountModal from "../../components/organic/RemoveAccountModal";
+import BuildProfileModal from "../../components/organic/BuildProfileModal";
+import CampaignModals from "../../components/organic/CampaignModals";
+import { ProfileCard } from "../../components/profiles/ProfileComponents";
+import linkedin from "../../assets/icons/LinkedIn.png";
 
 // Sample campaign data
 // Sample leads data for completed campaigns

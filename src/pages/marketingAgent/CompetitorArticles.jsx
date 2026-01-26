@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
-import bgImage from "../assets/Background.png";
-import { competitorArticles } from "../data/blogMockData";
+import bgImage from "../../assets/Background.png";
+import { competitorArticles } from "../../data/blogMockData";
 import ContentEditor from "./Contenteditor";
 
 export default function CompetitorArticles({ onBack }) {

@@ -155,7 +155,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SubscriptionProvider } from "./services/SubscriptionContext";
 import Layout from "./components/layout/Layout";
 import DashboardContent from "./pages/DashboardContent";
-import SalesAgentContent from "./pages/SalesAgentContent";
+import SalesAgentContent from "./pages/salesAgent/SalesAgentContent";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import ChoosePlanPage from "./pages/auth/ChoosePlanPage";

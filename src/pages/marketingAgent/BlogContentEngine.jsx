@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Edit2, Trash2 } from "lucide-react";
-import bgImage from "../assets/Background.png";
+import bgImage from "../../assets/Background.png";
 import {
   savedKeywords,
   pastKeywords,
   searchLocations,
   searchLanguages,
-} from "../data/blogMockData";
+} from "../../data/blogMockData";
 import CompetitorArticles from "./CompetitorArticles";
 
 export default function BlogContentEngine() {

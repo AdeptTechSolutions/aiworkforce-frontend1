@@ -1,7 +1,7 @@
 // pages/CampaignManager.jsx
 import { useState } from "react";
-import { ProfileCard } from "../components/profiles/ProfileComponents";
-import CampaignManagerModals from "../components/campaigns/CampaignManagerModals";
+import { ProfileCard } from "../../components/profiles/ProfileComponents";
+import CampaignManagerModals from "../../components/campaigns/CampaignManagerModals";
 
 // Sample campaigns data
 const SAMPLE_CAMPAIGNS = {

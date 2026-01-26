@@ -1,31 +1,31 @@
 // pages/SettingsPage.jsx
 import { useState, useEffect } from "react";
-import KnowledgeTab from "../components/settings/KnowledgeTab";
-import PromptsTab from "../components/settings/PromptsTab";
+import KnowledgeTab from "../../components/settings/KnowledgeTab";
+import PromptsTab from "../../components/settings/PromptsTab";
 import {
     ConnectingModal,
     IntegrationSuccessModal,
     IntegrationErrorModal,
     TwilioNumberModal,
     VonageNumberModal
-} from '../components/modals/Modals';
-import { integrationService } from '../services/IntegrationService';
-import CallAgentSettings from "../components/settings/CallAgentSettings";
+} from '../../components/modals/Modals';
+import { integrationService } from '../../services/IntegrationService';
+import CallAgentSettings from "../../components/settings/CallAgentSettings";
 
 // Import integration icons
-import Sales from '../assets/IntegrationIcons/salesforce.png';
-import pipe from '../assets/IntegrationIcons/Pipedrive.png';
-import hub from '../assets/IntegrationIcons/hubspot.png';
-import zoho from '../assets/IntegrationIcons/zoho.png';
-import odoo from '../assets/IntegrationIcons/odoo.png';
-import outlook from '../assets/IntegrationIcons/outlook.png';
-import google from '../assets/IntegrationIcons/google.png';
-import calendly from '../assets/IntegrationIcons/calendly.png';
-import LinkedIn from '../assets/IntegrationIcons/linkedin.png';
-import whatsapp from '../assets/IntegrationIcons/whatsapp.png';
-import telegram from '../assets/IntegrationIcons/telegram.png';
-import twilio from '../assets/IntegrationIcons/twilio.png';
-import vonage from '../assets/IntegrationIcons/vonage.png';
+import Sales from '../../assets/IntegrationIcons/salesforce.png';
+import pipe from '../../assets/IntegrationIcons/Pipedrive.png';
+import hub from '../../assets/IntegrationIcons/hubspot.png';
+import zoho from '../../assets/IntegrationIcons/zoho.png';
+import odoo from '../../assets/IntegrationIcons/odoo.png';
+import outlook from '../../assets/IntegrationIcons/outlook.png';
+import google from '../../assets/IntegrationIcons/google.png';
+import calendly from '../../assets/IntegrationIcons/calendly.png';
+import LinkedIn from '../../assets/IntegrationIcons/linkedin.png';
+import whatsapp from '../../assets/IntegrationIcons/whatsapp.png';
+import telegram from '../../assets/IntegrationIcons/telegram.png';
+import twilio from '../../assets/IntegrationIcons/twilio.png';
+import vonage from '../../assets/IntegrationIcons/vonage.png';
 
 // Integration Icons
 const SalesforceIcon = () => <img src={Sales} alt="" className="w-8 h-8" />;
