@@ -1,5 +1,12 @@
 // data/b2bData.js
 
+/**
+ * NOTE: Location data in filters below is now fetched dynamically from API
+ * Endpoint: BASE_URL/b2b/v1/rocketreach/countries
+ * See: src/services/locationService.js and src/hooks/useCountries.js
+ * The hardcoded location options are kept as fallback
+ */
+
 // Basic Search Filter Options (only 2 filters)
 export const basicSearchFilters = {
   businessType: {

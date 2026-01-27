@@ -16,6 +16,7 @@ import { getAgentConfig } from "../../data/agentConfig";
 import logo from "../../assets/Logo -.png";
 import logofooter from "../../assets/Logo-footer.svg";
 import { useSearch } from "../../context/SearchContext";
+import { useCountries } from "../../hooks/useCountries";
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -30,7 +31,10 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
   const b2bContext = useB2BSearch();
   const context = mode === "b2b" ? b2bContext : b2cContext;
   const { hasSearched } = context;
-  const config = getAgentConfig(mode);
+
+  // Fetch countries data from API
+  const { countries, loading: countriesLoading } = useCountries();
+  const config = getAgentConfig(mode, countries);
 
   const {
     activeFilters,

@@ -10,6 +10,12 @@ export const salesAgentNavItems = [
   { key: "callLogs", name: "Call Logs", icon: "callLogs" },
 ];
 
+/**
+ * Location data - FALLBACK ONLY
+ * This data is used as fallback when the API call fails.
+ * The actual location data is now fetched from: BASE_URL/b2b/v1/rocketreach/countries
+ * See: src/services/locationService.js and src/hooks/useCountries.js
+ */
 export const locationData = [
   {
     name: "US > States",

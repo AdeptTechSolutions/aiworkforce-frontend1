@@ -337,6 +337,24 @@ export const b2bConfig = {
   data: b2bCompaniesData,
 };
 
-export const getAgentConfig = (mode) => {
-  return mode === "b2b" ? b2bConfig : b2cConfig;
+export const getAgentConfig = (mode, countriesData = null) => {
+  const baseConfig = mode === "b2b" ? b2bConfig : b2cConfig;
+
+  // If countriesData is provided, update location options dynamically
+  if (countriesData && countriesData.length > 0) {
+    const updatedFilters = {};
+
+    Object.keys(baseConfig.filters).forEach(searchType => {
+      updatedFilters[searchType] = baseConfig.filters[searchType].map(filter => {
+        if (filter.key === "location") {
+          return { ...filter, options: countriesData };
+        }
+        return filter;
+      });
+    });
+
+    return { ...baseConfig, filters: updatedFilters };
+  }
+
+  return baseConfig;
 };
