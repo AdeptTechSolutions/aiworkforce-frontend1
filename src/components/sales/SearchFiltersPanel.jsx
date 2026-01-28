@@ -360,13 +360,25 @@ export default function SearchFiltersPanel({
   activeFilters = [],
   onAddFilter,
   onRemoveFilter,
-  excludeInProject,
-  setExcludeInProject,
+  excludeInProject: excludeInProjectProp,
+  setExcludeInProject: setExcludeInProjectProp,
   onClearFilters,
   onSaveSearch,
   onLoadSearch,
   context,
 }) {
+  // Use internal state if no prop is provided
+  const [internalExcludeInProject, setInternalExcludeInProject] =
+    useState(false);
+
+  // Use prop if provided, otherwise use internal state
+  const excludeInProject =
+    excludeInProjectProp !== undefined
+      ? excludeInProjectProp
+      : internalExcludeInProject;
+  const setExcludeInProject =
+    setExcludeInProjectProp || setInternalExcludeInProject;
+
   const hasSearched = context?.hasSearched || false;
   const updateFilterModifier = context?.updateFilterModifier || (() => {});
 
@@ -380,6 +392,10 @@ export default function SearchFiltersPanel({
         f.type.startsWith(`${type}To`) ||
         f.type.startsWith(`${type}_`),
     ).length;
+  };
+
+  const handleExcludeToggle = () => {
+    setExcludeInProject(!excludeInProject);
   };
 
   return (
@@ -410,9 +426,7 @@ export default function SearchFiltersPanel({
       </div>
       <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-100">
         <div
-          onClick={() =>
-            setExcludeInProject && setExcludeInProject(!excludeInProject)
-          }
+          onClick={handleExcludeToggle}
           className={`w-[18px] h-[18px] rounded-[6px] border flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors
       ${
         excludeInProject
@@ -435,9 +449,7 @@ export default function SearchFiltersPanel({
           )}
         </div>
         <span
-          onClick={() =>
-            setExcludeInProject && setExcludeInProject(!excludeInProject)
-          }
+          onClick={handleExcludeToggle}
           className="text-[14px] text-gray-600 cursor-pointer select-none"
         >
           Exclude profiles already in project.

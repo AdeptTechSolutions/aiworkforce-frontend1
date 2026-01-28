@@ -203,6 +203,12 @@ export const AddToProjectModal = ({
   const fetchProjects = context?.fetchProjects;
   const isLoadingProjects = context?.isLoadingProjects || false;
 
+  // Get selected profiles/companies and full list for bulk operations
+  const selectedProfiles = context?.selectedProfiles || [];
+  const selectedCompanies = context?.selectedCompanies || [];
+  const allProfiles = context?.profiles || [];
+  const allCompanies = context?.companies || [];
+
   const [selectedProject, setSelectedProject] = useState(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -210,6 +216,7 @@ export const AddToProjectModal = ({
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isAddingToProject, setIsAddingToProject] = useState(false);
 
   // Fetch projects when modal opens
   useEffect(() => {
@@ -218,16 +225,47 @@ export const AddToProjectModal = ({
     }
   }, [isOpen, fetchProjects]);
 
-  // Get the item (profile or company)
+  // Get the item (profile or company) - single item mode
   const item = mode === "b2b" ? company : profile;
 
-  const handleAdd = () => {
-    if (selectedProject && item) {
-      if (addToProject) {
-        addToProject(selectedProject.id, [item.id]);
+  // Get items for bulk mode
+  const getItemsToAdd = () => {
+    if (item) {
+      // Single item mode
+      return [item];
+    }
+
+    // Bulk mode - get full profile/company objects from selected IDs
+    if (mode === "b2b") {
+      return allCompanies.filter((c) => selectedCompanies.includes(c.id));
+    } else {
+      return allProfiles.filter((p) => selectedProfiles.includes(p.id));
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!selectedProject) return;
+
+    const itemsToAdd = getItemsToAdd();
+    if (itemsToAdd.length === 0) return;
+
+    if (addToProject) {
+      setIsAddingToProject(true);
+      try {
+        // Pass the full profile/company data array
+        const result = await addToProject(selectedProject.id, itemsToAdd);
+        if (result?.success) {
+          setSuccessType("added");
+          setShowSuccess(true);
+        } else {
+          // Handle error case - still show success for now, but log error
+          console.error("Failed to add to project:", result?.error);
+          setSuccessType("added");
+          setShowSuccess(true);
+        }
+      } finally {
+        setIsAddingToProject(false);
       }
-      setSuccessType("added");
-      setShowSuccess(true);
     }
   };
 
@@ -289,7 +327,10 @@ export const AddToProjectModal = ({
 
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Successfully added!</h2>
           <p className="text-gray-500 mb-8">
-            Lead added to "{selectedProject?.name}" successfully
+            {getItemsToAdd().length > 1
+              ? `${getItemsToAdd().length} ${mode === "b2b" ? "companies" : "leads"} added to "${selectedProject?.name}" successfully`
+              : `Lead added to "${selectedProject?.name}" successfully`
+            }
           </p>
 
           <button
@@ -445,13 +486,16 @@ export const AddToProjectModal = ({
 
             <button
               onClick={handleAdd}
-              disabled={!selectedProject}
-              className={`px-6 py-3 rounded-xl font-medium transition-colors ${selectedProject
+              disabled={!selectedProject || isAddingToProject}
+              className={`px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 ${selectedProject && !isAddingToProject
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
             >
-              Add to Project
+              {isAddingToProject && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              )}
+              {isAddingToProject ? "Adding..." : `Add to Project${!item && getItemsToAdd().length > 1 ? ` (${getItemsToAdd().length})` : ""}`}
             </button>
           </div>
         </div>

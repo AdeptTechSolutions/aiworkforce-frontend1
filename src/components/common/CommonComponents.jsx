@@ -102,15 +102,15 @@ export const FilterTag = ({ filter, onRemove }) => {
 export const Checkbox = ({ checked, onChange, label, indeterminate = false }) => {
   return (
     <label className="flex items-center gap-2 cursor-pointer">
-      <div className="relative">
+      <div className="relative w-5 h-5">
         <input
           type="checkbox"
           checked={checked}
           onChange={onChange}
-          className="sr-only"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
         />
         <div
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${checked
+          className={`absolute inset-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${checked
             ? "bg-blue-600 border-blue-600"
             : "border-gray-300 bg-white"
             }`}

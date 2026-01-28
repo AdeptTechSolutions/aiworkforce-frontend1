@@ -66,7 +66,9 @@ export const SearchProvider = ({ children }) => {
     };
 
     // Find radius filter if exists
-    const radiusFilter = activeFilters.find(f => f.type === "location_radius");
+    const radiusFilter = activeFilters.find(
+      (f) => f.type === "location_radius",
+    );
     const radius = radiusFilter?.radius || 0;
 
     activeFilters.forEach((filter) => {
@@ -181,8 +183,16 @@ export const SearchProvider = ({ children }) => {
       };
 
       console.log("🔍 API Request Body:", JSON.stringify(requestBody, null, 2));
+      console.log("🔍 Exclude existing:", excludeInProject);
 
-      const response = await api.post("/b2b/v1/b2c/search-people", requestBody);
+      const config = excludeInProject
+        ? { params: { exclude_existing: true } }
+        : {};
+      const response = await api.post(
+        "/b2b/v1/b2c/search-people",
+        requestBody,
+        config,
+      );
 
       console.log("✅ API Response:", JSON.stringify(response.data, null, 2));
 
@@ -245,76 +255,93 @@ export const SearchProvider = ({ children }) => {
     } finally {
       setIsSearching(false);
     }
-  }, [isSearching, currentPage, itemsPerPage, transformFiltersToAPIQuery]);
+  }, [
+    isSearching,
+    currentPage,
+    itemsPerPage,
+    transformFiltersToAPIQuery,
+    excludeInProject,
+  ]);
 
   // Save current search to API
-  const saveCurrentSearch = useCallback(async (searchName) => {
-    try {
-      // Transform activeFilters to request body format
-      const requestBody = {
-        search_type: "basic", // or "advanced" based on your logic
-        name: searchName,
-        location: "",
-        description: "",
-        preferred_contact_method: "",
-        occupation: "",
-        role_department: "",
-        skills: [],
-        years_of_experience: "",
-        company_name_or_domain: "",
-        education: "",
-        exclude_profiles_in_project: excludeInProject ? 1 : 0,
-        search_query: "",
-        filters_applied: {},
-        results_count: totalResults,
-      };
+  const saveCurrentSearch = useCallback(
+    async (searchName) => {
+      try {
+        // Transform activeFilters to request body format
+        const requestBody = {
+          search_type: "basic", // or "advanced" based on your logic
+          name: searchName,
+          location: "",
+          description: "",
+          preferred_contact_method: "",
+          occupation: "",
+          role_department: "",
+          skills: [],
+          years_of_experience: "",
+          company_name_or_domain: "",
+          education: "",
+          exclude_profiles_in_project: excludeInProject ? 1 : 0,
+          search_query: "",
+          filters_applied: {},
+          results_count: totalResults,
+        };
 
-      // Find radius filter if exists
-      const radiusFilter = activeFilters.find(f => f.type === "location_radius");
-      const radius = radiusFilter?.radius || 0;
+        // Find radius filter if exists
+        const radiusFilter = activeFilters.find(
+          (f) => f.type === "location_radius",
+        );
+        const radius = radiusFilter?.radius || 0;
 
-      // Map activeFilters to request body fields
-      activeFilters.forEach((filter) => {
-        if (filter.type === "location") {
-          let locationValue = filter.value;
+        // Map activeFilters to request body fields
+        activeFilters.forEach((filter) => {
+          if (filter.type === "location") {
+            let locationValue = filter.value;
 
-          // Append radius if it exists
-          if (radius > 0) {
-            locationValue = `${filter.value}::~${radius}mi`;
+            // Append radius if it exists
+            if (radius > 0) {
+              locationValue = `${filter.value}::~${radius}mi`;
+            }
+
+            requestBody.location = locationValue;
+          } else if (filter.type === "description") {
+            requestBody.description = filter.value;
+          } else if (
+            filter.type === "occupation" ||
+            filter.type === "role_jobTitle"
+          ) {
+            requestBody.occupation = filter.value;
+          } else if (filter.type === "department") {
+            requestBody.role_department = filter.value;
+          } else if (filter.type === "skills") {
+            requestBody.skills.push(filter.value);
+          } else if (filter.type === "years_experience") {
+            requestBody.years_of_experience = filter.value;
+          } else if (
+            filter.type === "company" ||
+            filter.type === "company_name"
+          ) {
+            requestBody.company_name_or_domain = filter.value;
+          } else if (filter.type === "degree") {
+            requestBody.education = filter.value;
           }
+        });
 
-          requestBody.location = locationValue;
-        } else if (filter.type === "description") {
-          requestBody.description = filter.value;
-        } else if (filter.type === "occupation" || filter.type === "role_jobTitle") {
-          requestBody.occupation = filter.value;
-        } else if (filter.type === "department") {
-          requestBody.role_department = filter.value;
-        } else if (filter.type === "skills") {
-          requestBody.skills.push(filter.value);
-        } else if (filter.type === "years_experience") {
-          requestBody.years_of_experience = filter.value;
-        } else if (filter.type === "company" || filter.type === "company_name") {
-          requestBody.company_name_or_domain = filter.value;
-        } else if (filter.type === "degree") {
-          requestBody.education = filter.value;
-        }
-      });
+        // Store all filters in filters_applied
+        requestBody.filters_applied = transformFiltersToAPIQuery();
 
-      // Store all filters in filters_applied
-      requestBody.filters_applied = transformFiltersToAPIQuery();
+        console.log("💾 Saving search:", requestBody);
 
-      console.log("💾 Saving search:", requestBody);
+        const response = await api.post("/b2b/searches", requestBody);
 
-      const response = await api.post("/b2b/searches", requestBody);
-
-      console.log("✅ Search saved successfully:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("❌ Error saving search:", error);
-      throw error;
-    }
-  }, [activeFilters, excludeInProject, totalResults, transformFiltersToAPIQuery]);
+        console.log("✅ Search saved successfully:", response.data);
+        return response.data;
+      } catch (error) {
+        console.error("❌ Error saving search:", error);
+        throw error;
+      }
+    },
+    [activeFilters, excludeInProject, totalResults, transformFiltersToAPIQuery],
+  );
 
   // Fetch saved searches from API
   const fetchSavedSearches = useCallback(async () => {
@@ -339,6 +366,8 @@ export const SearchProvider = ({ children }) => {
       activeFilters.length,
       "hasSearched:",
       hasSearched,
+      "excludeInProject:",
+      excludeInProject,
     );
 
     // Auto-trigger search when filters are present
@@ -348,11 +377,20 @@ export const SearchProvider = ({ children }) => {
         console.log("✨ Setting hasSearched to true");
         setHasSearched(true);
       }
-      console.log("🚀 Calling searchPeople...");
+      console.log(
+        "🚀 Calling searchPeople with excludeInProject:",
+        excludeInProject,
+      );
       searchPeople();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters, currentPage, itemsPerPage]);
+  }, [
+    activeFilters,
+    currentPage,
+    itemsPerPage,
+    excludeInProject,
+    searchPeople,
+  ]);
 
   // Add filter
   const addFilter = useCallback((filter) => {
@@ -392,12 +430,15 @@ export const SearchProvider = ({ children }) => {
     let idCounter = Date.now();
 
     // Handle both old format (savedSearch.filters) and new API format (savedSearch.filters_applied)
-    const filtersData = savedSearch.filters_applied || savedSearch.filters || {};
+    const filtersData =
+      savedSearch.filters_applied || savedSearch.filters || {};
 
     // Map API response fields to filters
     if (savedSearch.location) {
       // Check if location has radius format: "Location::~75mi"
-      const locationMatch = savedSearch.location.match(/^(.+?)::~(\d+)(mi|km)$/);
+      const locationMatch = savedSearch.location.match(
+        /^(.+?)::~(\d+)(mi|km)$/,
+      );
 
       if (locationMatch) {
         // Location has radius
@@ -504,10 +545,16 @@ export const SearchProvider = ({ children }) => {
             let filterType = key;
             let icon = "filter";
 
-            if (key === "current_employer" || key === "exclude_current_employer") {
+            if (
+              key === "current_employer" ||
+              key === "exclude_current_employer"
+            ) {
               filterType = "company";
               icon = "building";
-            } else if (key === "current_title" || key === "exclude_current_title") {
+            } else if (
+              key === "current_title" ||
+              key === "exclude_current_title"
+            ) {
               filterType = "occupation";
               icon = "briefcase";
             } else if (key === "location" || key === "exclude_location") {
@@ -521,13 +568,16 @@ export const SearchProvider = ({ children }) => {
                 const [, location, radiusValue, unit] = locationMatch;
 
                 // Add modifier if it's an exclude filter
-                const modifier = key.startsWith("exclude_") ? "exclude" : undefined;
+                const modifier = key.startsWith("exclude_")
+                  ? "exclude"
+                  : undefined;
 
                 // Check if this location filter already exists
-                const isDuplicate = filters.some(f =>
-                  f.type === filterType &&
-                  f.value === location &&
-                  f.modifier === modifier
+                const isDuplicate = filters.some(
+                  (f) =>
+                    f.type === filterType &&
+                    f.value === location &&
+                    f.modifier === modifier,
                 );
 
                 if (!isDuplicate) {
@@ -541,7 +591,7 @@ export const SearchProvider = ({ children }) => {
                   });
 
                   // Add radius filter (only once, not for each location)
-                  if (!filters.some(f => f.type === "location_radius")) {
+                  if (!filters.some((f) => f.type === "location_radius")) {
                     filters.push({
                       id: idCounter++,
                       type: "location_radius",
@@ -566,10 +616,11 @@ export const SearchProvider = ({ children }) => {
             const modifier = key.startsWith("exclude_") ? "exclude" : undefined;
 
             // Check if this filter already exists (prevent duplicates)
-            const isDuplicate = filters.some(f =>
-              f.type === filterType &&
-              f.value === item &&
-              f.modifier === modifier
+            const isDuplicate = filters.some(
+              (f) =>
+                f.type === filterType &&
+                f.value === item &&
+                f.modifier === modifier,
             );
 
             if (!isDuplicate) {
@@ -645,95 +696,126 @@ export const SearchProvider = ({ children }) => {
   // }, [credits]);
 
   // 2. Update your enrichProfile function to check credits and call API
-  const enrichProfile = useCallback(async (profileId) => {
-    // Check if user has enough credits
-    if (credits <= 0) {
-      setShowOutOfCreditsModal(true);
-      return { success: false, error: "No credits available" };
-    }
+  const enrichProfile = useCallback(
+    async (profileId) => {
+      // Check if user has enough credits
+      if (credits <= 0) {
+        setShowOutOfCreditsModal(true);
+        return { success: false, error: "No credits available" };
+      }
 
-    try {
-      // Call the lookup-person-raw API endpoint
-      const response = await api.get(`/b2b/v1/b2c/lookup-person-raw/${profileId}`);
-      console.log("✅ Enrich Profile API Response:", response.data);
+      try {
+        // Call the lookup-person-raw API endpoint
+        const response = await api.get(
+          `/b2b/v1/b2c/lookup-person-raw/${profileId}`,
+        );
+        console.log("✅ Enrich Profile API Response:", response.data);
 
-      if (response.data) {
-        const enrichedData = response.data;
+        if (response.data) {
+          const enrichedData = response.data;
 
-        // Transform job_history to pastPositions format
-        const pastPositions = (enrichedData.job_history || [])
-          .filter((job) => !job.is_current)
-          .map((job) => ({
-            title: job.title || "N/A",
-            company: job.company_name || job.company || "N/A",
-            years: `${job.start_date ? new Date(job.start_date).getFullYear() : "N/A"} - ${job.end_date === "Present" ? "Present" : job.end_date ? new Date(job.end_date).getFullYear() : "N/A"}`,
+          // Transform job_history to pastPositions format
+          const pastPositions = (enrichedData.job_history || [])
+            .filter((job) => !job.is_current)
+            .map((job) => ({
+              title: job.title || "N/A",
+              company: job.company_name || job.company || "N/A",
+              years: `${job.start_date ? new Date(job.start_date).getFullYear() : "N/A"} - ${job.end_date === "Present" ? "Present" : job.end_date ? new Date(job.end_date).getFullYear() : "N/A"}`,
+            }));
+
+          // Transform education array
+          const education = (enrichedData.education || []).map((edu) => ({
+            school: edu.school || "N/A",
+            degree: edu.degree || "",
+            major: edu.major || "",
+            years: `${edu.start || "N/A"}-${edu.end || "N/A"}`,
           }));
 
-        // Transform education array
-        const education = (enrichedData.education || []).map((edu) => ({
-          school: edu.school || "N/A",
-          degree: edu.degree || "",
-          major: edu.major || "",
-          years: `${edu.start || "N/A"}-${edu.end || "N/A"}`,
-        }));
+          // Extract phone numbers
+          const phones = (enrichedData.phones || []).map(
+            (phone) => phone.number,
+          );
 
-        // Extract phone numbers
-        const phones = (enrichedData.phones || []).map((phone) => phone.number);
+          // Extract emails
+          const emails = (enrichedData.emails || []).map(
+            (email) => email.email,
+          );
 
-        // Extract emails
-        const emails = (enrichedData.emails || []).map((email) => email.email);
+          // Update the profile with enriched data
+          setProfiles((prev) =>
+            prev.map((profile) =>
+              profile.id === profileId
+                ? {
+                    ...profile,
+                    isEnriched: true,
+                    name: enrichedData.name || profile.name,
+                    title: enrichedData.current_title || profile.title,
+                    company: enrichedData.current_employer || profile.company,
+                    location:
+                      enrichedData.location ||
+                      enrichedData.country ||
+                      profile.location,
+                    industry:
+                      enrichedData.current_employer_industry ||
+                      profile.industry,
+                    avatar: enrichedData.profile_pic || profile.avatar,
+                    linkedin:
+                      enrichedData.linkedin_url ||
+                      enrichedData.links?.linkedin ||
+                      profile.linkedin,
+                    website:
+                      enrichedData.current_employer_domain || profile.website,
+                    currentPosition:
+                      enrichedData.current_title || profile.title,
+                    pastPositions:
+                      pastPositions.length > 0
+                        ? pastPositions
+                        : profile.pastPositions,
+                    education:
+                      education.length > 0 ? education : profile.education,
+                    skills: enrichedData.skills || profile.skills,
+                    phones: phones.length > 0 ? phones : profile.phones,
+                    emails: emails.length > 0 ? emails : profile.emails,
+                    contactInfo: {
+                      ...profile.contactInfo,
+                      website:
+                        enrichedData.current_employer_domain ||
+                        profile.contactInfo?.website,
+                      phones:
+                        phones.length > 0
+                          ? phones
+                          : profile.contactInfo?.phones,
+                      emails:
+                        emails.length > 0
+                          ? emails
+                          : profile.contactInfo?.emails,
+                    },
+                    // Store raw enriched data for additional fields if needed
+                    enrichedRawData: enrichedData,
+                  }
+                : profile,
+            ),
+          );
 
-        // Update the profile with enriched data
-        setProfiles((prev) =>
-          prev.map((profile) =>
-            profile.id === profileId
-              ? {
-                  ...profile,
-                  isEnriched: true,
-                  name: enrichedData.name || profile.name,
-                  title: enrichedData.current_title || profile.title,
-                  company: enrichedData.current_employer || profile.company,
-                  location: enrichedData.location || enrichedData.country || profile.location,
-                  industry: enrichedData.current_employer_industry || profile.industry,
-                  avatar: enrichedData.profile_pic || profile.avatar,
-                  linkedin: enrichedData.linkedin_url || enrichedData.links?.linkedin || profile.linkedin,
-                  website: enrichedData.current_employer_domain || profile.website,
-                  currentPosition: enrichedData.current_title || profile.title,
-                  pastPositions: pastPositions.length > 0 ? pastPositions : profile.pastPositions,
-                  education: education.length > 0 ? education : profile.education,
-                  skills: enrichedData.skills || profile.skills,
-                  phones: phones.length > 0 ? phones : profile.phones,
-                  emails: emails.length > 0 ? emails : profile.emails,
-                  contactInfo: {
-                    ...profile.contactInfo,
-                    website: enrichedData.current_employer_domain || profile.contactInfo?.website,
-                    phones: phones.length > 0 ? phones : profile.contactInfo?.phones,
-                    emails: emails.length > 0 ? emails : profile.contactInfo?.emails,
-                  },
-                  // Store raw enriched data for additional fields if needed
-                  enrichedRawData: enrichedData,
-                }
-              : profile,
-          ),
-        );
+          // Deduct credits
+          setCredits((prev) => {
+            const newCredits = prev - 1;
+            if (newCredits <= 0) {
+              setShowOutOfCreditsModal(true);
+            }
+            return Math.max(0, newCredits);
+          });
 
-        // Deduct credits
-        setCredits((prev) => {
-          const newCredits = prev - 1;
-          if (newCredits <= 0) {
-            setShowOutOfCreditsModal(true);
-          }
-          return Math.max(0, newCredits);
-        });
-
-        return { success: true, data: enrichedData };
+          return { success: true, data: enrichedData };
+        }
+      } catch (error) {
+        console.error("❌ Error enriching profile:", error);
+        console.error("Error details:", error.response?.data || error.message);
+        return { success: false, error: error.message };
       }
-    } catch (error) {
-      console.error("❌ Error enriching profile:", error);
-      console.error("Error details:", error.response?.data || error.message);
-      return { success: false, error: error.message };
-    }
-  }, [credits]);
+    },
+    [credits],
+  );
 
   // 3. Update enrichMultipleProfiles to check credits
   const enrichMultipleProfiles = (profileIds) => {
@@ -805,13 +887,19 @@ export const SearchProvider = ({ children }) => {
       const response = await api.get("/b2b/projects/");
       console.log("📥 Fetched projects:", response.data);
 
-      if (response.data && response.data.success && response.data.data?.projects) {
-        const transformedProjects = response.data.data.projects.map((project) => ({
-          id: project.id,
-          name: project.name,
-          description: project.description || "",
-          profileCount: project.profileCount || project.profile_count || 0,
-        }));
+      if (
+        response.data &&
+        response.data.success &&
+        response.data.data?.projects
+      ) {
+        const transformedProjects = response.data.data.projects.map(
+          (project) => ({
+            id: project.id,
+            name: project.name,
+            description: project.description || "",
+            profileCount: project.profileCount || project.profile_count || 0,
+          }),
+        );
         setProjects(transformedProjects);
         return transformedProjects;
       }
@@ -850,18 +938,129 @@ export const SearchProvider = ({ children }) => {
     }
   }, []);
 
-  // Add profile to project
-  const addToProject = useCallback((projectId, profileIds) => {
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === projectId
-          ? {
-              ...project,
-              profileCount: project.profileCount + profileIds.length,
-            }
-          : project,
-      ),
-    );
+  // Add profile to project via API
+  const addToProject = useCallback(async (projectId, profilesData) => {
+    try {
+      // Format the request body according to the API specification
+      const peopleData = profilesData.map((profile) => {
+        // Build the base people_data object
+        const personData = {
+          id: profile.id, // RocketReach ID (required)
+          name: profile.name || "N/A", // Name (required)
+          current_title: profile.title || profile.current_title || "", // → stored in description
+          current_employer: profile.company || profile.current_employer || "", // → stored in company_type
+          linkedin_url:
+            profile.linkedin || profile.enrichedRawData?.linkedin_url || "", // → stored in website
+          location: profile.location || "", // → stored in location
+          emails: [], // Will be populated below
+          phones: [], // Will be populated below
+        };
+
+        // Extract emails - handle both enriched and non-enriched formats
+        if (profile.emails && Array.isArray(profile.emails)) {
+          personData.emails = profile.emails.map((email) =>
+            typeof email === "string" ? { email: email, type: "work" } : email,
+          );
+        } else if (
+          profile.contactInfo?.emails &&
+          Array.isArray(profile.contactInfo.emails)
+        ) {
+          personData.emails = profile.contactInfo.emails.map((email) =>
+            typeof email === "string" ? { email: email, type: "work" } : email,
+          );
+        } else if (profile.enrichedRawData?.emails) {
+          personData.emails = profile.enrichedRawData.emails;
+        }
+
+        // Extract phones - handle both enriched and non-enriched formats
+        if (profile.phones && Array.isArray(profile.phones)) {
+          personData.phones = profile.phones.map((phone) =>
+            typeof phone === "string" ? { number: phone, type: "work" } : phone,
+          );
+        } else if (
+          profile.contactInfo?.phones &&
+          Array.isArray(profile.contactInfo.phones)
+        ) {
+          personData.phones = profile.contactInfo.phones.map((phone) =>
+            typeof phone === "string" ? { number: phone, type: "work" } : phone,
+          );
+        } else if (profile.enrichedRawData?.phones) {
+          personData.phones = profile.enrichedRawData.phones;
+        }
+
+        // Add rocketreach_data if we have enriched raw data
+        if (profile.enrichedRawData) {
+          personData.rocketreach_data = profile.enrichedRawData;
+        }
+
+        // Build meta_data for any additional fields not in the main schema
+        const metaData = {};
+
+        if (profile.industry) metaData.industry = profile.industry;
+        if (profile.avatar) metaData.avatar = profile.avatar;
+        if (profile.website) metaData.website = profile.website;
+        if (profile.skills) metaData.skills = profile.skills;
+        if (profile.education) metaData.education = profile.education;
+        if (profile.pastPositions)
+          metaData.pastPositions = profile.pastPositions;
+        if (profile.current) metaData.current = profile.current;
+        if (profile.past) metaData.past = profile.past;
+
+        // Add any other fields that aren't part of the main schema
+        if (Object.keys(metaData).length > 0) {
+          personData.meta_data = metaData;
+        }
+
+        return personData;
+      });
+
+      const requestBody = {
+        project_id: projectId,
+        people_data: peopleData,
+      };
+
+      console.log(
+        "📤 Adding to project - Request Body:",
+        JSON.stringify(requestBody, null, 2),
+      );
+
+      const response = await api.post(
+        "/b2b/v1/b2c/add-to-project",
+        requestBody,
+      );
+
+      console.log("✅ Add to project response:", response.data);
+
+      // Update local state on success
+      if (response.data) {
+        setProjects((prev) =>
+          prev.map((project) =>
+            project.id === projectId
+              ? {
+                  ...project,
+                  profileCount: project.profileCount + profilesData.length,
+                }
+              : project,
+          ),
+        );
+
+        // Mark profiles as in project
+        const profileIds = profilesData.map((p) => p.id);
+        setProfiles((prev) =>
+          prev.map((profile) =>
+            profileIds.includes(profile.id)
+              ? { ...profile, inProject: true }
+              : profile,
+          ),
+        );
+
+        return { success: true, data: response.data };
+      }
+    } catch (error) {
+      console.error("❌ Error adding to project:", error);
+      console.error("Error details:", error.response?.data || error.message);
+      return { success: false, error: error.message };
+    }
   }, []);
 
   // Toggle expanded profile

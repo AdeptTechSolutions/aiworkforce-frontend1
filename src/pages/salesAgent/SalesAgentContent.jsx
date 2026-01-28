@@ -47,6 +47,8 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
     setShowOutOfCreditsModal,
     saveCurrentSearch,
     fetchSavedSearches,
+    excludeInProject,
+    setExcludeInProject,
   } = context;
 
   // Search type state - uses first option from config
@@ -222,6 +224,8 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
             onSaveSearch={() => setSaveSearchModal(true)}
             onLoadSearch={handleOpenLoadSearchModal}
             context={context}
+            excludeInProject={excludeInProject}
+            setExcludeInProject={setExcludeInProject}
           />
         </div>
 
