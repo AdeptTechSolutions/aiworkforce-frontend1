@@ -700,50 +700,148 @@ export const B2BSearchProvider = ({ children }) => {
       }
 
       try {
-        // Call the B2C lookup-person-raw API endpoint
-        const response = await api.get(
-          `/b2b/v1/b2c/lookup-person-raw/${directorId}`,
-        );
+        // Find the company and director
+        const company = companies.find((c) => c.id === companyId);
+        const director = company?.directors?.find((d) => d.id === directorId);
 
-        console.log("✅ Enrich Director API Response:", response.data);
+        if (!company || !director) {
+          console.error("Company or director not found");
+          return false;
+        }
 
-        const enrichedData = response.data;
+        console.log("🔍 Enriching director:", director.name, "at", company.name);
 
-        // Extract phone numbers from API response
-        const phones = (enrichedData.phones || []).map((phone) => phone.number);
+        // Step 1: Try RocketReach person-lookup first
+        let enrichedData = null;
+        let dataSource = null;
 
-        // Extract emails from API response
-        const emails = (enrichedData.emails || []).map((email) => email.email);
+        try {
+          const rocketReachBody = {
+            query: {
+              name: [director.name],
+              current_employer: [company.name],
+            },
+          };
+
+          console.log("📡 Calling RocketReach API with:", rocketReachBody);
+
+          const rocketReachResponse = await api.post(
+            "/b2b/v1/rocketreach/person-lookup",
+            rocketReachBody,
+          );
+
+          console.log("✅ RocketReach API Response:", rocketReachResponse.data);
+
+          // Check if profile data exists and is not empty
+          if (
+            rocketReachResponse.data?.profile &&
+            Object.keys(rocketReachResponse.data.profile).length > 0 &&
+            rocketReachResponse.data.profile.id
+          ) {
+            enrichedData = rocketReachResponse.data.profile;
+            dataSource = "rocketreach";
+            console.log("✅ Using RocketReach data");
+          } else {
+            console.log("⚠️ RocketReach returned empty profile, trying ContactOut...");
+          }
+        } catch (rocketReachError) {
+          console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
+        }
+
+        // Step 2: If RocketReach failed or returned empty, try ContactOut
+        if (!enrichedData) {
+          try {
+            const contactOutBody = {
+              full_name: director.name,
+              company: [company.name],
+            };
+
+            console.log("📡 Calling ContactOut API with:", contactOutBody);
+
+            const contactOutResponse = await api.post(
+              "/b2b/v1/contactout/enrich",
+              contactOutBody,
+            );
+
+            console.log("✅ ContactOut API Response:", contactOutResponse.data);
+
+            // Check if profile data exists
+            if (
+              contactOutResponse.data?.profile &&
+              Object.keys(contactOutResponse.data.profile).length > 0
+            ) {
+              enrichedData = contactOutResponse.data.profile;
+              dataSource = "contactout";
+              console.log("✅ Using ContactOut data");
+            } else {
+              console.error("❌ Both APIs returned empty data");
+              return false;
+            }
+          } catch (contactOutError) {
+            console.error("❌ Both enrichment APIs failed:", contactOutError.message);
+            return false;
+          }
+        }
+
+        // Step 3: Transform and update director with enriched data
+        let phones = [];
+        let emails = [];
+        let title = director.title;
+        let linkedin_url = director.linkedin_url;
+        let location = director.location;
+        let current_employer = director.current_employer;
+
+        if (dataSource === "rocketreach") {
+          // RocketReach format
+          phones = (enrichedData.phones || []).map((phone) => phone.number);
+          emails = (enrichedData.emails || []).map((email) => email.email);
+          title = enrichedData.current_title || director.title;
+          linkedin_url = enrichedData.linkedin_url || director.linkedin_url;
+          location = enrichedData.location || director.location;
+          current_employer = enrichedData.current_employer || director.current_employer;
+        } else if (dataSource === "contactout") {
+          // ContactOut format
+          // Combine all email arrays
+          const allEmails = [
+            ...(enrichedData.email || []),
+            ...(enrichedData.work_email || []),
+            ...(enrichedData.personal_email || []),
+          ];
+          emails = allEmails.filter(Boolean);
+
+          phones = (enrichedData.phone || []).filter(Boolean);
+          title = enrichedData.headline || director.title;
+          linkedin_url = enrichedData.url || director.linkedin_url;
+          location = enrichedData.location || director.location;
+          current_employer = enrichedData.company?.name || director.current_employer;
+        }
 
         // Update the director with enriched data
         setCompanies((prev) =>
-          prev.map((company) => {
-            if (company.id === companyId) {
+          prev.map((c) => {
+            if (c.id === companyId) {
               return {
-                ...company,
-                directors: company.directors.map((director) =>
-                  director.id === directorId
+                ...c,
+                directors: c.directors.map((d) =>
+                  d.id === directorId
                     ? {
-                        ...director,
+                        ...d,
                         isEnriched: true,
-                        // Update with real data from API
-                        name: enrichedData.name || director.name,
-                        title: enrichedData.current_title || director.title,
-                        email: emails[0] || director.email,
+                        name: enrichedData.name || enrichedData.full_name || d.name,
+                        title: title,
+                        email: emails[0] || d.email,
                         secondaryEmail: emails[1] || null,
-                        phones: phones.length > 0 ? phones : director.phones,
-                        linkedin_url:
-                          enrichedData.linkedin_url || director.linkedin_url,
-                        location: enrichedData.location || director.location,
-                        current_employer:
-                          enrichedData.current_employer ||
-                          director.current_employer,
+                        phones: phones.length > 0 ? phones : d.phones,
+                        linkedin_url: linkedin_url,
+                        location: location,
+                        current_employer: current_employer,
+                        enrichmentSource: dataSource, // Track which API was used
                       }
-                    : director,
+                    : d,
                 ),
               };
             }
-            return company;
+            return c;
           }),
         );
 
@@ -756,6 +854,7 @@ export const B2BSearchProvider = ({ children }) => {
           return Math.max(0, newCredits);
         });
 
+        console.log(`✅ Successfully enriched director using ${dataSource}`);
         return true;
       } catch (error) {
         console.error("❌ Error enriching director:", error);
@@ -763,7 +862,7 @@ export const B2BSearchProvider = ({ children }) => {
         return false;
       }
     },
-    [credits],
+    [credits, companies],
   );
 
   // Enrich all directors in a company
