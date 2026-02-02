@@ -1,8 +1,9 @@
 // pages/CampaignManager.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProfileCard } from "../../components/profiles/ProfileComponents";
 import CampaignManagerModals from "../../components/campaigns/CampaignManagerModals";
 import WorkflowBuilder from "../../components/workflow/WorkflowBuilder";
+import api from "../../services/api";
 
 // Sample campaigns data
 const SAMPLE_CAMPAIGNS = {
@@ -78,12 +79,13 @@ const CampaignManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedCampaigns, setSelectedCampaigns] = useState([]);
-  
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
   // View states
   const [viewingCampaign, setViewingCampaign] = useState(null);
   const [leads, setLeads] = useState(SAMPLE_LEADS);
   const [selectedLeads, setSelectedLeads] = useState([]);
-  
+
   // Modal states
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showRemoveSuccess, setShowRemoveSuccess] = useState(false);
@@ -91,7 +93,7 @@ const CampaignManager = () => {
   const [showEnrichingModal, setShowEnrichingModal] = useState(false);
   const [showCannotStartModal, setShowCannotStartModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  
+
   // Tooltip states
   const [showEngagedTooltip, setShowEngagedTooltip] = useState(false);
   const [showRepliedTooltip, setShowRepliedTooltip] = useState(false);
@@ -102,6 +104,55 @@ const CampaignManager = () => {
 
   const currentCampaigns = campaigns[activeTab] || [];
   const unenrichedCount = leads.filter(l => !l.isEnriched).length;
+
+  // Fetch projects from API
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setIsLoadingProjects(true);
+      try {
+        const response = await api.get("/b2b/projects/all");
+        console.log("📥 Fetched all B2B projects:", response.data);
+
+        if (response.data && response.data.success && response.data.data?.projects) {
+          // Transform projects to campaign format
+          const transformedProjects = response.data.data.projects.map((project) => {
+            // Format the created_at date
+            const createdDate = new Date(project.created_at);
+            const formattedDate = createdDate.toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            });
+
+            return {
+              id: project.id,
+              name: project.name,
+              prospects: null,
+              progress: null,
+              engaged: null,
+              replied: null,
+              status: "draft", // Default status for fetched projects
+              source: project.source === "b2b" ? "B2B" : project.source === "b2c" ? "B2C" : "organic",
+              createdAt: formattedDate,
+            };
+          });
+
+          // Merge with existing campaigns
+          setCampaigns((prev) => ({
+            ...prev,
+            active: transformedProjects,
+          }));
+        }
+      } catch (error) {
+        console.error("❌ Error fetching B2B projects:", error);
+        console.error("Error details:", error.response?.data || error.message);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   // Handlers
   const handleCampaignClick = (campaign) => {
@@ -432,7 +483,19 @@ const CampaignManager = () => {
 
       {/* Table Body */}
       <div className="bg-white rounded-b-xl">
-        {currentCampaigns.map((campaign) => (
+        {isLoadingProjects ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3C49F7]"></div>
+              <p className="text-sm text-gray-500">Loading projects...</p>
+            </div>
+          </div>
+        ) : currentCampaigns.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-sm text-gray-500">No campaigns found</p>
+          </div>
+        ) : (
+          currentCampaigns.map((campaign) => (
           <div
             key={campaign.id}
             className="grid grid-cols-12 gap-4 px-4 py-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer items-center"
@@ -513,7 +576,8 @@ const CampaignManager = () => {
               )}
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Workflow Builder */}
