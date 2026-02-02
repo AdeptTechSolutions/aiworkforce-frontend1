@@ -1,362 +1,451 @@
 // components/workflow/WorkflowEditor.jsx
 import { useState } from "react";
-import { AddNewButton, ViewToggle, MoreOptionsMenu, StepItem, BranchConnector } from "./WorkflowEditorComponents";
-import { RightPanel } from "./WorkflowEditorPanels";
-import { TestCallModal, SavePromptModal, GlobalInstructionsModal, SaveAsTemplateModal, DeleteStepModal } from "./WorkflowEditorModals";
+import { ChevronLeft, MoreVertical } from "lucide-react";
+import { TreeView } from "./WorkflowTreeView";
+import { ListView } from "./WorkflowListView";
+import { EmailPanel, LinkedInPanel, WhatsAppPanel, TelegramPanel, ConditionPanel, CallPanel, EmptyPanel } from "./WorkflowPanels";
+import WorkflowSettings from "./WorkflowSettings";
+import {
+    EmailSignatureModal,
+    CreateSignatureModal,
+    SignatureSuccessModal,
+    DeleteStepModal,
+} from "./WorkflowBuilderModals";
 
-const WorkflowEditor = ({ onBack, workflowName, workflowDate, onSave, onSaveAndContinue, initialSteps = [] }) => {
-  // View state
-  const [view, setView] = useState("list");
-  
-  // Steps state
-  const [steps, setSteps] = useState(initialSteps);
-  const [selectedStepId, setSelectedStepId] = useState(null);
-  
-  // Configuration state
-  const [stepConfigs, setStepConfigs] = useState({});
-  
-  // Global settings
-  const [sendEmailsInThread, setSendEmailsInThread] = useState(true);
-  const [globalInstructions, setGlobalInstructions] = useState("");
-  
-  // Modal states
-  const [showTestCallModal, setShowTestCallModal] = useState(false);
-  const [showSavePromptModal, setShowSavePromptModal] = useState(false);
-  const [showGlobalInstructionsModal, setShowGlobalInstructionsModal] = useState(false);
-  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [stepToDelete, setStepToDelete] = useState(null);
+// Import illustration
+import workflowIllustration from "../../assets/WF3.png";
 
-  // Get selected step
-  const selectedStep = steps.find(s => s.id === selectedStepId);
+const WorkflowEditor = ({
+    onBack,
+    workflowName,
+    workflowDate,
+    onSave,
+    onSaveAndContinue,
+    initialSteps = []
+}) => {
+    // View state
+    const [view, setView] = useState("list");
+    const [showSettings, setShowSettings] = useState(false);
 
-  // Add new step handler
-  const handleAddStep = (type, subAction = null, branch = null) => {
-    const newStep = {
-      id: Date.now(),
-      type,
-      subAction,
-      delay: 3,
-      branch,
-      config: {},
+    // Steps state
+    const [steps, setSteps] = useState(initialSteps);
+    const [selectedStepId, setSelectedStepId] = useState(null);
+
+    // Step configurations (email content, etc.)
+    const [stepConfigs, setStepConfigs] = useState({});
+
+    // Modal states
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [showCreateSignatureModal, setShowCreateSignatureModal] = useState(false);
+    const [showSignatureSuccess, setShowSignatureSuccess] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [stepToDelete, setStepToDelete] = useState(null);
+    const [signatureName, setSignatureName] = useState("");
+
+    // Existing signatures
+    const [existingSignatures, setExistingSignatures] = useState([]);
+
+    // Get selected step
+    const selectedStep = steps.find(s => s.id === selectedStepId);
+    const selectedConfig = selectedStepId ? (stepConfigs[selectedStepId] || {}) : {};
+
+    // Get step label
+    const getStepLabel = (type, subAction) => {
+        switch (type) {
+            case "email": return "Send Email Message";
+            case "linkedin":
+                switch (subAction) {
+                    case "message": return "LinkedIn Message";
+                    case "likePost": return "Like a Post";
+                    case "repost": return "Repost";
+                    case "comment": return "Comment on a Post";
+                    default: return "LinkedIn";
+                }
+            case "whatsapp": return "Send Whatsapp Message";
+            case "telegram": return "Send Telegram Message";
+            case "call": return "Call";
+            case "condition": return "Condition";
+            default: return type;
+        }
     };
-    setSteps([...steps, newStep]);
-    setSelectedStepId(newStep.id);
-    
-    setStepConfigs({
-      ...stepConfigs,
-      [newStep.id]: getDefaultConfig(type),
-    });
-  };
 
-  // Get default config based on step type
-  const getDefaultConfig = (type) => {
-    switch (type) {
-      case "call":
-        return {
-          voice: "eric",
-          language: "English",
-          backgroundAudio: "Office",
-          waitForGreetings: true,
-          noiseCancellation: true,
-          blockInterruption: true,
-          retryUnanswered: true,
-          retryAttempts: "1",
-          retryAfter: 3,
-          retryUnit: "Hours",
-          voicemailBehaviour: "hangup",
+    // Get default config
+    const getDefaultConfig = (type) => {
+        switch (type) {
+            case "email":
+                return {
+                    to: `${workflowName} - ${workflowDate}`,
+                    cc: "",
+                    bcc: "",
+                    subject: "",
+                    body: "",
+                };
+            case "linkedin":
+                return { message: "" };
+            case "whatsapp":
+                return {
+                    to: `${workflowName} - ${workflowDate}`,
+                    message: "",
+                };
+            case "telegram":
+                return {
+                    to: `${workflowName} - ${workflowDate}`,
+                    message: "",
+                };
+            case "condition":
+                return {
+                    conditionType: null,
+                };
+            case "call":
+                return {
+                    openingLine: "",
+                    websiteUrl: "https://www.example.com",
+                    callPrompt: "",
+                };
+            default:
+                return {};
+        }
+    };
+
+    // Add new step
+    const handleAddStep = (type, subAction = null, position = "end", referenceId = null, branch = null) => {
+        const newStep = {
+            id: Date.now(),
+            type,
+            subAction,
+            label: getStepLabel(type, subAction),
+            delay: 3,
+            branch: branch || null,
+            parentId: branch ? referenceId : null,
         };
-      case "email":
-        return { subject: "", body: "" };
-      case "linkedin":
-        return { message: "" };
-      default:
-        return {};
+
+        let newSteps = [...steps];
+
+        if (position === "above" && referenceId) {
+            const index = newSteps.findIndex(s => s.id === referenceId);
+            if (index !== -1) {
+                newSteps.splice(index, 0, newStep);
+            } else {
+                newSteps.push(newStep);
+            }
+        } else if (position === "below" && referenceId) {
+            const index = newSteps.findIndex(s => s.id === referenceId);
+            if (index !== -1) {
+                newSteps.splice(index + 1, 0, newStep);
+            } else {
+                newSteps.push(newStep);
+            }
+        } else {
+            // "end" position - add to end of main flow or branch
+            if (branch && referenceId) {
+                // Adding to a branch - find the last step in this branch
+                const branchSteps = newSteps.filter(s => s.branch === branch && s.parentId === referenceId);
+                if (branchSteps.length > 0) {
+                    const lastBranchStep = branchSteps[branchSteps.length - 1];
+                    const lastIndex = newSteps.findIndex(s => s.id === lastBranchStep.id);
+                    newSteps.splice(lastIndex + 1, 0, newStep);
+                } else {
+                    newSteps.push(newStep);
+                }
+            } else {
+                newSteps.push(newStep);
+            }
+        }
+
+        setSteps(newSteps);
+        setSelectedStepId(newStep.id);
+        setStepConfigs({
+            ...stepConfigs,
+            [newStep.id]: getDefaultConfig(type),
+        });
+    };
+
+    // Delete step
+    const handleDeleteStep = (stepId) => {
+        const step = steps.find(s => s.id === stepId);
+        setStepToDelete(step);
+        setShowDeleteModal(true);
+    };
+
+    const confirmDeleteStep = () => {
+        if (stepToDelete) {
+            // Also delete any child steps in branches
+            const stepsToDelete = [stepToDelete.id];
+            if (stepToDelete.type === "condition") {
+                // Find all steps that have this condition as parent
+                steps.forEach(s => {
+                    if (s.parentId === stepToDelete.id) {
+                        stepsToDelete.push(s.id);
+                    }
+                });
+            }
+
+            setSteps(steps.filter(s => !stepsToDelete.includes(s.id)));
+
+            if (selectedStepId && stepsToDelete.includes(selectedStepId)) {
+                setSelectedStepId(null);
+            }
+
+            const newConfigs = { ...stepConfigs };
+            stepsToDelete.forEach(id => delete newConfigs[id]);
+            setStepConfigs(newConfigs);
+            setStepToDelete(null);
+        }
+        setShowDeleteModal(false);
+    };
+
+    // Update step delay
+    const handleUpdateDelay = (stepId, delay) => {
+        setSteps(steps.map(s => s.id === stepId ? { ...s, delay } : s));
+    };
+
+    // Update step config
+    const handleConfigChange = (field, value) => {
+        if (selectedStepId) {
+            setStepConfigs({
+                ...stepConfigs,
+                [selectedStepId]: {
+                    ...selectedConfig,
+                    [field]: value,
+                },
+            });
+
+            // Update condition label when conditionType changes
+            if (field === "conditionType" && selectedStep?.type === "condition") {
+                const conditionLabels = {
+                    email: "Email Responded",
+                    whatsapp: "WhatsApp Responded",
+                    telegram: "Telegram Responded",
+                    call: "Call Responded",
+                };
+                setSteps(steps.map(s =>
+                    s.id === selectedStepId
+                        ? { ...s, label: conditionLabels[value] || "Condition" }
+                        : s
+                ));
+            }
+        }
+    };
+
+    // Handle signature creation flow
+    const handleOpenSignatureModal = () => {
+        setShowSignatureModal(true);
+    };
+
+    const handleCreateNewSignature = (name) => {
+        setSignatureName(name);
+        setShowSignatureModal(false);
+        setShowCreateSignatureModal(true);
+    };
+
+    const handleSaveSignature = (signatureData) => {
+        setExistingSignatures([...existingSignatures, { id: Date.now(), ...signatureData }]);
+        setShowCreateSignatureModal(false);
+        setShowSignatureSuccess(true);
+        setTimeout(() => setShowSignatureSuccess(false), 2000);
+    };
+
+    const handleSelectSignature = (signature) => {
+        setShowSignatureModal(false);
+    };
+
+    // Render right panel based on selected step
+    const renderRightPanel = () => {
+        if (!selectedStep) {
+            return <EmptyPanel illustration={workflowIllustration} />;
+        }
+
+        switch (selectedStep.type) {
+            case "email":
+                return (
+                    <EmailPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                        workflowName={workflowName}
+                        workflowDate={workflowDate}
+                        onOpenSignature={handleOpenSignatureModal}
+                    />
+                );
+            case "linkedin":
+                return (
+                    <LinkedInPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                        subAction={selectedStep.subAction}
+                    />
+                );
+            case "whatsapp":
+                return (
+                    <WhatsAppPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                        workflowName={workflowName}
+                        workflowDate={workflowDate}
+                    />
+                );
+            case "telegram":
+                return (
+                    <TelegramPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                        workflowName={workflowName}
+                        workflowDate={workflowDate}
+                    />
+                );
+            case "condition":
+                return (
+                    <ConditionPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                    />
+                );
+            case "call":
+                return (
+                    <CallPanel
+                        config={selectedConfig}
+                        onChange={handleConfigChange}
+                        workflowName={workflowName}
+                        workflowDate={workflowDate}
+                    />
+                );
+            default:
+                return <EmptyPanel illustration={workflowIllustration} />;
+        }
+    };
+
+    // Check if we have any steps to show the right panel
+    const hasSteps = steps.length > 0;
+
+    // Show Settings Screen if showSettings is true
+    if (showSettings) {
+        return (
+            <WorkflowSettings
+                onBack={() => setShowSettings(false)}
+                workflowName={workflowName}
+                onSave={() => {
+                    console.log("Saving settings");
+                    onSave?.();
+                }}
+                onLaunch={() => {
+                    console.log("Launching campaign");
+                    onSaveAndContinue?.();
+                }}
+            />
+        );
     }
-  };
 
-  // Delete step handler
-  const handleDeleteStep = (stepId) => {
-    const step = steps.find(s => s.id === stepId);
-    setStepToDelete(step);
-    setShowDeleteModal(true);
-  };
+    return (
+        <div className="flex flex-col h-full bg-[#F8F9FC]">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-1 text-gray-700 hover:text-gray-900"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="font-medium">Back</span>
+                </button>
 
-  const confirmDeleteStep = () => {
-    if (stepToDelete) {
-      setSteps(steps.filter(s => s.id !== stepToDelete.id));
-      if (selectedStepId === stepToDelete.id) {
-        setSelectedStepId(null);
-      }
-      const newConfigs = { ...stepConfigs };
-      delete newConfigs[stepToDelete.id];
-      setStepConfigs(newConfigs);
-      setStepToDelete(null);
-    }
-    setShowDeleteModal(false);
-  };
-
-  // Update step delay
-  const handleUpdateDelay = (stepId, delay) => {
-    setSteps(steps.map(s => s.id === stepId ? { ...s, delay } : s));
-  };
-
-  // Update step config
-  const handleConfigChange = (config) => {
-    if (selectedStepId) {
-      setStepConfigs({
-        ...stepConfigs,
-        [selectedStepId]: config,
-      });
-    }
-  };
-
-  // Test call handler
-  const handleTestCall = (data) => {
-    console.log("Starting test call:", data);
-  };
-
-  // Save prompt handler
-  const handleSavePrompt = (title) => {
-    console.log("Saving prompt:", title);
-  };
-
-  // Save as template handler
-  const handleSaveAsTemplate = (data) => {
-    console.log("Saving as template:", data);
-  };
-
-  // Check if step has conditions
-  const stepHasConditions = (step) => {
-    return step.type === "call" || step.type === "linkedin";
-  };
-
-  // Get steps by branch
-  const getMainSteps = () => steps.filter(s => !s.branch);
-  const getAcceptedBranchSteps = () => steps.filter(s => s.branch === "accepted");
-  const getPendingBranchSteps = () => steps.filter(s => s.branch === "pending");
-
-  return (
-    <div className="flex flex-col h-full bg-[#F8F9FC]">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-gray-600 hover:text-gray-900"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm font-medium">Back</span>
-        </button>
-
-        <div className="flex items-center gap-3">
-          <ViewToggle view={view} onViewChange={setView} />
-          <MoreOptionsMenu
-            onSaveAsTemplate={() => setShowSaveTemplateModal(true)}
-            onGlobalInstructions={() => setShowGlobalInstructionsModal(true)}
-            sendEmailsInThread={sendEmailsInThread}
-            onToggleThread={() => setSendEmailsInThread(!sendEmailsInThread)}
-          />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex gap-6 px-6 pb-6 overflow-hidden">
-        {/* Left Side - Workflow Steps */}
-        <div className="flex-1 overflow-y-auto">
-          {view === "list" ? (
-            <div className="space-y-3">
-              <AddNewButton onSelect={handleAddStep} position="left" />
-
-              {getMainSteps().map((step, index) => (
-                <div key={step.id}>
-                  <StepItem
-                    step={step}
-                    index={index}
-                    isSelected={selectedStepId === step.id}
-                    onSelect={setSelectedStepId}
-                    onDelete={handleDeleteStep}
-                    onUpdateDelay={handleUpdateDelay}
-                  />
-                  
-                  {/* Show branch connectors after call/linkedin steps */}
-                  {stepHasConditions(step) && index === getMainSteps().length - 1 && (
-                    <div className="mt-4 space-y-4">
-                      {/* Accepted Branch */}
-                      <BranchConnector
-                        isAccepted={true}
-                        onAddNew={(type, sub, branch) => handleAddStep(type, sub, branch)}
-                      />
-                      {getAcceptedBranchSteps().map((branchStep, bIndex) => (
-                        <StepItem
-                          key={branchStep.id}
-                          step={branchStep}
-                          index={bIndex}
-                          isSelected={selectedStepId === branchStep.id}
-                          onSelect={setSelectedStepId}
-                          onDelete={handleDeleteStep}
-                          onUpdateDelay={handleUpdateDelay}
-                        />
-                      ))}
-
-                      {/* Pending Branch */}
-                      <BranchConnector
-                        isAccepted={false}
-                        onAddNew={(type, sub, branch) => handleAddStep(type, sub, branch)}
-                      />
-                      {getPendingBranchSteps().map((branchStep, bIndex) => (
-                        <StepItem
-                          key={branchStep.id}
-                          step={branchStep}
-                          index={bIndex}
-                          isSelected={selectedStepId === branchStep.id}
-                          onSelect={setSelectedStepId}
-                          onDelete={handleDeleteStep}
-                          onUpdateDelay={handleUpdateDelay}
-                        />
-                      ))}
+                <div className="flex items-center gap-2">
+                    {/* View Toggle */}
+                    <div className="flex items-center bg-gray-100 rounded-full p-1">
+                        <button
+                            onClick={() => setView("list")}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${view === "list" ? "bg-[#1a1a1a] text-white" : "text-gray-600"
+                                }`}
+                        >
+                            List
+                        </button>
+                        <button
+                            onClick={() => setView("tree")}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${view === "tree" ? "bg-[#1a1a1a] text-white" : "text-gray-600"
+                                }`}
+                        >
+                            Tree
+                        </button>
                     </div>
-                  )}
-                </div>
-              ))}
 
-              {steps.length === 0 && (
-                <div className="text-center py-16 text-gray-500">
-                  <p className="text-lg mb-2">No steps added yet</p>
-                  <p className="text-sm">Click "Add New" to start building your workflow</p>
+                    {/* Save & Continue Button */}
+                    <button
+                        onClick={() => setShowSettings(true)}
+                        className="px-5 py-2 bg-[#3C49F7] text-white rounded-lg text-sm font-medium hover:bg-[#2a35d4]"
+                    >
+                        Save & Continue
+                    </button>
+
+                    {/* More Options */}
+                    <button className="p-2 hover:bg-gray-100 rounded-lg">
+                        <MoreVertical className="w-5 h-5 text-gray-500" />
+                    </button>
                 </div>
-              )}
             </div>
-          ) : (
-            // Tree View (Grid/Canvas)
-            <div className="h-full flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
-                <AddNewButton onSelect={handleAddStep} position="center" />
-                
-                {steps.length > 0 && (
-                  <div className="flex flex-col items-center gap-2">
-                    {/* Vertical connector */}
-                    <div className="w-0.5 h-8 bg-gray-300" />
-                    
-                    {/* Steps in tree view */}
-                    {getMainSteps().map((step, index) => (
-                      <div key={step.id} className="flex flex-col items-center">
-                        <StepItem
-                          step={step}
-                          index={index}
-                          isSelected={selectedStepId === step.id}
-                          onSelect={setSelectedStepId}
-                          onDelete={handleDeleteStep}
-                          onUpdateDelay={handleUpdateDelay}
-                          isTreeView
+
+            {/* Main Content */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Left Side - Workflow Canvas */}
+                <div className={`overflow-y-auto p-6 ${hasSteps ? 'flex-1' : 'w-full'}`}>
+                    {view === "list" ? (
+                        <ListView
+                            steps={steps}
+                            selectedStepId={selectedStepId}
+                            onSelectStep={setSelectedStepId}
+                            onAddStep={handleAddStep}
+                            onDeleteStep={handleDeleteStep}
+                            onUpdateDelay={handleUpdateDelay}
+                            onSwitchToTree={() => setView("tree")}
                         />
-                        
-                        {index < getMainSteps().length - 1 && (
-                          <div className="w-0.5 h-8 bg-gray-300" />
-                        )}
-                        
-                        {/* Branches for conditional steps */}
-                        {stepHasConditions(step) && index === getMainSteps().length - 1 && (
-                          <div className="flex gap-16 mt-4">
-                            {/* Accepted Branch */}
-                            <div className="flex flex-col items-center">
-                              <div className="text-xs text-green-600 font-medium mb-2">Accepted</div>
-                              <AddNewButton
-                                onSelect={(type, sub) => handleAddStep(type, sub, "accepted")}
-                                position="center"
-                              />
-                            </div>
-                            
-                            {/* Pending Branch */}
-                            <div className="flex flex-col items-center">
-                              <div className="text-xs text-orange-500 font-medium mb-2">Pending</div>
-                              <AddNewButton
-                                onSelect={(type, sub) => handleAddStep(type, sub, "pending")}
-                                position="center"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                    ) : (
+                        <TreeView
+                            steps={steps}
+                            selectedStepId={selectedStepId}
+                            onSelectStep={setSelectedStepId}
+                            onAddStep={handleAddStep}
+                            onDeleteStep={handleDeleteStep}
+                            onUpdateDelay={handleUpdateDelay}
+                        />
+                    )}
+                </div>
+
+                {/* Right Side - Configuration Panel - Only show when there are steps */}
+                {hasSteps && (
+                    <div className="w-[45%] flex-shrink-0 p-5 overflow-y-auto">
+                        {renderRightPanel()}
+                    </div>
                 )}
-              </div>
             </div>
-          )}
+
+            {/* Modals */}
+            <EmailSignatureModal
+                isOpen={showSignatureModal}
+                onClose={() => setShowSignatureModal(false)}
+                onCreateNew={handleCreateNewSignature}
+                onSelectSignature={handleSelectSignature}
+                existingSignatures={existingSignatures}
+            />
+
+            <CreateSignatureModal
+                isOpen={showCreateSignatureModal}
+                onClose={() => setShowCreateSignatureModal(false)}
+                onSave={handleSaveSignature}
+                signatureName={signatureName}
+            />
+
+            <SignatureSuccessModal
+                isOpen={showSignatureSuccess}
+                onClose={() => setShowSignatureSuccess(false)}
+            />
+
+            <DeleteStepModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setStepToDelete(null);
+                }}
+                onConfirm={confirmDeleteStep}
+                stepName={stepToDelete?.label || "this step"}
+            />
         </div>
-
-        {/* Right Side - Configuration Panel */}
-        <div className="w-[40%] flex-shrink-0 overflow-scroll">
-          <RightPanel
-            selectedStep={selectedStep}
-            config={selectedStepId ? stepConfigs[selectedStepId] : null}
-            onConfigChange={handleConfigChange}
-            onTestCall={() => setShowTestCallModal(true)}
-            onSavePrompt={() => setShowSavePromptModal(true)}
-            workflowName={workflowName}
-            workflowDate={workflowDate}
-          />
-        </div>
-      </div>
-
-      {/* Footer Buttons */}
-      <div className="px-6 py-4 bg-white border-t border-gray-200 flex justify-end gap-3">
-        <button
-          onClick={onSave}
-          className="px-6 py-2.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Save
-        </button>
-        <button
-          onClick={onSaveAndContinue}
-          className="px-6 py-2.5 bg-[#3C49F7] text-white rounded-full text-sm font-medium hover:bg-[#2a35d4]"
-        >
-          Save and continue
-        </button>
-      </div>
-
-      {/* Modals */}
-      <TestCallModal
-        isOpen={showTestCallModal}
-        onClose={() => setShowTestCallModal(false)}
-        onSubmit={handleTestCall}
-      />
-
-      <SavePromptModal
-        isOpen={showSavePromptModal}
-        onClose={() => setShowSavePromptModal(false)}
-        onSave={handleSavePrompt}
-      />
-
-      <GlobalInstructionsModal
-        isOpen={showGlobalInstructionsModal}
-        onClose={() => setShowGlobalInstructionsModal(false)}
-        instructions={globalInstructions}
-        onSave={(instructions) => {
-          setGlobalInstructions(instructions);
-          setShowGlobalInstructionsModal(false);
-        }}
-      />
-
-      <SaveAsTemplateModal
-        isOpen={showSaveTemplateModal}
-        onClose={() => setShowSaveTemplateModal(false)}
-        onSave={handleSaveAsTemplate}
-      />
-
-      <DeleteStepModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setStepToDelete(null);
-        }}
-        onConfirm={confirmDeleteStep}
-        stepType={stepToDelete?.type}
-      />
-    </div>
-  );
+    );
 };
 
 export default WorkflowEditor;
