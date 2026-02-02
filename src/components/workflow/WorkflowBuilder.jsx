@@ -6,6 +6,7 @@ import WorkflowEditor from "./WorkflowEditor";
 // Import your illustration images from assets
 import pencilIllustration from "../../assets/WF1.png";
 import fishingIllustration from "../../assets/WF2.png";
+import workflowIllustration from "../../assets/WF3.png"; // Add this illustration for empty state
 
 // Sample data for campaigns
 const CAMPAIGN_MANAGER_CAMPAIGNS = [
@@ -33,10 +34,10 @@ const TEMPLATES = {
         subtitle: "For time sensitive prospects",
         icon: "scissors",
         initialSteps: [
-            { id: 1, type: "email", delay: 1 },
-            { id: 2, type: "email", delay: 2 },
-            { id: 3, type: "email", delay: 2 },
-            { id: 4, type: "email", delay: 3 },
+            { id: 1, type: "email", label: "Send Email Message", delay: 3 },
+            { id: 2, type: "email", label: "Send Email Message", delay: 3 },
+            { id: 3, type: "email", label: "Send Email Message", delay: 3 },
+            { id: 4, type: "email", label: "Send Email Message", delay: 3 },
         ],
         details: {
             title: "Direct Action Campaign",
@@ -60,11 +61,10 @@ const TEMPLATES = {
         subtitle: "AI Workforce",
         icon: "trending",
         initialSteps: [
-            { id: 1, type: "linkedin", subAction: "message", delay: 1 },
-            { id: 2, type: "linkedin", subAction: "likePost", delay: 1 },
-            { id: 3, type: "email", delay: 2 },
-            { id: 4, type: "linkedin", subAction: "message", delay: 2 },
-            { id: 5, type: "email", delay: 2 },
+            { id: 1, type: "email", label: "Send Email Message", delay: 3 },
+            { id: 2, type: "linkedin", subAction: "likePost", label: "Like a Post", delay: 3 },
+            { id: 3, type: "email", label: "Send Email Message", delay: 3 },
+            { id: 4, type: "condition", label: "Condition", delay: 0 },
         ],
         details: {
             title: "Event-Driven Outreach",
@@ -581,7 +581,7 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
         const selectedTemplateData = selectedTemplate ? TEMPLATES[selectedTemplate] : null;
 
         return (
-            <div className="flex gap-6">
+            <div className="flex gap-16">
                 {/* Left side - Template options */}
                 <div className="flex-1">
                     <button
@@ -613,29 +613,41 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                     {/* Template Library */}
                     <h3 className="text-lg font-medium text-[#1a1a1a] mb-3">Template Library</h3>
                     <div className="grid grid-cols-2 gap-4 max-w-lg">
-                        <button
-                            onClick={() => handleTemplateSelect("directAction")}
-                            className={`p-4 border rounded-lg text-left transition-all
-                ${selectedTemplate === "directAction"
-                                    ? "border-[#3C49F7] bg-[#F8F9FC]"
-                                    : "border-gray-200 hover:border-gray-300"}`}
-                        >
-                            <TemplateIcon type="scissors" className="w-6 h-6 mb-3" />
-                            <p className="font-semibold text-[#1a1a1a]">{TEMPLATES.directAction.title}</p>
-                            <p className="text-sm text-gray-500">{TEMPLATES.directAction.subtitle}</p>
-                        </button>
+                        {/* Direct Action - Coming Soon */}
+                        <div className="relative group">
+                            <button
+                                disabled
+                                className="p-4 border rounded-lg text-left transition-all w-full border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                            >
+                                <TemplateIcon type="scissors" className="w-6 h-6 mb-3 opacity-50" />
+                                <p className="font-semibold text-gray-400">{TEMPLATES.directAction.title}</p>
+                                <p className="text-sm text-gray-400">{TEMPLATES.directAction.subtitle}</p>
+                            </button>
+                            {/* Coming Soon Tooltip */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg">
+                                    Coming Soon
+                                </span>
+                            </div>
+                        </div>
 
-                        <button
-                            onClick={() => handleTemplateSelect("eventDriven")}
-                            className={`p-4 border rounded-lg text-left transition-all
-                ${selectedTemplate === "eventDriven"
-                                    ? "border-[#3C49F7] bg-[#F8F9FC]"
-                                    : "border-gray-200 hover:border-gray-300"}`}
-                        >
-                            <TemplateIcon type="trending" className="w-6 h-6 mb-3" />
-                            <p className="font-semibold text-[#1a1a1a]">{TEMPLATES.eventDriven.title}</p>
-                            <p className="text-sm text-gray-500">{TEMPLATES.eventDriven.subtitle}</p>
-                        </button>
+                        {/* Event Driven - Coming Soon */}
+                        <div className="relative group">
+                            <button
+                                disabled
+                                className="p-4 border rounded-lg text-left transition-all w-full border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                            >
+                                <TemplateIcon type="trending" className="w-6 h-6 mb-3 opacity-50" />
+                                <p className="font-semibold text-gray-400">{TEMPLATES.eventDriven.title}</p>
+                                <p className="text-sm text-gray-400">{TEMPLATES.eventDriven.subtitle}</p>
+                            </button>
+                            {/* Coming Soon Tooltip */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-lg">
+                                    Coming Soon
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     {selectedTemplate && (
@@ -778,8 +790,20 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                         </div>
                     </div>
 
+                    {/* Save Buttons - No progress indicator */}
                     <div className="flex items-center gap-3">
-                        <StepIndicator currentStep={currentStep} />
+                        <button
+                            onClick={handleSave}
+                            className="px-5 py-2 border border-gray-200 rounded-full text-gray-700 font-medium hover:bg-gray-50"
+                        >
+                            Save
+                        </button>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="px-5 py-2 bg-[#3C49F7] text-white rounded-full font-medium hover:bg-[#2a35d4]"
+                        >
+                            Save & Continue
+                        </button>
                     </div>
                 </div>
 
@@ -835,7 +859,7 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                         Save
                     </button>
                     <button
-                        onClick={handleSaveAndContinue}
+                        onClick={() => setShowSettings(true)}
                         className="px-5 py-2 bg-[#3C49F7] text-white rounded-full font-medium hover:bg-[#2a35d4]"
                     >
                         Save & Continue

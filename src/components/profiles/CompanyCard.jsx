@@ -324,7 +324,7 @@ export const CompanyCard = ({
 
       {/* Expanded Section (Advance Mode Only) */}
       {isAdvanceMode && isExpanded && (
-        <div className="border-t border-gray-100 p-6 bg-white">
+        <div className="border-t border-gray-100 p-6 bg-white overflow-x-scroll">
           {/* SIC Codes */}
           <div className="flex gap-8 mb-6 border-b border-gray-300">
             <div className="w-28 flex-shrink-0">
