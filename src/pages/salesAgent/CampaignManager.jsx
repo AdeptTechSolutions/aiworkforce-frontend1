@@ -331,6 +331,7 @@ const CampaignManager = () => {
   const [viewingCampaign, setViewingCampaign] = useState(null);
   const [leads, setLeads] = useState(SAMPLE_LEADS);
   const [selectedLeads, setSelectedLeads] = useState([]);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
 
   // Modal states
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
@@ -389,6 +390,7 @@ const CampaignManager = () => {
                     : project.source === "b2c"
                       ? "B2C"
                       : "organic",
+                sourceType: project.source, // Keep original API source for enrichment logic
                 createdAt: formattedDate,
               };
             },
@@ -411,8 +413,54 @@ const CampaignManager = () => {
     fetchProjects();
   }, []);
 
+  // Fetch project results
+  const fetchProjectResults = async (projectId) => {
+    setIsLoadingResults(true);
+    try {
+      const response = await api.get(`/b2b/projects/${projectId}/results`);
+      console.log("📥 Fetched project results:", response.data);
+
+      if (
+        response.data &&
+        response.data.success &&
+        response.data.data?.results
+      ) {
+        // Transform results to lead format
+        const transformedLeads = response.data.data.results.map((result) => ({
+          id: result.id,
+          externalId: result.external_id, // RocketReach person ID for B2C enrichment
+          name: result.name || "Unknown",
+          title: result.description || "",
+          company: result.company_type || "",
+          location: result.location || "",
+          industry: "", // Not provided in API response
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name || "Unknown")}&background=3C49F7&color=fff&size=100`,
+          website: result.website || "",
+          phones: result.phone ? [result.phone] : [],
+          emails: result.email ? [result.email] : [],
+          isEnriched: result.is_enriched || false,
+          past: [], // Past positions - will be populated on enrichment
+          education: [], // Education - will be populated on enrichment
+          linkedin: "", // LinkedIn URL - will be populated on enrichment
+        }));
+
+        setLeads(transformedLeads);
+      } else {
+        // If no results, set empty array
+        setLeads([]);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching project results:", error);
+      console.error("Error details:", error.response?.data || error.message);
+      // On error, show empty leads
+      setLeads([]);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
   // Handlers
-  const handleCampaignClick = (campaign) => {
+  const handleCampaignClick = async (campaign) => {
     // For running or paused campaigns - do nothing
     if (campaign.status === "running" || campaign.status === "paused") {
       return;
@@ -421,6 +469,9 @@ const CampaignManager = () => {
     // For completed and draft campaigns - open leads view
     setViewingCampaign(campaign);
     setSelectedLeads([]);
+
+    // Fetch actual results for the campaign
+    await fetchProjectResults(campaign.id);
   };
 
   const handleBackFromCampaign = () => {
@@ -486,19 +537,180 @@ const CampaignManager = () => {
     setShowEnrichConfirm(true);
   };
 
-  const handleConfirmEnrichAll = () => {
+  const handleConfirmEnrichAll = async () => {
     setShowEnrichConfirm(false);
     setShowEnrichingModal(true);
-    setTimeout(() => {
-      setLeads((prev) => prev.map((l) => ({ ...l, isEnriched: true })));
-      setShowEnrichingModal(false);
-    }, 2000);
+
+    const unenrichedLeads = leads.filter((l) => !l.isEnriched);
+
+    // Enrich all unenriched leads sequentially
+    for (const lead of unenrichedLeads) {
+      await handleEnrichLead(lead.id);
+    }
+
+    setShowEnrichingModal(false);
   };
 
-  const handleEnrichLead = (id) => {
-    setLeads((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, isEnriched: true } : l)),
-    );
+  // Enrich single lead based on campaign source
+  const handleEnrichLead = async (id) => {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead || lead.isEnriched) return;
+
+    try {
+      let enrichedData = null;
+
+      // Get the source type (use sourceType if available, otherwise fallback to source)
+      const campaignSource = (viewingCampaign.sourceType || viewingCampaign.source || "").toLowerCase();
+
+      console.log("🔍 Campaign source:", campaignSource, "for lead:", lead.name);
+
+      if (campaignSource === "b2c") {
+        // B2C Enrichment
+        console.log("🔍 Enriching B2C lead:", lead.name, "with external ID:", lead.externalId);
+
+        if (!lead.externalId) {
+          console.error("❌ No external ID found for B2C lead");
+          return;
+        }
+
+        const response = await api.get(`/b2b/v1/b2c/lookup-person-raw/${lead.externalId}`);
+        console.log("✅ B2C Enrichment Response:", response.data);
+
+        if (response.data) {
+          // Transform job_history to pastPositions format
+          const pastPositions = (response.data.job_history || [])
+            .filter((job) => !job.is_current)
+            .map((job) => ({
+              title: job.title || "N/A",
+              company: job.company_name || job.company || "N/A",
+              years: `${job.start_date ? new Date(job.start_date).getFullYear() : "N/A"} - ${job.end_date === "Present" ? "Present" : job.end_date ? new Date(job.end_date).getFullYear() : "N/A"}`,
+            }));
+
+          // Transform education array
+          const education = (response.data.education || []).map((edu) => ({
+            school: edu.school || "N/A",
+            degree: edu.degree || "",
+            major: edu.major || "",
+            years: `${edu.start || "N/A"}-${edu.end || "N/A"}`,
+          }));
+
+          enrichedData = {
+            phones: (response.data.phones || []).map((phone) => phone.number),
+            emails: (response.data.emails || []).map((email) => email.email),
+            website: response.data.current_employer_domain || lead.website,
+            pastPositions: pastPositions,
+            education: education,
+            avatar: response.data.profile_pic || lead.avatar,
+            linkedin: response.data.linkedin_url || response.data.links?.linkedin,
+          };
+        }
+      } else if (campaignSource === "b2b") {
+        // B2B Enrichment - Try RocketReach first
+        console.log("🔍 Enriching B2B lead:", lead.name, "at", lead.company);
+
+        try {
+          const rocketReachBody = {
+            query: {
+              name: [lead.name],
+              current_employer: [lead.company],
+            },
+          };
+
+          console.log("📡 Calling RocketReach API with:", rocketReachBody);
+          const rocketReachResponse = await api.post(
+            "/b2b/v1/rocketreach/person-lookup",
+            rocketReachBody,
+          );
+
+          console.log("✅ RocketReach API Response:", rocketReachResponse.data);
+
+          if (
+            rocketReachResponse.data?.profile &&
+            Object.keys(rocketReachResponse.data.profile).length > 0 &&
+            rocketReachResponse.data.profile.id
+          ) {
+            const profile = rocketReachResponse.data.profile;
+            enrichedData = {
+              phones: (profile.phones || []).map((phone) => phone.number),
+              emails: (profile.emails || []).map((email) => email.email),
+              website: lead.website,
+            };
+            console.log("✅ Using RocketReach data");
+          } else {
+            console.log("⚠️ RocketReach returned empty, trying ContactOut...");
+            throw new Error("RocketReach returned empty profile");
+          }
+        } catch (rocketReachError) {
+          console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
+
+          // Fallback to ContactOut
+          try {
+            const contactOutBody = {
+              full_name: lead.name,
+              company: [lead.company],
+            };
+
+            console.log("📡 Calling ContactOut API with:", contactOutBody);
+            const contactOutResponse = await api.post(
+              "/b2b/v1/contactout/enrich",
+              contactOutBody,
+            );
+
+            console.log("✅ ContactOut API Response:", contactOutResponse.data);
+
+            if (
+              contactOutResponse.data?.profile &&
+              Object.keys(contactOutResponse.data.profile).length > 0
+            ) {
+              const profile = contactOutResponse.data.profile;
+              // ContactOut format
+              const allEmails = [
+                ...(profile.email || []),
+                ...(profile.work_email || []),
+                ...(profile.personal_email || []),
+              ].filter(Boolean);
+
+              enrichedData = {
+                phones: (profile.phone || []).filter(Boolean),
+                emails: allEmails,
+                website: lead.website,
+              };
+              console.log("✅ Using ContactOut data");
+            } else {
+              console.error("❌ Both APIs returned empty data");
+              throw new Error("Both enrichment APIs returned empty data");
+            }
+          } catch (contactOutError) {
+            console.error("❌ Both enrichment APIs failed:", contactOutError.message);
+            throw contactOutError;
+          }
+        }
+      }
+
+      // Update the lead with enriched data
+      if (enrichedData) {
+        setLeads((prev) =>
+          prev.map((l) =>
+            l.id === id
+              ? {
+                  ...l,
+                  isEnriched: true,
+                  phones: enrichedData.phones?.length > 0 ? enrichedData.phones : l.phones,
+                  emails: enrichedData.emails?.length > 0 ? enrichedData.emails : l.emails,
+                  website: enrichedData.website || l.website,
+                  past: enrichedData.pastPositions || l.past || [],
+                  education: enrichedData.education || l.education || [],
+                  avatar: enrichedData.avatar || l.avatar,
+                  linkedin: enrichedData.linkedin || l.linkedin,
+                }
+              : l,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error enriching lead:", error);
+      console.error("Error details:", error.response?.data || error.message);
+    }
   };
 
   // Workflow Builder handler
@@ -517,7 +729,9 @@ const CampaignManager = () => {
   // Campaign Details View (Only for completed campaigns)
   if (viewingCampaign) {
     const isCompleted = viewingCampaign.status === "done";
-    const totalLeads = viewingCampaign.leadsGenerated || leads.length;
+    const totalLeads = isLoadingResults
+      ? "..."
+      : viewingCampaign.leadsGenerated || leads.length;
 
     return (
       <div className="flex-1 min-h-full p-8 overflow-y-auto bg-[#F8F9FC]">
@@ -574,106 +788,131 @@ const CampaignManager = () => {
         </div>
 
         {/* Results Count & Actions */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-600">
-            1 - 10 of about {leads.length} results.
-          </p>
-          <div className="flex items-center gap-3">
-            <button className="text-[#3C49F7] text-sm font-medium hover:underline">
-              Export Leads
-            </button>
-            {unenrichedCount > 0 && (
-              <button
-                onClick={handleEnrichAll}
-                className="border border-[#3C49F7] text-[#3C49F7] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#F2F2FF]"
-              >
-                Enrich All {unenrichedCount} Leads
-              </button>
-            )}
-            <button
-              onClick={() => handleStartWorkflow()}
-              className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
-            >
-              Start Workflow Builder
-            </button>
+        {!isLoadingResults && (
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-600">
+              {leads.length > 0
+                ? `1 - ${Math.min(10, leads.length)} of about ${leads.length} results.`
+                : "No results found."}
+            </p>
+            <div className="flex items-center gap-3">
+              {leads.length > 0 && (
+                <>
+                  <button className="text-[#3C49F7] text-sm font-medium hover:underline">
+                    Export Leads
+                  </button>
+                  {unenrichedCount > 0 && (
+                    <button
+                      onClick={handleEnrichAll}
+                      className="border border-[#3C49F7] text-[#3C49F7] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#F2F2FF]"
+                    >
+                      Enrich All {unenrichedCount} Leads
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleStartWorkflow()}
+                    className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
+                  >
+                    Start Workflow Builder
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Select All */}
-        <div className="flex items-center gap-3 mb-4">
-          <input
-            type="checkbox"
-            className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
-            onChange={(e) =>
-              setSelectedLeads(e.target.checked ? leads.map((l) => l.id) : [])
-            }
-            checked={selectedLeads.length === leads.length && leads.length > 0}
-          />
-          <span className="text-sm text-gray-700">Select All</span>
-        </div>
+        {!isLoadingResults && leads.length > 0 && (
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              type="checkbox"
+              className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
+              onChange={(e) =>
+                setSelectedLeads(e.target.checked ? leads.map((l) => l.id) : [])
+              }
+              checked={selectedLeads.length === leads.length && leads.length > 0}
+            />
+            <span className="text-sm text-gray-700">Select All</span>
+          </div>
+        )}
 
         {/* Leads List */}
         <div className="space-y-2">
-          {leads.map((lead) => (
-            <ProfileCard
-              key={lead.id}
-              profile={lead}
-              isSelected={selectedLeads.includes(lead.id)}
-              onSelect={handleSelectLead}
-              onEnrich={handleEnrichLead}
-              onAddToProject={() => handleRemoveLead(lead)}
-            />
-          ))}
+          {isLoadingResults ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3C49F7]"></div>
+                <p className="text-sm text-gray-500">Loading results...</p>
+              </div>
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-sm text-gray-500">No results found</p>
+            </div>
+          ) : (
+            leads.map((lead) => (
+              <ProfileCard
+                key={lead.id}
+                profile={lead}
+                isSelected={selectedLeads.includes(lead.id)}
+                onSelect={handleSelectLead}
+                onEnrich={handleEnrichLead}
+                onAddToProject={() => handleRemoveLead(lead)}
+              />
+            ))
+          )}
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-6">
-          <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
-          <div className="flex items-center gap-1">
-            <button className="p-2 rounded hover:bg-gray-100">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((page) => (
-              <button
-                key={page}
-                className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}
-              >
-                {page}
+        {!isLoadingResults && leads.length > 0 && (
+          <div className="flex items-center justify-between mt-6">
+            <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded hover:bg-gray-100">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
               </button>
-            ))}
-            <button className="p-2 rounded hover:bg-gray-100">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((page) => (
+                <button
+                  key={page}
+                  className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button className="p-2 rounded hover:bg-gray-100">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Modals */}
         <CampaignManagerModals
