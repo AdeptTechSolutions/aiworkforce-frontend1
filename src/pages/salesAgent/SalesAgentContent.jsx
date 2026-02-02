@@ -16,6 +16,8 @@ import { getAgentConfig } from "../../data/agentConfig";
 import logo from "../../assets/Logo -.png";
 import logofooter from "../../assets/Logo-footer.svg";
 import { useSearch } from "../../context/SearchContext";
+import { useCountries } from "../../hooks/useCountries";
+import { useSicCodes } from "../../hooks/useSicCodes";
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -30,7 +32,11 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
   const b2bContext = useB2BSearch();
   const context = mode === "b2b" ? b2bContext : b2cContext;
   const { hasSearched } = context;
-  const config = getAgentConfig(mode);
+
+  // Fetch countries and SIC codes data from API
+  const { countries, loading: countriesLoading } = useCountries();
+  const { sicCodes, loading: sicCodesLoading } = useSicCodes();
+  const config = getAgentConfig(mode, countries, sicCodes);
 
   const {
     activeFilters,
@@ -41,6 +47,10 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
     setHasSearched,
     showOutOfCreditsModal,
     setShowOutOfCreditsModal,
+    saveCurrentSearch,
+    fetchSavedSearches,
+    excludeInProject,
+    setExcludeInProject,
   } = context;
 
   // Search type state - uses first option from config
@@ -50,6 +60,9 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
   const searchType = mode === "b2b" ? (b2bContext.searchType || localSearchType) : localSearchType;
   const setSearchType = mode === "b2b" ? b2bContext.setSearchType : setLocalSearchType;
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Saved searches state
+  const [savedSearches, setSavedSearches] = useState([]);
 
   // Reset search type when mode changes
   useEffect(() => {
@@ -66,12 +79,17 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [showLoadSearchModal, setShowLoadSearchModal] = useState(false);
 
-  const handleSaveSearch = (searchName) => {
-    if (context.saveCurrentSearch) {
-      context.saveCurrentSearch(searchName);
+  const handleSaveSearch = async (searchName) => {
+    try {
+      if (saveCurrentSearch) {
+        await saveCurrentSearch(searchName);
+      }
+      setSaveSearchModal(false);
+      setSearchSavedModal(true);
+    } catch (error) {
+      console.error("Error saving search:", error);
+      // You might want to show an error modal here
     }
-    setSaveSearchModal(false);
-    setSearchSavedModal(true);
   };
 
 //   const handleLoadSearch = (selectedSearch) => {
@@ -89,29 +107,52 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
 //     }, 2000);
 //   };
 
-const handleLoadSearch = (selectedSearch) => {
-  setShowLoadSearchModal(false);
-  setShowLoadingModal(true);
-
-  setTimeout(() => {
-    setShowLoadingModal(false);
-    
-    // For B2B, set searchType BEFORE loading the search
-    if (mode === "b2b" && selectedSearch.searchType) {
-      b2bContext.setSearchType(selectedSearch.searchType);
+  // Fetch saved searches when load modal opens
+  const handleOpenLoadSearchModal = async () => {
+    setShowLoadSearchModal(true);
+    if (fetchSavedSearches) {
+      try {
+        const searches = await fetchSavedSearches();
+        setSavedSearches(searches);
+      } catch (error) {
+        console.error("Error fetching saved searches:", error);
+      }
     }
-    
-    loadSavedSearch(selectedSearch);
-  }, 2000);
-};
+  };
+
+  const handleLoadSearch = (selectedSearch) => {
+    setShowLoadSearchModal(false);
+    setShowLoadingModal(true);
+
+    setTimeout(() => {
+      setShowLoadingModal(false);
+
+      // For B2B, set searchType BEFORE loading the search
+      if (mode === "b2b" && selectedSearch.searchType) {
+        b2bContext.setSearchType(selectedSearch.searchType);
+      }
+
+      loadSavedSearch(selectedSearch);
+    }, 2000);
+  };
 
   const handleSearch = () => {
     if (searchQuery.trim() || activeFilters.length > 0) {
-      setShowLoadingModal(true);
-      setTimeout(() => {
-        setShowLoadingModal(false);
-        setHasSearched(true);
-      }, 1500);
+      // For B2C mode, trigger the API search
+      if (mode === "b2c") {
+        setShowLoadingModal(true);
+        setTimeout(() => {
+          setShowLoadingModal(false);
+          setHasSearched(true);
+        }, 1500);
+      } else {
+        // B2B mode uses existing logic
+        setShowLoadingModal(true);
+        setTimeout(() => {
+          setShowLoadingModal(false);
+          setHasSearched(true);
+        }, 1500);
+      }
     }
   };
 
@@ -161,7 +202,12 @@ const handleLoadSearch = (selectedSearch) => {
               {config.searchTypes.map((type) => (
                 <button
                   key={type.key}
-                  onClick={() => setSearchType(type.key)}
+                  onClick={() => {
+                    if (searchType !== type.key) {
+                      clearFilters();
+                      setSearchType(type.key);
+                    }
+                  }}
                   className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
                     searchType === type.key
                       ? "bg-gray-900 text-white shadow-sm"
@@ -183,8 +229,10 @@ const handleLoadSearch = (selectedSearch) => {
             onRemoveFilter={removeFilter}
             onClearFilters={clearFilters}
             onSaveSearch={() => setSaveSearchModal(true)}
-            onLoadSearch={() => setShowLoadSearchModal(true)}
+            onLoadSearch={handleOpenLoadSearchModal}
             context={context}
+            excludeInProject={excludeInProject}
+            setExcludeInProject={setExcludeInProject}
           />
         </div>
 
@@ -268,7 +316,7 @@ const handleLoadSearch = (selectedSearch) => {
         isOpen={showLoadSearchModal}
         onClose={() => setShowLoadSearchModal(false)}
         onLoadSearch={handleLoadSearch}
-        savedSearches={config.savedSearches}
+        savedSearches={savedSearches}
       />
 
       <SearchSavedModal
