@@ -78,12 +78,12 @@ const CampaignManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedCampaigns, setSelectedCampaigns] = useState([]);
-  
+
   // View states
   const [viewingCampaign, setViewingCampaign] = useState(null);
   const [leads, setLeads] = useState(SAMPLE_LEADS);
   const [selectedLeads, setSelectedLeads] = useState([]);
-  
+
   // Modal states
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showRemoveSuccess, setShowRemoveSuccess] = useState(false);
@@ -91,7 +91,7 @@ const CampaignManager = () => {
   const [showEnrichingModal, setShowEnrichingModal] = useState(false);
   const [showCannotStartModal, setShowCannotStartModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  
+
   // Tooltip states
   const [showEngagedTooltip, setShowEngagedTooltip] = useState(false);
   const [showRepliedTooltip, setShowRepliedTooltip] = useState(false);
@@ -105,13 +105,12 @@ const CampaignManager = () => {
 
   // Handlers
   const handleCampaignClick = (campaign) => {
-    if (campaign.status === "draft") {
-      const hasUnenriched = leads.some(l => !l.isEnriched);
-      if (hasUnenriched) {
-        setShowCannotStartModal(true);
-        return;
-      }
+    // For running or paused campaigns - do nothing
+    if (campaign.status === "running" || campaign.status === "paused") {
+      return;
     }
+
+    // For completed and draft campaigns - open leads view
     setViewingCampaign(campaign);
     setSelectedLeads([]);
   };
@@ -185,9 +184,8 @@ const CampaignManager = () => {
     setShowWorkflowBuilder(true);
   };
 
-  // Campaign Details View
+  // Campaign Details View (Only for completed campaigns)
   if (viewingCampaign) {
-    const isDraft = viewingCampaign.status === "draft";
     const isCompleted = viewingCampaign.status === "done";
     const totalLeads = viewingCampaign.leadsGenerated || leads.length;
 
@@ -206,18 +204,22 @@ const CampaignManager = () => {
           <div>
             <h1 className="text-[32px] font-normal text-[#1a1a1a] font-['DM_Sans']">{viewingCampaign.name}</h1>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-gray-500 text-sm">20 Nov 2025, 12:37 PM</span>
-              {isDraft && <StatusBadge status="draft" />}
-              {isCompleted && (
+              <span className="text-gray-500 text-sm">{viewingCampaign.createdAt}</span>
+              {viewingCampaign.status === "done" && (
                 <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium">
                   Campaign Ended – 100% Done
+                </span>
+              )}
+              {viewingCampaign.status === "draft" && (
+                <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-medium">
+                  Draft
                 </span>
               )}
               <SourceBadge source={viewingCampaign.source} />
             </div>
           </div>
           <div className="text-right">
-            <p className="text-gray-500 text-sm">{isDraft ? "Leads added" : "Leads generated"}</p>
+            <p className="text-gray-500 text-sm">Leads generated</p>
             <p className="text-[48px] font-semibold text-[#1a1a1a] leading-none">{totalLeads}</p>
           </div>
         </div>
@@ -232,7 +234,7 @@ const CampaignManager = () => {
                 Enrich All {unenrichedCount} Leads
               </button>
             )}
-            <button 
+            <button
               onClick={() => handleStartWorkflow()}
               className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
             >
@@ -279,7 +281,7 @@ const CampaignManager = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            {[1,2,3,4,5,6,7,8,9].map(page => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(page => (
               <button key={page} className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}>{page}</button>
             ))}
             <button className="p-2 rounded hover:bg-gray-100">
@@ -331,17 +333,15 @@ const CampaignManager = () => {
       <div className="flex items-center gap-2 mb-6">
         <button
           onClick={() => setActiveTab("active")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            activeTab === "active" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a] border border-gray-200"
-          }`}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "active" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a] border border-gray-200"
+            }`}
         >
           Active ({campaigns.active.length})
         </button>
         <button
           onClick={() => setActiveTab("completed")}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            activeTab === "completed" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a] border border-gray-200"
-          }`}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "completed" ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a] border border-gray-200"
+            }`}
         >
           Completed ({campaigns.completed.length})
         </button>
@@ -435,7 +435,8 @@ const CampaignManager = () => {
         {currentCampaigns.map((campaign) => (
           <div
             key={campaign.id}
-            className="grid grid-cols-12 gap-4 px-4 py-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer items-center"
+            className={`grid grid-cols-12 gap-4 px-4 py-4 border-b border-gray-50 items-center ${campaign.status === "done" || campaign.status === "draft" ? "hover:bg-gray-50 cursor-pointer" : ""
+              }`}
             onClick={() => handleCampaignClick(campaign)}
           >
             <div className="col-span-1" onClick={(e) => e.stopPropagation()}>
@@ -456,7 +457,7 @@ const CampaignManager = () => {
                   <div className="h-1.5 bg-gray-200 rounded-full w-48 overflow-hidden">
                     <div className="h-full bg-[#3C49F7] rounded-full" style={{ width: `${campaign.progress}%` }} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{campaign.progress}% – In Progress</p>
+                  <p className="text-xs text-gray-500 mt-1">{campaign.progress}% – {campaign.status === "done" ? "Completed" : "In Progress"}</p>
                 </div>
               )}
             </div>
@@ -470,8 +471,20 @@ const CampaignManager = () => {
                 <span>{campaign.replied}% <span className="text-orange-500">{campaign.replied}</span></span>
               ) : null}
             </div>
-            <div className="col-span-1">
+            <div className="col-span-1 flex items-center gap-2">
               <StatusBadge status={campaign.status} />
+              {(campaign.status === "done" || campaign.status === "draft") && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewingCampaign(campaign);
+                    setSelectedLeads([]);
+                  }}
+                  className="text-[#3C49F7] text-xs font-medium hover:underline"
+                >
+                
+                </button>
+              )}
             </div>
             <div className="col-span-1">
               <SourceBadge source={campaign.source} />
@@ -515,6 +528,22 @@ const CampaignManager = () => {
           </div>
         ))}
       </div>
+
+      {/* Modals for main view */}
+      <CampaignManagerModals
+        showRemoveConfirm={showRemoveConfirm}
+        setShowRemoveConfirm={setShowRemoveConfirm}
+        showRemoveSuccess={showRemoveSuccess}
+        setShowRemoveSuccess={setShowRemoveSuccess}
+        showEnrichConfirm={showEnrichConfirm}
+        setShowEnrichConfirm={setShowEnrichConfirm}
+        showEnrichingModal={showEnrichingModal}
+        showCannotStartModal={showCannotStartModal}
+        setShowCannotStartModal={setShowCannotStartModal}
+        onConfirmRemove={handleConfirmRemove}
+        onConfirmEnrichAll={handleConfirmEnrichAll}
+        leadCount={unenrichedCount}
+      />
 
       {/* Workflow Builder */}
       {showWorkflowBuilder && (
