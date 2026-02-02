@@ -23,20 +23,70 @@ const SAMPLE_LEADS = [
 ];
 
 // Sample data for testing with existing campaigns
+// const SAMPLE_CAMPAIGNS = {
+//   inProgress: [
+//     {
+//       id: 1,
+//       name: "New Campaign",
+//       date: "20 December, 2025",
+//       progress: 2,
+//       status: "running",
+//       prospectsFound: 5,
+//       prospectsTotal: 498,
+//     },
+//   ],
+//   completed: [
+//     {
+//       id: 2,
+//       name: "New Campaign",
+//       date: "20 Oct 2025, 12:37 PM",
+//       progress: 100,
+//       status: "done",
+//       prospectsFound: 498,
+//       prospectsTotal: 498,
+//     },
+//     {
+//       id: 3,
+//       name: "New Campaign",
+//       date: "20 Sep 2025, 12:37 PM",
+//       progress: 100,
+//       status: "done",
+//       prospectsFound: 498,
+//       prospectsTotal: 498,
+//     },
+//     {
+//       id: 4,
+//       name: "New Campaign",
+//       date: "20 Aug 2025, 12:37 PM",
+//       progress: 100,
+//       status: "done",
+//       prospectsFound: 498,
+//       prospectsTotal: 498,
+//     },
+//     {
+//       id: 5,
+//       name: "New Campaign",
+//       date: "20 Jul 2025, 12:37 PM",
+//       progress: 100,
+//       status: "done",
+//       prospectsFound: 498,
+//       prospectsTotal: 498,
+//     },
+//     {
+//       id: 6,
+//       name: "New Campaign",
+//       date: "20 Jun 2025, 12:37 PM",
+//       progress: 100,
+//       status: "done",
+//       prospectsFound: 498,
+//       prospectsTotal: 498,
+//     },
+//   ],
+// };
 const SAMPLE_CAMPAIGNS = {
-  inProgress: [
-    {
-      id: 1,
-      name: "New Campaign",
-      date: "20 December, 2025",
-      progress: 2,
-      status: "running",
-      prospectsFound: 5,
-      prospectsTotal: 498,
-    },
-  ],
+  inProgress: [],
   completed: [
-    {
+     {
       id: 2,
       name: "New Campaign",
       date: "20 Oct 2025, 12:37 PM",
@@ -45,44 +95,9 @@ const SAMPLE_CAMPAIGNS = {
       prospectsFound: 498,
       prospectsTotal: 498,
     },
-    {
-      id: 3,
-      name: "New Campaign",
-      date: "20 Sep 2025, 12:37 PM",
-      progress: 100,
-      status: "done",
-      prospectsFound: 498,
-      prospectsTotal: 498,
-    },
-    {
-      id: 4,
-      name: "New Campaign",
-      date: "20 Aug 2025, 12:37 PM",
-      progress: 100,
-      status: "done",
-      prospectsFound: 498,
-      prospectsTotal: 498,
-    },
-    {
-      id: 5,
-      name: "New Campaign",
-      date: "20 Jul 2025, 12:37 PM",
-      progress: 100,
-      status: "done",
-      prospectsFound: 498,
-      prospectsTotal: 498,
-    },
-    {
-      id: 6,
-      name: "New Campaign",
-      date: "20 Jun 2025, 12:37 PM",
-      progress: 100,
-      status: "done",
-      prospectsFound: 498,
-      prospectsTotal: 498,
-    },
   ],
 };
+
 
 const OrganicLeadBuilder = () => {
   // Account State
@@ -149,7 +164,7 @@ const OrganicLeadBuilder = () => {
       setShowLinkedInNotConnected(true);
       return;
     }
-    
+
     const hasRunningCampaign = campaigns.inProgress.some(c => c.status === "running");
     if (hasRunningCampaign) {
       setShowCannotRunModal(true);
@@ -199,7 +214,7 @@ const OrganicLeadBuilder = () => {
     setSelectedCampaign(campaigns.inProgress.find(c => c.id === campaignId));
     setShowResumingModal(true);
     setOpenMenuId(null);
-    
+
     setTimeout(() => {
       setCampaigns(prev => ({
         ...prev,
@@ -276,9 +291,8 @@ const OrganicLeadBuilder = () => {
             <div className="mt-3 w-full max-w-[500px]">
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    isCompleted ? "bg-[#3C49F7]" : "bg-[#3C49F7]"
-                  }`}
+                  className={`h-full rounded-full transition-all duration-300 ${isCompleted ? "bg-[#3C49F7]" : "bg-[#3C49F7]"
+                    }`}
                   style={{ width: `${campaign.progress}%` }}
                 />
               </div>
@@ -344,7 +358,7 @@ const OrganicLeadBuilder = () => {
   // If viewing leads, show the Campaign Leads View
   if (viewingLeads && leadsViewCampaign) {
     const totalResults = leadsViewCampaign.prospectsFound || 498;
-    
+
     const handleSelectLead = (id) => {
       setSelectedLeads(prev =>
         prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -358,7 +372,7 @@ const OrganicLeadBuilder = () => {
     const handleAddToProject = (profile) => {
       console.log("Add to project:", profile);
     };
-    
+
     return (
       <div className="flex-1 min-h-full p-8 overflow-y-auto bg-[#F8F9FC]">
         {/* Back Button */}
@@ -385,7 +399,7 @@ const OrganicLeadBuilder = () => {
               </span>
             </div>
           </div>
-          
+
           <div className="text-right">
             <p className="text-gray-500 text-sm">Leads generated</p>
             <p className="text-[48px] font-semibold text-[#1a1a1a] leading-none">{totalResults}</p>
@@ -397,7 +411,7 @@ const OrganicLeadBuilder = () => {
           <p className="text-sm text-gray-600">1 - 10 of about {totalResults} results.</p>
           <div className="flex items-center gap-3">
             <button className="text-[#3C49F7] text-sm font-medium hover:underline">Export Leads</button>
-            <button 
+            <button
               onClick={() => handleStartWorkflow()}
               className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
             >
@@ -408,8 +422,8 @@ const OrganicLeadBuilder = () => {
 
         {/* Select All */}
         <div className="flex items-center gap-3 mb-4">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
             onChange={(e) => {
               if (e.target.checked) {
@@ -453,7 +467,7 @@ const OrganicLeadBuilder = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            {[1,2,3,4,5,6,7,8,9].map(page => (
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(page => (
               <button key={page} className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}>{page}</button>
             ))}
             <button className="p-2 rounded hover:bg-gray-100">
@@ -532,7 +546,7 @@ const OrganicLeadBuilder = () => {
         ) : (
           <>
             <div className="mb-6">
-              <h1 className="text-[32px] font-normal text-[#1a1a1a] mb-1 font-['DM_Sans']">
+              <h1 className="text-[32px] font-light text-[#1a1a1a] font-['DM_Sans'] italic">
                 To start generate leads,
               </h1>
               <p className="text-lg font-semibold text-[#1a1a1a]">We need you to:</p>
@@ -561,85 +575,83 @@ const OrganicLeadBuilder = () => {
 
       {/* Campaigns Section - Always show */}
       <div className="bg-white rounded-2xl p-6">
-          {campaigns.inProgress.length === 0 && campaigns.completed.length === 0 ? (
-            <div>
-              <h2 className="text-[28px] font-normal text-[#1a1a1a] mb-4">
-                Start Organic Lead Search
-              </h2>
+        {campaigns.inProgress.length === 0 && campaigns.completed.length === 0 ? (
+          <div>
+            <h2 className="text-[28px] font-normal text-[#1a1a1a] mb-4">
+              {isConnected ? "Start Organic Lead Search" : "Start a campaign"}
+            </h2>
+            <button
+              onClick={handleAddNewCampaign}
+              className="border border-[#3C49F7] text-[#3C49F7] px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#F7F7FF] transition-colors"
+            >
+              Add New Campaign
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-[28px] font-normal text-[#1a1a1a] mb-4">
+                  Campaigns
+                </h2>
+                <button
+                  onClick={handleAddNewCampaign}
+                  className="border-2 border-[#1a1a1a] text-[#1a1a1a] px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Add New Campaign
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Note: One campaign can run at a time
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6">
               <button
-                onClick={handleAddNewCampaign}
-                className="border-2 border-[#1a1a1a] text-[#1a1a1a] px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors"
+                onClick={() => setActiveTab("inProgress")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "inProgress"
+                  ? "bg-[#1a1a1a] text-white"
+                  : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
+                  }`}
               >
-                Add New Campaign
+                In Progress ({campaigns.inProgress.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("completed")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "completed"
+                  ? "bg-[#1a1a1a] text-white"
+                  : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
+                  }`}
+              >
+                Completed ({campaigns.completed.length})
               </button>
             </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-[28px] font-normal text-[#1a1a1a] mb-4">
-                    Campaigns
-                  </h2>
-                  <button
-                    onClick={handleAddNewCampaign}
-                    className="border-2 border-[#1a1a1a] text-[#1a1a1a] px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Add New Campaign
-                  </button>
-                </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Note: One campaign can run at a time
-                </div>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex gap-2 mb-6">
-                <button
-                  onClick={() => setActiveTab("inProgress")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeTab === "inProgress"
-                      ? "bg-[#1a1a1a] text-white"
-                      : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  In Progress ({campaigns.inProgress.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("completed")}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeTab === "completed"
-                      ? "bg-[#1a1a1a] text-white"
-                      : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  Completed ({campaigns.completed.length})
-                </button>
-              </div>
-
-              {/* Campaign List */}
-              <div>
-                {activeTab === "inProgress" && (
-                  campaigns.inProgress.length > 0 ? (
-                    campaigns.inProgress.map(campaign => renderCampaignCard(campaign, false))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No campaigns in progress</p>
-                  )
-                )}
-                {activeTab === "completed" && (
-                  campaigns.completed.length > 0 ? (
-                    campaigns.completed.map(campaign => renderCampaignCard(campaign, true))
-                  ) : (
-                    <p className="text-gray-500 text-center py-8">No completed campaigns</p>
-                  )
-                )}
-              </div>
-            </>
-          )}
-        </div>
+            {/* Campaign List */}
+            <div>
+              {activeTab === "inProgress" && (
+                campaigns.inProgress.length > 0 ? (
+                  campaigns.inProgress.map(campaign => renderCampaignCard(campaign, false))
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No campaigns in progress</p>
+                )
+              )}
+              {activeTab === "completed" && (
+                campaigns.completed.length > 0 ? (
+                  campaigns.completed.map(campaign => renderCampaignCard(campaign, true))
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No completed campaigns</p>
+                )
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Modals */}
       <SetAccountModal
