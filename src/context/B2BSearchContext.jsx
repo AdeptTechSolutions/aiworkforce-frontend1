@@ -709,7 +709,12 @@ export const B2BSearchProvider = ({ children }) => {
           return false;
         }
 
-        console.log("🔍 Enriching director:", director.name, "at", company.name);
+        console.log(
+          "🔍 Enriching director:",
+          director.name,
+          "at",
+          company.name,
+        );
 
         // Step 1: Try RocketReach person-lookup first
         let enrichedData = null;
@@ -742,10 +747,15 @@ export const B2BSearchProvider = ({ children }) => {
             dataSource = "rocketreach";
             console.log("✅ Using RocketReach data");
           } else {
-            console.log("⚠️ RocketReach returned empty profile, trying ContactOut...");
+            console.log(
+              "⚠️ RocketReach returned empty profile, trying ContactOut...",
+            );
           }
         } catch (rocketReachError) {
-          console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
+          console.log(
+            "⚠️ RocketReach failed, trying ContactOut...",
+            rocketReachError.message,
+          );
         }
 
         // Step 2: If RocketReach failed or returned empty, try ContactOut
@@ -778,7 +788,10 @@ export const B2BSearchProvider = ({ children }) => {
               return false;
             }
           } catch (contactOutError) {
-            console.error("❌ Both enrichment APIs failed:", contactOutError.message);
+            console.error(
+              "❌ Both enrichment APIs failed:",
+              contactOutError.message,
+            );
             return false;
           }
         }
@@ -798,7 +811,8 @@ export const B2BSearchProvider = ({ children }) => {
           title = enrichedData.current_title || director.title;
           linkedin_url = enrichedData.linkedin_url || director.linkedin_url;
           location = enrichedData.location || director.location;
-          current_employer = enrichedData.current_employer || director.current_employer;
+          current_employer =
+            enrichedData.current_employer || director.current_employer;
         } else if (dataSource === "contactout") {
           // ContactOut format
           // Combine all email arrays
@@ -813,7 +827,8 @@ export const B2BSearchProvider = ({ children }) => {
           title = enrichedData.headline || director.title;
           linkedin_url = enrichedData.url || director.linkedin_url;
           location = enrichedData.location || director.location;
-          current_employer = enrichedData.company?.name || director.current_employer;
+          current_employer =
+            enrichedData.company?.name || director.current_employer;
         }
 
         // Update the director with enriched data
@@ -827,7 +842,8 @@ export const B2BSearchProvider = ({ children }) => {
                     ? {
                         ...d,
                         isEnriched: true,
-                        name: enrichedData.name || enrichedData.full_name || d.name,
+                        name:
+                          enrichedData.name || enrichedData.full_name || d.name,
                         title: title,
                         email: emails[0] || d.email,
                         secondaryEmail: emails[1] || null,
@@ -996,49 +1012,45 @@ export const B2BSearchProvider = ({ children }) => {
   }, []);
 
   // Add companies to project via API
-  const addToProject = useCallback(async (projectId, companiesData) => {
+  const addToProject = useCallback(async (projectId, companiesData, searchMetadata = {}) => {
     try {
-      // Format the request body for B2B companies
-      const companyDataArray = companiesData.map((company) => {
-        // Build the base company_data object
-        const companyData = {
-          id: company.id, // Company number (required)
-          name: company.name || "N/A", // Company name (required)
-          email_domain: company.email_domain || "",
-          ticker_symbol: company.ticker_symbol || "",
-          industry_str: company.industry_str || "",
-          city: company.city || "",
-          region: company.region || "",
-          country_code: company.country_code || "",
-          location: company.location || "",
-          status: company.status || "",
-          logo: company.logo || "",
-          incorporatedDate: company.incorporatedDate || "",
-          sicCodes: company.sicCodes || [],
-          companyType: company.companyType || "",
+      // Format the request body for B2B companies using the new /b2b/projects/add-results format
+      const resultsData = companiesData.map((company) => {
+        // Determine source based on search type or company data
+        const source = searchMetadata.source || (searchType === "advance" ? "companies_house" : "rocketreach");
+
+        // Build the results_data object
+        const resultData = {
+          source: source,
+          company_number: company.id || "",
+          // Use company_name for Companies House, name for others
+          ...(source === "companies_house"
+            ? { company_name: company.name || "N/A" }
+            : { name: company.name || "N/A" }
+          ),
+          description: company.industry_str || company.description || "",
+          company_status: company.status || "",
+          company_type: company.companyType || "",
+          sic_codes: Array.isArray(company.sicCodes) ? company.sicCodes : [],
+          website: company.hasWebsite ? `https://${company.email_domain || ""}` : "",
+          email: company.email_domain ? `info@${company.email_domain}` : "",
+          phone: "", // Not available in company data
+          address: company.location || "",
+          location: company.location || `${company.city}, ${company.region}, ${company.country_code}`.replace(/, ,/g, ',').replace(/^, |, $/g, ''),
         };
 
-        // Add directors data if available
-        if (company.directors && company.directors.length > 0) {
-          companyData.directors = company.directors.map((director) => ({
-            id: director.id,
-            name: director.name,
-            title: director.title,
-            email: director.email,
-            phones: director.phones || [],
-            appointed_on: director.appointed_on,
-            address: director.address,
-            officer_role: director.officer_role,
-            isEnriched: director.isEnriched || false,
-          }));
-        }
-
-        return companyData;
+        return resultData;
       });
 
       const requestBody = {
         project_id: projectId,
-        company_data: companyDataArray,
+        results_data: resultsData,
+        search_metadata: {
+          source: searchMetadata.source || (searchType === "advance" ? "companies_house" : "rocketreach"),
+          query: searchMetadata.query || activeFilters.map(f => `${f.type}:${f.value}`).join(", "),
+        },
+        include_people: true,
+        people_limit: 10,
       };
 
       console.log(
@@ -1047,7 +1059,7 @@ export const B2BSearchProvider = ({ children }) => {
       );
 
       const response = await api.post(
-        "/b2b/v1/b2b/add-to-project",
+        "/b2b/projects/add-results",
         requestBody,
       );
 
@@ -1083,7 +1095,7 @@ export const B2BSearchProvider = ({ children }) => {
       console.error("Error details:", error.response?.data || error.message);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [activeFilters, searchType]);
 
   // Toggle expanded company
   const toggleExpandedCompany = useCallback((companyId) => {

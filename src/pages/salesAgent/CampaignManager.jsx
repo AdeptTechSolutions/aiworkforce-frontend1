@@ -1,6 +1,7 @@
 // pages/CampaignManager.jsx
 import { useState, useEffect } from "react";
 import { ProfileCard } from "../../components/profiles/ProfileComponents";
+import { CompanyCard } from "../../components/profiles/CompanyCard";
 import CampaignManagerModals from "../../components/campaigns/CampaignManagerModals";
 import WorkflowBuilder from "../../components/workflow/WorkflowBuilder";
 import api from "../../services/api";
@@ -324,7 +325,6 @@ const CampaignManager = () => {
   const [activeTab, setActiveTab] = useState("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [selectedCampaigns, setSelectedCampaigns] = useState([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
   // View states
@@ -332,6 +332,10 @@ const CampaignManager = () => {
   const [leads, setLeads] = useState(SAMPLE_LEADS);
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+
+  // B2B specific states - companies for CompanyCard display
+  const [b2bCompanies, setB2bCompanies] = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
 
   // Modal states
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
@@ -414,7 +418,7 @@ const CampaignManager = () => {
   }, []);
 
   // Fetch project results
-  const fetchProjectResults = async (projectId) => {
+  const fetchProjectResults = async (projectId, campaignSource) => {
     setIsLoadingResults(true);
     try {
       const response = await api.get(`/b2b/projects/${projectId}/results`);
@@ -425,35 +429,77 @@ const CampaignManager = () => {
         response.data.success &&
         response.data.data?.results
       ) {
-        // Transform results to lead format
-        const transformedLeads = response.data.data.results.map((result) => ({
-          id: result.id,
-          externalId: result.external_id, // RocketReach person ID for B2C enrichment
-          name: result.name || "Unknown",
-          title: result.description || "",
-          company: result.company_type || "",
-          location: result.location || "",
-          industry: "", // Not provided in API response
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name || "Unknown")}&background=3C49F7&color=fff&size=100`,
-          website: result.website || "",
-          phones: result.phone ? [result.phone] : [],
-          emails: result.email ? [result.email] : [],
-          isEnriched: result.is_enriched || false,
-          past: [], // Past positions - will be populated on enrichment
-          education: [], // Education - will be populated on enrichment
-          linkedin: "", // LinkedIn URL - will be populated on enrichment
-        }));
+        // Check if this is a B2B project (source = "b2b" or "B2B")
+        const isB2B = (campaignSource || "").toLowerCase() === "b2b";
 
-        setLeads(transformedLeads);
+        if (isB2B) {
+          // For B2B projects, transform to CompanyCard format (exactly like B2B advanced search)
+          const transformedCompanies = response.data.data.results.map((company) => {
+            return {
+              id: company.id,
+              // Store company_number separately for directors API (external_id contains the Companies House number)
+              companyNumber: company.external_id || company.company_number || "",
+              name: company.name || "Unknown",
+              email_domain: company.website ? company.website.replace(/^https?:\/\//, '').replace(/^www\./, '') : "",
+              ticker_symbol: "",
+              industry_str: company.description || company.sic_codes?.[0] || "",
+              city: "",
+              region: "",
+              country_code: "",
+              location: company.location || company.address || "N/A",
+              status: company.company_status || "Active",
+              logo: company.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name || "Unknown")}&background=3C49F7&color=fff`,
+              hasWebsite: !!company.website,
+              hasInstagram: false,
+              hasLinkedin: false,
+              incorporatedDate: company.date_of_creation || "N/A",
+              sicCodes: company.sic_codes || [],
+              companyType: company.company_type || "N/A",
+              directors: [],
+              originalId: company.id,
+              website: company.website || "",
+              email: company.email || "",
+              phone: company.phone || "",
+            };
+          });
+
+          setB2bCompanies(transformedCompanies);
+          setLeads([]); // Clear leads for B2B
+          setSelectedCompanies([]);
+        } else {
+          // For B2C/Organic projects, use existing transformation
+          const transformedLeads = response.data.data.results.map((result) => ({
+            id: result.id,
+            externalId: result.external_id, // RocketReach person ID for B2C enrichment
+            name: result.name || "Unknown",
+            title: result.description || "",
+            company: result.company_type || "",
+            location: result.location || "",
+            industry: "", // Not provided in API response
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name || "Unknown")}&background=3C49F7&color=fff&size=100`,
+            website: result.website || "",
+            phones: result.phone ? [result.phone] : [],
+            emails: result.email ? [result.email] : [],
+            isEnriched: result.is_enriched || false,
+            past: [], // Past positions - will be populated on enrichment
+            education: [], // Education - will be populated on enrichment
+            linkedin: "", // LinkedIn URL - will be populated on enrichment
+          }));
+
+          setLeads(transformedLeads);
+          setB2bCompanies([]); // Clear B2B companies for non-B2B
+        }
       } else {
-        // If no results, set empty array
+        // If no results, set empty arrays
         setLeads([]);
+        setB2bCompanies([]);
       }
     } catch (error) {
       console.error("❌ Error fetching project results:", error);
       console.error("Error details:", error.response?.data || error.message);
-      // On error, show empty leads
+      // On error, show empty
       setLeads([]);
+      setB2bCompanies([]);
     } finally {
       setIsLoadingResults(false);
     }
@@ -470,8 +516,9 @@ const CampaignManager = () => {
     setViewingCampaign(campaign);
     setSelectedLeads([]);
 
-    // Fetch actual results for the campaign
-    await fetchProjectResults(campaign.id);
+    // Fetch actual results for the campaign, passing source type
+    const campaignSource = campaign.sourceType || campaign.source;
+    await fetchProjectResults(campaign.id, campaignSource);
   };
 
   const handleBackFromCampaign = () => {
@@ -482,7 +529,7 @@ const CampaignManager = () => {
   const handleMenuAction = (action, campaign) => {
     setOpenMenuId(null);
     switch (action) {
-      case "duplicate":
+      case "duplicate": {
         const newCampaign = {
           ...campaign,
           id: Date.now(),
@@ -493,6 +540,7 @@ const CampaignManager = () => {
           active: [...prev.active, newCampaign],
         }));
         break;
+      }
       case "pause":
         setCampaigns((prev) => ({
           ...prev,
@@ -551,7 +599,7 @@ const CampaignManager = () => {
     setShowEnrichingModal(false);
   };
 
-  // Enrich single lead based on campaign source
+  // Enrich single lead (for B2C/non-B2B projects only - B2B uses CompanyCard's inline enrichment)
   const handleEnrichLead = async (id) => {
     const lead = leads.find((l) => l.id === id);
     if (!lead || lead.isEnriched) return;
@@ -559,132 +607,44 @@ const CampaignManager = () => {
     try {
       let enrichedData = null;
 
-      // Get the source type (use sourceType if available, otherwise fallback to source)
-      const campaignSource = (viewingCampaign.sourceType || viewingCampaign.source || "").toLowerCase();
+      // B2C Enrichment
+      console.log("🔍 Enriching B2C lead:", lead.name, "with external ID:", lead.externalId);
 
-      console.log("🔍 Campaign source:", campaignSource, "for lead:", lead.name);
+      if (!lead.externalId) {
+        console.error("❌ No external ID found for B2C lead");
+        return;
+      }
 
-      if (campaignSource === "b2c") {
-        // B2C Enrichment
-        console.log("🔍 Enriching B2C lead:", lead.name, "with external ID:", lead.externalId);
+      const response = await api.get(`/b2b/v1/b2c/lookup-person-raw/${lead.externalId}`);
+      console.log("✅ B2C Enrichment Response:", response.data);
 
-        if (!lead.externalId) {
-          console.error("❌ No external ID found for B2C lead");
-          return;
-        }
-
-        const response = await api.get(`/b2b/v1/b2c/lookup-person-raw/${lead.externalId}`);
-        console.log("✅ B2C Enrichment Response:", response.data);
-
-        if (response.data) {
-          // Transform job_history to pastPositions format
-          const pastPositions = (response.data.job_history || [])
-            .filter((job) => !job.is_current)
-            .map((job) => ({
-              title: job.title || "N/A",
-              company: job.company_name || job.company || "N/A",
-              years: `${job.start_date ? new Date(job.start_date).getFullYear() : "N/A"} - ${job.end_date === "Present" ? "Present" : job.end_date ? new Date(job.end_date).getFullYear() : "N/A"}`,
-            }));
-
-          // Transform education array
-          const education = (response.data.education || []).map((edu) => ({
-            school: edu.school || "N/A",
-            degree: edu.degree || "",
-            major: edu.major || "",
-            years: `${edu.start || "N/A"}-${edu.end || "N/A"}`,
+      if (response.data) {
+        // Transform job_history to pastPositions format
+        const pastPositions = (response.data.job_history || [])
+          .filter((job) => !job.is_current)
+          .map((job) => ({
+            title: job.title || "N/A",
+            company: job.company_name || job.company || "N/A",
+            years: `${job.start_date ? new Date(job.start_date).getFullYear() : "N/A"} - ${job.end_date === "Present" ? "Present" : job.end_date ? new Date(job.end_date).getFullYear() : "N/A"}`,
           }));
 
-          enrichedData = {
-            phones: (response.data.phones || []).map((phone) => phone.number),
-            emails: (response.data.emails || []).map((email) => email.email),
-            website: response.data.current_employer_domain || lead.website,
-            pastPositions: pastPositions,
-            education: education,
-            avatar: response.data.profile_pic || lead.avatar,
-            linkedin: response.data.linkedin_url || response.data.links?.linkedin,
-          };
-        }
-      } else if (campaignSource === "b2b") {
-        // B2B Enrichment - Try RocketReach first
-        console.log("🔍 Enriching B2B lead:", lead.name, "at", lead.company);
+        // Transform education array
+        const education = (response.data.education || []).map((edu) => ({
+          school: edu.school || "N/A",
+          degree: edu.degree || "",
+          major: edu.major || "",
+          years: `${edu.start || "N/A"}-${edu.end || "N/A"}`,
+        }));
 
-        try {
-          const rocketReachBody = {
-            query: {
-              name: [lead.name],
-              current_employer: [lead.company],
-            },
-          };
-
-          console.log("📡 Calling RocketReach API with:", rocketReachBody);
-          const rocketReachResponse = await api.post(
-            "/b2b/v1/rocketreach/person-lookup",
-            rocketReachBody,
-          );
-
-          console.log("✅ RocketReach API Response:", rocketReachResponse.data);
-
-          if (
-            rocketReachResponse.data?.profile &&
-            Object.keys(rocketReachResponse.data.profile).length > 0 &&
-            rocketReachResponse.data.profile.id
-          ) {
-            const profile = rocketReachResponse.data.profile;
-            enrichedData = {
-              phones: (profile.phones || []).map((phone) => phone.number),
-              emails: (profile.emails || []).map((email) => email.email),
-              website: lead.website,
-            };
-            console.log("✅ Using RocketReach data");
-          } else {
-            console.log("⚠️ RocketReach returned empty, trying ContactOut...");
-            throw new Error("RocketReach returned empty profile");
-          }
-        } catch (rocketReachError) {
-          console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
-
-          // Fallback to ContactOut
-          try {
-            const contactOutBody = {
-              full_name: lead.name,
-              company: [lead.company],
-            };
-
-            console.log("📡 Calling ContactOut API with:", contactOutBody);
-            const contactOutResponse = await api.post(
-              "/b2b/v1/contactout/enrich",
-              contactOutBody,
-            );
-
-            console.log("✅ ContactOut API Response:", contactOutResponse.data);
-
-            if (
-              contactOutResponse.data?.profile &&
-              Object.keys(contactOutResponse.data.profile).length > 0
-            ) {
-              const profile = contactOutResponse.data.profile;
-              // ContactOut format
-              const allEmails = [
-                ...(profile.email || []),
-                ...(profile.work_email || []),
-                ...(profile.personal_email || []),
-              ].filter(Boolean);
-
-              enrichedData = {
-                phones: (profile.phone || []).filter(Boolean),
-                emails: allEmails,
-                website: lead.website,
-              };
-              console.log("✅ Using ContactOut data");
-            } else {
-              console.error("❌ Both APIs returned empty data");
-              throw new Error("Both enrichment APIs returned empty data");
-            }
-          } catch (contactOutError) {
-            console.error("❌ Both enrichment APIs failed:", contactOutError.message);
-            throw contactOutError;
-          }
-        }
+        enrichedData = {
+          phones: (response.data.phones || []).map((phone) => phone.number),
+          emails: (response.data.emails || []).map((email) => email.email),
+          website: response.data.current_employer_domain || lead.website,
+          pastPositions: pastPositions,
+          education: education,
+          avatar: response.data.profile_pic || lead.avatar,
+          linkedin: response.data.linkedin_url || response.data.links?.linkedin,
+        };
       }
 
       // Update the lead with enriched data
@@ -726,12 +686,12 @@ const CampaignManager = () => {
   setShowWorkflowBuilder(true);
 };
 
-  // Campaign Details View (Only for completed campaigns)
+  // Campaign Details View (for draft and completed campaigns)
   if (viewingCampaign) {
-    const isCompleted = viewingCampaign.status === "done";
+    const isB2BProject = (viewingCampaign.sourceType || viewingCampaign.source || "").toLowerCase() === "b2b";
     const totalLeads = isLoadingResults
       ? "..."
-      : viewingCampaign.leadsGenerated || leads.length;
+      : viewingCampaign.leadsGenerated || (isB2BProject ? b2bCompanies.length : leads.length);
 
     return (
       <div className="flex-1 min-h-full p-8 overflow-y-auto bg-[#F8F9FC]">
@@ -791,17 +751,24 @@ const CampaignManager = () => {
         {!isLoadingResults && (
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600">
-              {leads.length > 0
-                ? `1 - ${Math.min(10, leads.length)} of about ${leads.length} results.`
-                : "No results found."}
+              {(() => {
+                const isB2B = (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b";
+                const count = isB2B ? b2bCompanies.length : leads.length;
+                const label = isB2B ? "companies" : "results";
+                return count > 0
+                  ? `1 - ${Math.min(10, count)} of about ${count} ${label}.`
+                  : `No ${label} found.`;
+              })()}
             </p>
             <div className="flex items-center gap-3">
-              {leads.length > 0 && (
+              {((viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b"
+                ? b2bCompanies.length > 0
+                : leads.length > 0) && (
                 <>
                   <button className="text-[#3C49F7] text-sm font-medium hover:underline">
-                    Export Leads
+                    Export {(viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b" ? "Companies" : "Leads"}
                   </button>
-                  {unenrichedCount > 0 && (
+                  {(viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() !== "b2b" && unenrichedCount > 0 && (
                     <button
                       onClick={handleEnrichAll}
                       className="border border-[#3C49F7] text-[#3C49F7] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#F2F2FF]"
@@ -821,22 +788,31 @@ const CampaignManager = () => {
           </div>
         )}
 
-        {/* Select All */}
-        {!isLoadingResults && leads.length > 0 && (
+        {/* Select All - For B2B companies or regular leads */}
+        {!isLoadingResults && (b2bCompanies.length > 0 || leads.length > 0) && (
           <div className="flex items-center gap-3 mb-4">
             <input
               type="checkbox"
               className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
-              onChange={(e) =>
-                setSelectedLeads(e.target.checked ? leads.map((l) => l.id) : [])
+              onChange={(e) => {
+                const isB2B = (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b";
+                if (isB2B) {
+                  setSelectedCompanies(e.target.checked ? b2bCompanies.map((c) => c.id) : []);
+                } else {
+                  setSelectedLeads(e.target.checked ? leads.map((l) => l.id) : []);
+                }
+              }}
+              checked={
+                (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b"
+                  ? selectedCompanies.length === b2bCompanies.length && b2bCompanies.length > 0
+                  : selectedLeads.length === leads.length && leads.length > 0
               }
-              checked={selectedLeads.length === leads.length && leads.length > 0}
             />
             <span className="text-sm text-gray-700">Select All</span>
           </div>
         )}
 
-        {/* Leads List */}
+        {/* Results List - B2B Companies or Regular Leads */}
         <div className="space-y-2">
           {isLoadingResults ? (
             <div className="flex items-center justify-center py-12">
@@ -845,26 +821,250 @@ const CampaignManager = () => {
                 <p className="text-sm text-gray-500">Loading results...</p>
               </div>
             </div>
-          ) : leads.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <p className="text-sm text-gray-500">No results found</p>
-            </div>
+          ) : (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b" ? (
+            // B2B Projects - Show CompanyCard with View Active Directors (exactly like B2B advanced search)
+            b2bCompanies.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-sm text-gray-500">No companies found</p>
+              </div>
+            ) : (
+              b2bCompanies.map((company) => (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  isSelected={selectedCompanies.includes(company.id)}
+                  onSelect={(companyId) => {
+                    setSelectedCompanies((prev) =>
+                      prev.includes(companyId)
+                        ? prev.filter((id) => id !== companyId)
+                        : [...prev, companyId]
+                    );
+                  }}
+                  onAddToProject={() => handleRemoveLead(company)}
+                  searchType="advance"
+                  context={{
+                    fetchDirectors: async (companyId) => {
+                      // Find the company to get the companyNumber (Companies House number)
+                      const targetCompany = b2bCompanies.find((c) => c.id === companyId);
+                      const companyNumber = targetCompany?.companyNumber;
+
+                      if (!companyNumber) {
+                        console.error("No company number found for company:", companyId);
+                        return [];
+                      }
+
+                      // Fetch directors using the same API as B2BSearchContext
+                      try {
+                        const response = await api.get(
+                          `/b2b/v1/companies-house/company/${companyNumber}/directors`
+                        );
+
+                        const transformedDirectors = (response.data.directors || []).map(
+                          (director, index) => {
+                            const address = director.address
+                              ? [
+                                  director.address.premises,
+                                  director.address.address_line_1,
+                                  director.address.address_line_2,
+                                  director.address.locality,
+                                  director.address.region,
+                                  director.address.postal_code,
+                                  director.address.country,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", ")
+                              : "N/A";
+
+                            return {
+                              id: `${companyNumber}-director-${index}`,
+                              name: director.formatted_name || director.original_name,
+                              title: director.officer_role || "Director",
+                              email: "***@company.com",
+                              secondaryEmail: null,
+                              phones: ["***-***-****"],
+                              maskedName: director.formatted_name || director.original_name,
+                              maskedEmail: "***@company.com",
+                              maskedSecondaryEmail: null,
+                              maskedPhones: ["***-***-****"],
+                              isEnriched: false,
+                              appointed_on: director.appointed_on,
+                              address: address,
+                              officer_role: director.officer_role,
+                            };
+                          }
+                        );
+
+                        // Update the company with directors
+                        setB2bCompanies((prev) =>
+                          prev.map((c) =>
+                            c.id === companyId ? { ...c, directors: transformedDirectors } : c
+                          )
+                        );
+
+                        return transformedDirectors;
+                      } catch (error) {
+                        console.error("Error fetching directors:", error);
+                        return [];
+                      }
+                    },
+                    enrichDirector: async (companyId, directorId) => {
+                      // Enrich director using the same API flow as B2BSearchContext
+                      const company = b2bCompanies.find((c) => c.id === companyId);
+                      const director = company?.directors?.find((d) => d.id === directorId);
+
+                      if (!company || !director) {
+                        console.error("Company or director not found");
+                        return false;
+                      }
+
+                      console.log("🔍 Enriching director:", director.name, "at", company.name);
+
+                      let enrichedData = null;
+                      let dataSource = null;
+
+                      // Try RocketReach first
+                      try {
+                        const rocketReachBody = {
+                          query: {
+                            name: [director.name],
+                            current_employer: [company.name],
+                          },
+                        };
+
+                        console.log("📡 Calling RocketReach API with:", rocketReachBody);
+                        const rocketReachResponse = await api.post(
+                          "/b2b/v1/rocketreach/person-lookup",
+                          rocketReachBody
+                        );
+
+                        console.log("✅ RocketReach API Response:", rocketReachResponse.data);
+
+                        if (
+                          rocketReachResponse.data?.profile &&
+                          Object.keys(rocketReachResponse.data.profile).length > 0 &&
+                          rocketReachResponse.data.profile.id
+                        ) {
+                          enrichedData = rocketReachResponse.data.profile;
+                          dataSource = "rocketreach";
+                          console.log("✅ Using RocketReach data");
+                        }
+                      } catch (rocketReachError) {
+                        console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
+                      }
+
+                      // Fallback to ContactOut
+                      if (!enrichedData) {
+                        try {
+                          const contactOutBody = {
+                            full_name: director.name,
+                            company: [company.name],
+                          };
+
+                          console.log("📡 Calling ContactOut API with:", contactOutBody);
+                          const contactOutResponse = await api.post(
+                            "/b2b/v1/contactout/enrich",
+                            contactOutBody
+                          );
+
+                          console.log("✅ ContactOut API Response:", contactOutResponse.data);
+
+                          if (
+                            contactOutResponse.data?.profile &&
+                            Object.keys(contactOutResponse.data.profile).length > 0
+                          ) {
+                            enrichedData = contactOutResponse.data.profile;
+                            dataSource = "contactout";
+                            console.log("✅ Using ContactOut data");
+                          } else {
+                            console.error("❌ Both APIs returned empty data");
+                            return false;
+                          }
+                        } catch (contactOutError) {
+                          console.error("❌ Both enrichment APIs failed:", contactOutError.message);
+                          return false;
+                        }
+                      }
+
+                      // Transform and update director with enriched data
+                      let phones = [];
+                      let emails = [];
+                      let title = director.title;
+                      let linkedin_url = director.linkedin_url;
+
+                      if (dataSource === "rocketreach") {
+                        phones = (enrichedData.phones || []).map((phone) => phone.number);
+                        emails = (enrichedData.emails || []).map((email) => email.email);
+                        title = enrichedData.current_title || director.title;
+                        linkedin_url = enrichedData.linkedin_url;
+                      } else if (dataSource === "contactout") {
+                        const allEmails = [
+                          ...(enrichedData.email || []),
+                          ...(enrichedData.work_email || []),
+                          ...(enrichedData.personal_email || []),
+                        ];
+                        emails = allEmails.filter(Boolean);
+                        phones = (enrichedData.phone || []).filter(Boolean);
+                        title = enrichedData.headline || director.title;
+                        linkedin_url = enrichedData.url;
+                      }
+
+                      // Update the director with enriched data
+                      setB2bCompanies((prev) =>
+                        prev.map((c) => {
+                          if (c.id === companyId) {
+                            return {
+                              ...c,
+                              directors: c.directors.map((d) =>
+                                d.id === directorId
+                                  ? {
+                                      ...d,
+                                      isEnriched: true,
+                                      name: enrichedData.name || enrichedData.full_name || d.name,
+                                      title: title,
+                                      email: emails[0] || d.email,
+                                      secondaryEmail: emails[1] || null,
+                                      phones: phones.length > 0 ? phones : d.phones,
+                                      linkedin_url: linkedin_url,
+                                      enrichmentSource: dataSource,
+                                    }
+                                  : d
+                              ),
+                            };
+                          }
+                          return c;
+                        })
+                      );
+
+                      console.log(`✅ Successfully enriched director using ${dataSource}`);
+                      return true;
+                    },
+                  }}
+                />
+              ))
+            )
           ) : (
-            leads.map((lead) => (
-              <ProfileCard
-                key={lead.id}
-                profile={lead}
-                isSelected={selectedLeads.includes(lead.id)}
-                onSelect={handleSelectLead}
-                onEnrich={handleEnrichLead}
-                onAddToProject={() => handleRemoveLead(lead)}
-              />
-            ))
+            // Non-B2B Projects - Show ProfileCard for leads
+            leads.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-sm text-gray-500">No results found</p>
+              </div>
+            ) : (
+              leads.map((lead) => (
+                <ProfileCard
+                  key={lead.id}
+                  profile={lead}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={handleSelectLead}
+                  onEnrich={handleEnrichLead}
+                  onAddToProject={() => handleRemoveLead(lead)}
+                />
+              ))
+            )
           )}
         </div>
 
         {/* Pagination */}
-        {!isLoadingResults && leads.length > 0 && (
+        {!isLoadingResults && (isB2BProject ? b2bCompanies.length > 0 : leads.length > 0) && (
           <div className="flex items-center justify-between mt-6">
             <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
               <option value={10}>10</option>
