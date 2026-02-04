@@ -2,28 +2,38 @@ import React, { useState, useEffect } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import bgImage from "../../assets/Background.png";
 import {
-  savedKeywords,
   searchLocations,
   searchLanguages,
 } from "../../data/blogMockData";
 import CompetitorArticles from "./CompetitorArticles";
+import ContentEditor from "./Contenteditor";
 import api from "../../services/api";
 
 export default function BlogContentEngine() {
   const [activeTab, setActiveTab] = useState("research");
   const [showCompetitorArticles, setShowCompetitorArticles] = useState(false);
   const [pastKeywords, setPastKeywords] = useState([]);
+  const [savedBlogs, setSavedBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savedBlogsLoading, setSavedBlogsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchParams, setSearchParams] = useState({
     keyword: "",
     location: "",
     language: "",
   });
+  const [showContentEditor, setShowContentEditor] = useState(false);
+  const [selectedBlogData, setSelectedBlogData] = useState(null);
 
   useEffect(() => {
     fetchPastKeywords();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "saved") {
+      fetchSavedBlogs();
+    }
+  }, [activeTab]);
 
   const fetchPastKeywords = async () => {
     try {
@@ -59,11 +69,136 @@ export default function BlogContentEngine() {
     setShowCompetitorArticles(false);
   };
 
+  const handleDeletePost = async (postId) => {
+    try {
+      await api.delete(`/seo/posts/${postId}`);
+      // Remove the deleted item from state
+      setPastKeywords((prev) => prev.filter((item) => item.id !== postId));
+    } catch (err) {
+      console.error("Error deleting post:", err);
+    }
+  };
+
+  const fetchSavedBlogs = async () => {
+    try {
+      setSavedBlogsLoading(true);
+      const response = await api.get("/seo/blogs");
+      console.log("Saved blogs response:", response.data);
+      const formattedBlogs = (response.data || []).map((blog) => ({
+        id: blog.id,
+        title: blog.title || "Untitled",
+        content: blog.content || "",
+        postId: blog.post_id,
+        keywords: blog.keywords || [],
+        status: blog.status || "draft",
+        createdAt: blog.created_at
+          ? new Date(blog.created_at).toISOString().split("T")[0]
+          : "N/A",
+        rawData: blog,
+      }));
+      setSavedBlogs(formattedBlogs);
+    } catch (err) {
+      console.error("Error fetching saved blogs:", err);
+    } finally {
+      setSavedBlogsLoading(false);
+    }
+  };
+
+  const handleDeleteBlog = async (blogId) => {
+    try {
+      await api.delete(`/seo/blogs/${blogId}`);
+      setSavedBlogs((prev) => prev.filter((blog) => blog.id !== blogId));
+    } catch (err) {
+      console.error("Error deleting blog:", err);
+    }
+  };
+
+  const handleOpenBlogInEditor = async (blog) => {
+    try {
+      // Fetch optimization data for this post
+      const [optimizeResponse, scoresResponse] = await Promise.all([
+        api.get(`/seo/optimize/${blog.postId}`),
+        api.get(`/seo/competitor-scores/${blog.postId}`),
+      ]);
+
+      setSelectedBlogData({
+        blogId: blog.id, // Include blog ID for updating
+        postId: blog.postId,
+        content: blog.content,
+        targetKeyword: blog.title,
+        optimizationGuide: optimizeResponse.data?.optimization_guide || null,
+        competitorScores: scoresResponse.data?.scores || null,
+      });
+      setShowContentEditor(true);
+    } catch (err) {
+      console.error("Error fetching blog data:", err);
+      // Still open editor with available data even if API fails
+      setSelectedBlogData({
+        blogId: blog.id, // Include blog ID for updating
+        postId: blog.postId,
+        content: blog.content,
+        targetKeyword: blog.title,
+        optimizationGuide: null,
+        competitorScores: null,
+      });
+      setShowContentEditor(true);
+    }
+  };
+
+  const handleEditPostInEditor = async (post) => {
+    try {
+      // Fetch optimization data for this post
+      const [optimizeResponse, scoresResponse] = await Promise.all([
+        api.get(`/seo/optimize/${post.id}`),
+        api.get(`/seo/competitor-scores/${post.id}`),
+      ]);
+
+      setSelectedBlogData({
+        postId: post.id,
+        content: "", // No content yet for past keywords
+        targetKeyword: post.keyword,
+        optimizationGuide: optimizeResponse.data?.optimization_guide || null,
+        competitorScores: scoresResponse.data?.scores || null,
+      });
+      setShowContentEditor(true);
+    } catch (err) {
+      console.error("Error fetching post data:", err);
+      // Still open editor with available data even if API fails
+      setSelectedBlogData({
+        postId: post.id,
+        content: "",
+        targetKeyword: post.keyword,
+        optimizationGuide: null,
+        competitorScores: null,
+      });
+      setShowContentEditor(true);
+    }
+  };
+
   if (showCompetitorArticles) {
     return (
       <CompetitorArticles
         onBack={handleBackFromCompetitor}
         searchParams={searchParams}
+      />
+    );
+  }
+
+  if (showContentEditor && selectedBlogData) {
+    return (
+      <ContentEditor
+        onBack={() => {
+          setShowContentEditor(false);
+          setSelectedBlogData(null);
+          fetchSavedBlogs(); // Refresh saved blogs after editing
+        }}
+        selectedArticles={[]}
+        optimizationGuide={selectedBlogData.optimizationGuide}
+        competitorScores={selectedBlogData.competitorScores}
+        targetKeyword={selectedBlogData.targetKeyword}
+        postId={selectedBlogData.postId}
+        initialContent={selectedBlogData.content}
+        blogId={selectedBlogData.blogId}
       />
     );
   }
@@ -156,12 +291,18 @@ export default function BlogContentEngine() {
                           <p className="text-md text-gray-900">{item.volume}</p>
                         </div>
 
-                        <button className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full">
+                        <button
+                          onClick={() => handleEditPostInEditor(item)}
+                          className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full"
+                        >
                           <Edit2 className="w-3.5 h-3.5" />
                           Edit in editor
                         </button>
 
-                        <button className="text-gray-800 transition-colors">
+                        <button
+                          onClick={() => handleDeletePost(item.id)}
+                          className="text-gray-800 hover:text-red-600 transition-colors"
+                        >
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
@@ -253,39 +394,55 @@ export default function BlogContentEngine() {
             </h2>
 
             <div className="space-y-0">
-              {savedKeywords.map((item, index) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-3 hover:bg-[#efeffc] px-5"
-                >
-                  <div className="flex-1">
-                    <p className="text-[1.3rem] font-semibold text-gray-900">
-                      {item.keyword}
-                    </p>
-                    <p className="text-md text-gray-900">
-                      Searched on {item.searchedOn}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-5">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-900 font-semibold">
-                        Volume
+              {savedBlogsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-500">Loading saved blogs...</p>
+                </div>
+              ) : savedBlogs.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-500">No saved blogs found</p>
+                </div>
+              ) : (
+                savedBlogs.map((blog) => (
+                  <div
+                    key={blog.id}
+                    className="flex items-center justify-between py-3 hover:bg-[#efeffc] px-5"
+                  >
+                    <div className="flex-1">
+                      <p className="text-[1.3rem] font-semibold text-gray-900">
+                        {blog.title}
                       </p>
-                      <p className="text-md text-gray-900">{item.volume}</p>
+                      <p className="text-md text-gray-900">
+                        Saved on {blog.createdAt}
+                      </p>
                     </div>
 
-                    <button className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full">
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Edit in editor
-                    </button>
+                    <div className="flex items-center gap-5">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-900 font-semibold">
+                          Status
+                        </p>
+                        <p className="text-md text-gray-900 capitalize">{blog.status}</p>
+                      </div>
 
-                    <button className="text-gray-800 transition-colors">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                      <button
+                        onClick={() => handleOpenBlogInEditor(blog)}
+                        className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Open in editor
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteBlog(blog.id)}
+                        className="text-gray-800 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}

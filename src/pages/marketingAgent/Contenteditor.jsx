@@ -8,6 +8,58 @@ import { Color } from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
 import api from "../../services/api";
+
+// Simple markdown to HTML converter
+const markdownToHtml = (markdown) => {
+  if (!markdown) return "";
+
+  let html = markdown
+    // Escape HTML entities first (but preserve markdown)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    // Headers (must be at start of line)
+    .replace(/^######\s+(.+)$/gm, "<h6>$1</h6>")
+    .replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>")
+    .replace(/^####\s+(.+)$/gm, "<h4>$1</h4>")
+    .replace(/^###\s+(.+)$/gm, "<h3>$1</h3>")
+    .replace(/^##\s+(.+)$/gm, "<h2>$1</h2>")
+    .replace(/^#\s+(.+)$/gm, "<h1>$1</h1>")
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    // Italic: *text* or _text_
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    // Unordered lists
+    .replace(/^\s*[-*+]\s+(.+)$/gm, "<li>$1</li>")
+    // Ordered lists
+    .replace(/^\s*\d+\.\s+(.+)$/gm, "<li>$1</li>")
+    // Blockquotes
+    .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+    // Inline code
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    // Links: [text](url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // Horizontal rule
+    .replace(/^---$/gm, "<hr>")
+    // Line breaks (double newline = paragraph)
+    .replace(/\n\n/g, "</p><p>")
+    // Single line breaks
+    .replace(/\n/g, "<br>");
+
+  // Wrap consecutive <li> elements in <ul>
+  html = html.replace(/(<li>.*?<\/li>)(\s*<li>)/g, "$1$2");
+  html = html.replace(/(<li>.*?<\/li>)+/g, "<ul>$&</ul>");
+
+  // Wrap in paragraph if not already wrapped
+  if (!html.startsWith("<h") && !html.startsWith("<ul") && !html.startsWith("<blockquote")) {
+    html = "<p>" + html + "</p>";
+  }
+
+  return html;
+};
+
 import {
   ChevronLeft,
   Bold,
@@ -289,6 +341,8 @@ const ContentEditor = ({
   competitorScores,
   targetKeyword,
   postId,
+  initialContent,
+  blogId,
 }) => {
   const [activeMainTab, setActiveMainTab] = useState("Terms");
   const [activeSubTab, setActiveSubTab] = useState("Keywords");
@@ -296,11 +350,12 @@ const ContentEditor = ({
   const [expandedCompetitors, setExpandedCompetitors] = useState({});
   const [expandedRelatedQuestions, setExpandedRelatedQuestions] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGenerated, setIsGenerated] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(!!initialContent);
   const [isCheckingScore, setIsCheckingScore] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState(false);
   const [customInstructions, setCustomInstructions] = useState("");
   const [contentScore, setContentScore] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [, forceUpdate] = useState({});
 
   // Extract data from optimizationGuide
@@ -451,8 +506,9 @@ const ContentEditor = ({
       console.log("Generate article response:", response.data);
 
       if (response.data?.status === "success" && editor) {
-        // Set the generated article content in the editor
-        editor.commands.setContent(response.data.article || "");
+        // Convert markdown to HTML and set in editor
+        const htmlContent = markdownToHtml(response.data.article || "");
+        editor.commands.setContent(htmlContent);
       }
 
       setIsGenerated(true);
@@ -463,6 +519,57 @@ const ContentEditor = ({
       console.error("Error generating article:", err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSaveBlog = async () => {
+    if (!editor || !postId) {
+      console.error("Editor or post ID not available");
+      return;
+    }
+
+    const editorContent = editor.getHTML();
+    if (!editorContent || editorContent === "<p></p>") {
+      alert("Please add some content before saving");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Extract keywords from topics
+      const keywordsList = topics.map((t) => t.word);
+
+      let response;
+      if (blogId) {
+        // Update existing blog with PUT
+        response = await api.put(`/seo/blogs/${blogId}`, {
+          title: targetKeyword || "Untitled Blog",
+          content: editorContent,
+          meta_description: "",
+          keywords: keywordsList,
+          status: "draft",
+        });
+        console.log("Update blog response:", response.data);
+        alert("Blog updated successfully!");
+      } else {
+        // Create new blog with POST
+        response = await api.post("/seo/blogs", {
+          title: targetKeyword || "Untitled Blog",
+          content: editorContent,
+          post_id: postId,
+          meta_description: "",
+          keywords: keywordsList,
+          status: "draft",
+        });
+        console.log("Save blog response:", response.data);
+        alert("Blog saved successfully!");
+      }
+    } catch (err) {
+      console.error("Error saving blog:", err);
+      alert("Failed to save blog");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -485,7 +592,7 @@ const ContentEditor = ({
       Color,
       Highlight.configure({ multicolor: true }),
     ],
-    content: "<p>Start writing your content here...</p>",
+    content: initialContent || "<p>Start writing your content here...</p>",
     editorProps: {
       attributes: {
         class:
@@ -570,8 +677,12 @@ const ContentEditor = ({
               </span>
             </p>
           </div>
-          <button className="px-5 py-1.5 bg-indigo-600 text-white rounded-full transition-colors">
-            Save Blog
+          <button
+            onClick={handleSaveBlog}
+            disabled={isSaving}
+            className="px-5 py-1.5 bg-indigo-600 text-white rounded-full transition-colors hover:bg-indigo-700 disabled:bg-indigo-400"
+          >
+            {isSaving ? "Saving..." : blogId ? "Update Blog" : "Save Blog"}
           </button>
         </div>
         {/* Content Target + Content Score (Single Row) */}
