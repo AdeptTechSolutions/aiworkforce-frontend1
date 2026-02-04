@@ -1,29 +1,72 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import bgImage from "../../assets/Background.png";
 import {
   savedKeywords,
-  pastKeywords,
   searchLocations,
   searchLanguages,
 } from "../../data/blogMockData";
 import CompetitorArticles from "./CompetitorArticles";
+import api from "../../services/api";
 
 export default function BlogContentEngine() {
   const [activeTab, setActiveTab] = useState("research");
-const [showCompetitorArticles, setShowCompetitorArticles] = useState(false);
+  const [showCompetitorArticles, setShowCompetitorArticles] = useState(false);
+  const [pastKeywords, setPastKeywords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchParams, setSearchParams] = useState({
+    keyword: "",
+    location: "",
+    language: "",
+  });
 
-const handleSubmit = (e) => {
-     e.preventDefault();
-     setShowCompetitorArticles(true);
-   };
+  useEffect(() => {
+    fetchPastKeywords();
+  }, []);
 
-   const handleBackFromCompetitor = () => {
-     setShowCompetitorArticles(false);
-   };
-   if (showCompetitorArticles) {
-     return <CompetitorArticles onBack={handleBackFromCompetitor} />;
-   }
+  const fetchPastKeywords = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get("/seo/posts");
+      const formattedData = response.data.map((item) => ({
+        id: item.id,
+        keyword: item.title || item.search_query?.q || "Unknown",
+        searchedOn: item.search_result?.search_metadata?.created_at
+          ? new Date(item.search_result.search_metadata.created_at).toISOString().split("T")[0]
+          : "N/A",
+        volume: item.search_result?.search_information?.total_results || 0,
+        rawData: item,
+      }));
+      setPastKeywords(formattedData);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to fetch past keywords");
+      console.error("Error fetching past keywords:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (searchParams.keyword && searchParams.location && searchParams.language) {
+      setShowCompetitorArticles(true);
+    }
+  };
+
+  const handleBackFromCompetitor = () => {
+    setShowCompetitorArticles(false);
+  };
+
+  if (showCompetitorArticles) {
+    return (
+      <CompetitorArticles
+        onBack={handleBackFromCompetitor}
+        searchParams={searchParams}
+      />
+    );
+  }
 
   return (
     <div
@@ -72,39 +115,59 @@ const handleSubmit = (e) => {
               </h2>
 
               <div className="space-y-0">
-                {pastKeywords.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between py-3 hover:bg-[#efeffc] px-5"
-                  >
-                    <div className="flex-1">
-                      <p className="text-[1.3rem] font-semibold text-gray-900">
-                        {item.keyword}
-                      </p>
-                      <p className="text-md text-gray-900">
-                        Searched on {item.searchedOn}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-5">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-900 font-semibold">
-                          Volume
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-gray-500">Loading past keywords...</p>
+                  </div>
+                ) : error ? (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <p className="text-red-500 mb-2">{error}</p>
+                    <button
+                      onClick={fetchPastKeywords}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : pastKeywords.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <p className="text-gray-500">No past keywords found</p>
+                  </div>
+                ) : (
+                  pastKeywords.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between py-3 hover:bg-[#efeffc] px-5"
+                    >
+                      <div className="flex-1">
+                        <p className="text-[1.3rem] font-semibold text-gray-900">
+                          {item.keyword}
                         </p>
-                        <p className="text-md text-gray-900">{item.volume}</p>
+                        <p className="text-md text-gray-900">
+                          Searched on {item.searchedOn}
+                        </p>
                       </div>
 
-                      <button className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full">
-                        <Edit2 className="w-3.5 h-3.5" />
-                        Edit in editor
-                      </button>
+                      <div className="flex items-center gap-5">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-900 font-semibold">
+                            Volume
+                          </p>
+                          <p className="text-md text-gray-900">{item.volume}</p>
+                        </div>
 
-                      <button className="text-gray-800 transition-colors">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                        <button className="flex items-center gap-1.5 text-md duration-200 hover:bg-black hover:text-white py-2 px-3 rounded-full">
+                          <Edit2 className="w-3.5 h-3.5" />
+                          Edit in editor
+                        </button>
+
+                        <button className="text-gray-800 transition-colors">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -123,6 +186,10 @@ const handleSubmit = (e) => {
                   <input
                     type="text"
                     placeholder="Enter Keyword"
+                    value={searchParams.keyword}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, keyword: e.target.value })
+                    }
                     className="w-full rounded-md border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                   />
                 </div>
@@ -131,8 +198,14 @@ const handleSubmit = (e) => {
                   <label className="mb-2 block text-md text-gray-900">
                     Search Location <span className="text-red-500">*</span>
                   </label>
-                  <select className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-400 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 bg-white">
-                    <option>-- Select Location --</option>
+                  <select
+                    value={searchParams.location}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, location: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-400 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 bg-white"
+                  >
+                    <option value="">-- Select Location --</option>
                     {searchLocations.map((locations) => (
                       <option key={locations.id} value={locations.value}>
                         {locations.label}
@@ -145,8 +218,14 @@ const handleSubmit = (e) => {
                   <label className="mb-2 block text-md text-gray-900">
                     Search Lang <span className="text-red-500">*</span>
                   </label>
-                  <select className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-400 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 bg-white">
-                    <option>-- Select Language --</option>
+                  <select
+                    value={searchParams.language}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, language: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-400 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 bg-white"
+                  >
+                    <option value="">-- Select Language --</option>
                     {searchLanguages.map((language) => (
                       <option key={language.id} value={language.value}>
                         {language.label}

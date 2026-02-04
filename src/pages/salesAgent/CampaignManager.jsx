@@ -283,6 +283,13 @@ const SourceBadge = ({ source }) => {
       </div>
     );
   }
+  if (source === "campaign") {
+    return (
+      <span className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-[#3C49F7]">
+        Campaign
+      </span>
+    );
+  }
   return (
     <span
       className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${source === "B2C" ? "bg-[#1a1a1a]" : "bg-[#1a1a1a]"}`}
@@ -326,6 +333,7 @@ const CampaignManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
   // View states
   const [viewingCampaign, setViewingCampaign] = useState(null);
@@ -415,6 +423,102 @@ const CampaignManager = () => {
     };
 
     fetchProjects();
+  }, []);
+
+  // Fetch campaigns from scheduler API
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      setIsLoadingCampaigns(true);
+      try {
+        const response = await api.get("/scheduler/v1/campaigns");
+        console.log("📥 Fetched campaigns:", response.data);
+
+        if (response.data && response.data.campaigns) {
+          // Transform campaigns to match the campaign card format
+          const transformedCampaigns = response.data.campaigns.map((campaign) => {
+            // Format the created_at date
+            const createdDate = new Date(campaign.created_at);
+            const formattedDate = createdDate.toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+
+            // Determine status based on campaign status
+            let displayStatus = "draft";
+            if (campaign.status === "running" || campaign.status === "active") {
+              displayStatus = "running";
+            } else if (campaign.status === "paused") {
+              displayStatus = "paused";
+            } else if (campaign.status === "completed" || campaign.status === "done") {
+              displayStatus = "done";
+            }
+
+            // Calculate progress percentage
+            const progress = campaign.total_leads > 0
+              ? Math.round((campaign.leads_completed / campaign.total_leads) * 100)
+              : null;
+
+            // Calculate engaged and replied percentages
+            const engaged = campaign.total_leads > 0
+              ? Math.round((campaign.leads_in_progress / campaign.total_leads) * 100)
+              : null;
+            const replied = campaign.total_leads > 0
+              ? Math.round((campaign.leads_responded / campaign.total_leads) * 100)
+              : null;
+
+            return {
+              id: campaign.id,
+              name: campaign.name,
+              description: campaign.description,
+              prospects: campaign.total_leads > 0
+                ? `${campaign.leads_completed}/${campaign.total_leads}`
+                : null,
+              progress: progress,
+              engaged: engaged,
+              replied: replied,
+              status: displayStatus,
+              source: "campaign", // Mark as campaign type
+              sourceType: "campaign",
+              createdAt: formattedDate,
+              isCampaign: true, // Flag to distinguish from projects
+              // Additional campaign-specific data
+              workflowId: campaign.workflow_id,
+              b2bB2cProjectId: campaign.b2b_b2c_project_id,
+              totalLeads: campaign.total_leads,
+              leadsCompleted: campaign.leads_completed,
+              leadsInProgress: campaign.leads_in_progress,
+              leadsFailed: campaign.leads_failed,
+              leadsResponded: campaign.leads_responded,
+              startDate: campaign.start_date,
+              timezone: campaign.timezone,
+            };
+          });
+
+          // Separate campaigns into active and completed
+          const activeCampaigns = transformedCampaigns.filter(
+            (c) => c.status !== "done"
+          );
+          const completedCampaigns = transformedCampaigns.filter(
+            (c) => c.status === "done"
+          );
+
+          // Merge campaigns with existing projects
+          setCampaigns((prev) => ({
+            ...prev,
+            active: [...prev.active, ...activeCampaigns],
+            completed: [...prev.completed, ...completedCampaigns],
+          }));
+        }
+      } catch (error) {
+        console.error("❌ Error fetching campaigns:", error);
+        console.error("Error details:", error.response?.data || error.message);
+      } finally {
+        setIsLoadingCampaigns(false);
+      }
+    };
+
+    fetchCampaigns();
   }, []);
 
   // Fetch project results
@@ -1316,11 +1420,11 @@ const CampaignManager = () => {
 
       {/* Table Body */}
       <div className="bg-white rounded-b-xl">
-        {isLoadingProjects ? (
+        {(isLoadingProjects || isLoadingCampaigns) ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3C49F7]"></div>
-              <p className="text-sm text-gray-500">Loading projects...</p>
+              <p className="text-sm text-gray-500">Loading projects and campaigns...</p>
             </div>
           </div>
         ) : currentCampaigns.length === 0 ? (

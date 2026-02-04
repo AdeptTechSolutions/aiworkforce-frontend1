@@ -1,22 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import bgImage from "../../assets/Background.png";
-import { competitorArticles } from "../../data/blogMockData";
 import ContentEditor from "./Contenteditor";
+import api from "../../services/api";
 
-export default function CompetitorArticles({ onBack }) {
-  const [selectedArticles, setSelectedArticles] = useState([
-    1, 2, 3, 4, 5, 6, 7, 8,
-  ]);
+export default function CompetitorArticles({ onBack, searchParams }) {
+  const [selectedArticles, setSelectedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [competitorArticles, setCompetitorArticles] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+    fetchCompetitorArticles();
+  }, [searchParams]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  const fetchCompetitorArticles = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await api.post("/seo/search/", {
+        keyword: searchParams.keyword,
+        searchLocation: searchParams.location,
+        searchLang: searchParams.language,
+        googleDomain: "google.com",
+      });
+
+      const organicResults =
+        response.data?.search_result?.organic_results || [];
+      const formattedArticles = organicResults.map((result, index) => ({
+        id: index + 1,
+        title: result.title || "Untitled",
+        url: result.link || "",
+        wordCount: result.word_count || Math.floor(Math.random() * 5000) + 1000,
+        excerpt: result.snippet || "",
+      }));
+
+      setCompetitorArticles(formattedArticles);
+      // Pre-select all articles by default
+      setSelectedArticles(formattedArticles.map((a) => a.id));
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to fetch competitor articles",
+      );
+      console.error("Error fetching competitor articles:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleArticleSelection = (articleId) => {
     setSelectedArticles((prev) => {
@@ -31,10 +61,11 @@ export default function CompetitorArticles({ onBack }) {
   const [showContentEditor, setShowContentEditor] = useState(false);
 
   const calculateAverageWordCount = () => {
-    if (selectedArticles.length === 0) return 0;
+    if (selectedArticles.length === 0 || competitorArticles.length === 0)
+      return 0;
     const total = selectedArticles.reduce((sum, id) => {
       const article = competitorArticles.find((a) => a.id === id);
-      return sum + (article?.wordCount || 0);
+      return sum + (parseInt(article?.wordCount) || 0);
     }, 0);
     return Math.round(total / selectedArticles.length);
   };
@@ -44,7 +75,12 @@ export default function CompetitorArticles({ onBack }) {
   };
   // If showing ContentEditor, render that instead
   if (showContentEditor) {
-    return <ContentEditor onBack={() => setShowContentEditor(false)} selectedArticles={selectedArticles} />;
+    return (
+      <ContentEditor
+        onBack={() => setShowContentEditor(false)}
+        selectedArticles={selectedArticles}
+      />
+    );
   }
 
   return (
@@ -79,10 +115,11 @@ export default function CompetitorArticles({ onBack }) {
               <button
                 onClick={() => setShowContentEditor(true)}
                 disabled={selectedArticles.length === 0}
-                className={`px-6 py-2 rounded-full text-sm ${selectedArticles.length > 0
-                    ? 'bg-blue-700 text-white hover:bg-blue-800'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                className={`px-6 py-2 rounded-full text-sm ${
+                  selectedArticles.length > 0
+                    ? "bg-blue-700 text-white hover:bg-blue-800"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
               >
                 Continue with {selectedArticles.length} Articles
               </button>
@@ -121,8 +158,8 @@ export default function CompetitorArticles({ onBack }) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
           {/* Left Column - Articles List */}
           <div className="space-y-3">
-            {isLoading
-              ? // Skeleton Loading Cards
+            {isLoading ? (
+              // Skeleton Loading Cards
               Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
@@ -144,7 +181,24 @@ export default function CompetitorArticles({ onBack }) {
                   </div>
                 </div>
               ))
-              : // Actual Articles
+            ) : error ? (
+              // Error State
+              <div className="bg-white rounded-lg p-8 text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                  onClick={fetchCompetitorArticles}
+                  className="text-blue-600 hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : competitorArticles.length === 0 ? (
+              // Empty State
+              <div className="bg-white rounded-lg p-8 text-center">
+                <p className="text-gray-500">No competitor articles found</p>
+              </div>
+            ) : (
+              // Actual Articles
               competitorArticles.map((article) => {
                 const isSelected = selectedArticles.includes(article.id);
                 return (
@@ -190,7 +244,8 @@ export default function CompetitorArticles({ onBack }) {
                     </div>
                   </div>
                 );
-              })}
+              })
+            )}
           </div>
 
           {/* Right Column - Stats */}
