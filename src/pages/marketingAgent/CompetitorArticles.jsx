@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import bgImage from "../../assets/Background.png";
 import ContentEditor from "./Contenteditor";
@@ -9,15 +9,55 @@ export default function CompetitorArticles({ onBack, searchParams }) {
   const [isLoading, setIsLoading] = useState(true);
   const [competitorArticles, setCompetitorArticles] = useState([]);
   const [error, setError] = useState(null);
+  const [scrapedArticleIds, setScrapedArticleIds] = useState(new Set());
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    fetchCompetitorArticles();
+    // Prevent double execution from React Strict Mode
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
+    fetchCompetitorArticles().finally(() => {
+      isFetchingRef.current = false;
+    });
   }, [searchParams]);
+
+  const scrapeArticle = async (postId, link) => {
+    try {
+      console.log("Scraping:", link);
+      const response = await api.post(`/seo/scrape/${postId}`, { links: [link] });
+      console.log("Scrape response for", link, ":", response.data);
+      const contentInfo = response.data?.data?.contentInfo || [];
+      return contentInfo.length > 0 ? link : null;
+    } catch (err) {
+      console.error(`Failed to scrape ${link}:`, err);
+      return null;
+    }
+  };
+
+  const scrapeArticlesSequentially = async (postId, links) => {
+    const scrapedLinks = [];
+    for (let i = 0; i < links.length; i++) {
+      const link = links[i];
+      const result = await scrapeArticle(postId, link);
+      if (result) {
+        scrapedLinks.push(result);
+      }
+      // Add a small delay between requests to prevent overwhelming the backend
+      if (i < links.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+    console.log("Successfully scraped links:", scrapedLinks);
+    return scrapedLinks;
+  };
 
   const fetchCompetitorArticles = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setScrapedArticleIds(new Set());
+
       const response = await api.post("/seo/search/", {
         keyword: searchParams.keyword,
         searchLocation: searchParams.location,
@@ -25,8 +65,12 @@ export default function CompetitorArticles({ onBack, searchParams }) {
         googleDomain: "google.com",
       });
 
+      console.log("Search response:", response.data);
+      const postId = response.data?.post_id;
+      console.log("Post ID:", postId);
       const organicResults =
         response.data?.search_result?.organic_results || [];
+
       const formattedArticles = organicResults.map((result, index) => ({
         id: index + 1,
         title: result.title || "Untitled",
@@ -36,8 +80,24 @@ export default function CompetitorArticles({ onBack, searchParams }) {
       }));
 
       setCompetitorArticles(formattedArticles);
-      // Pre-select all articles by default
-      setSelectedArticles(formattedArticles.map((a) => a.id));
+
+      // Get all article links and scrape them
+      const allLinks = formattedArticles.map((article) => article.url).filter(Boolean);
+      const scrapedLinks = await scrapeArticlesSequentially(postId, allLinks);
+
+      // Create a set of successfully scraped URLs
+      const scrapedUrlSet = new Set(scrapedLinks);
+
+      // Map back to article IDs that were successfully scraped
+      const successfulIds = new Set(
+        formattedArticles
+          .filter((article) => scrapedUrlSet.has(article.url))
+          .map((article) => article.id)
+      );
+      setScrapedArticleIds(successfulIds);
+
+      // Pre-select only successfully scraped articles
+      setSelectedArticles(Array.from(successfulIds));
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to fetch competitor articles",
@@ -49,6 +109,9 @@ export default function CompetitorArticles({ onBack, searchParams }) {
   };
 
   const toggleArticleSelection = (articleId) => {
+    // Only allow toggling if article was successfully scraped
+    if (!scrapedArticleIds.has(articleId)) return;
+
     setSelectedArticles((prev) => {
       if (prev.includes(articleId)) {
         return prev.filter((id) => id !== articleId);
@@ -201,10 +264,11 @@ export default function CompetitorArticles({ onBack, searchParams }) {
               // Actual Articles
               competitorArticles.map((article) => {
                 const isSelected = selectedArticles.includes(article.id);
+                const isScraped = scrapedArticleIds.has(article.id);
                 return (
                   <div
                     key={article.id}
-                    className="bg-white rounded-lg p-5 transition-all"
+                    className={`bg-white rounded-lg p-5 transition-all ${!isScraped ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-start gap-4">
                       {/* Checkbox */}
@@ -213,31 +277,35 @@ export default function CompetitorArticles({ onBack, searchParams }) {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleArticleSelection(article.id)}
-                          className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          disabled={!isScraped}
+                          className={`w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 ${isScraped ? "cursor-pointer" : "cursor-not-allowed"}`}
                         />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900">
+                        <h3 className={`text-lg font-bold ${isScraped ? "text-gray-900" : "text-gray-400"}`}>
                           {article.title}
                         </h3>
                         <a
                           href={article.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-500 font-semibold text-sm mb-2 block truncate"
+                          className={`font-semibold text-sm mb-2 block truncate ${isScraped ? "text-indigo-500" : "text-gray-400 pointer-events-none"}`}
                         >
                           {article.url}
                         </a>
-                        <p className="text-gray-700 text-sm">
+                        <p className={`text-sm ${isScraped ? "text-gray-700" : "text-gray-400"}`}>
                           {article.excerpt}
                         </p>
+                        {!isScraped && (
+                          <p className="text-red-500 text-xs mt-1">Failed to scrape this article</p>
+                        )}
                       </div>
 
                       {/* Word Count */}
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-green-600 font-semibold text-base bg-green-50 px-3 py-1 rounded-full">
+                        <p className={`font-semibold text-base px-3 py-1 rounded-full ${isScraped ? "text-green-600 bg-green-50" : "text-gray-400 bg-gray-100"}`}>
                           {formatWordCount(article.wordCount)} words
                         </p>
                       </div>
@@ -263,7 +331,7 @@ export default function CompetitorArticles({ onBack, searchParams }) {
               ) : (
                 <div className="flex items-baseline gap-2">
                   <span className="text-6xl font-semibold text-gray-900">
-                    {competitorArticles.length}
+                    {scrapedArticleIds.size}
                   </span>
                   <span className="text-gray-600 text-lg pb-6">
                     /{competitorArticles.length}
