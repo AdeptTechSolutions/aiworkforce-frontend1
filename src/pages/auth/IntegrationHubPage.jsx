@@ -6,7 +6,10 @@ import {
   IntegrationSuccessModal,
   IntegrationErrorModal,
   TwilioNumberModal,
-  VonageNumberModal
+  VonageNumberModal,
+  OdooIntegrationModal,
+  TelegramLoginModal,
+  WhatsAppConnectModal
 } from '../../components/modals/Modals';
 import Header from '../../components/layout/Header';
 import { integrationService } from '../../services/IntegrationService';
@@ -39,6 +42,15 @@ const WhatsAppIcon = () => <img src={whatsapp} alt="" />;
 const TelegramIcon = () => <img src={telegram} alt="" />;
 const TwilioIcon = () => <img src={twilio} alt="" />;
 const VonageIcon = () => <img src={vonage} alt="" />;
+
+// Facebook placeholder icon (SVG)
+const FacebookIcon = () => (
+  <div className="w-8 h-8 bg-[#1877F2] rounded-lg flex items-center justify-center">
+    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  </div>
+);
 
 // Integration Item Component
 const IntegrationItem = ({ icon, name, status, onConnect, onRetry, disabled = false }) => {
@@ -102,6 +114,7 @@ const IntegrationHubPage = () => {
     gmail: 'not_connected',
     calendly: 'not_connected',
     linkedin: 'not_connected',
+    facebook: 'not_connected',
     whatsapp: 'not_connected',
     telegram: 'not_connected',
     twilio: 'not_connected',
@@ -113,9 +126,13 @@ const IntegrationHubPage = () => {
   const [showError, setShowError] = useState(false);
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showVonageModal, setShowVonageModal] = useState(false);
+  const [showOdooModal, setShowOdooModal] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [currentIntegration, setCurrentIntegration] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [odooExistingData, setOdooExistingData] = useState(null);
 
   // Fetch integration statuses on mount
   useEffect(() => {
@@ -131,6 +148,87 @@ const IntegrationHubPage = () => {
     } catch (error) {
       console.log('Could not fetch integration statuses:', error);
     }
+
+    // Also check specific integration statuses
+    try {
+      const [gmailStatus, outlookStatus] = await Promise.allSettled([
+        integrationService.getGmailStatus(),
+        integrationService.getOutlookStatus()
+      ]);
+
+      if (gmailStatus.status === 'fulfilled' && gmailStatus.value?.connected) {
+        setIntegrations(prev => ({ ...prev, gmail: 'connected' }));
+      }
+      if (outlookStatus.status === 'fulfilled' && outlookStatus.value?.connected) {
+        setIntegrations(prev => ({ ...prev, outlook: 'connected' }));
+      }
+    } catch (error) {
+      console.log('Could not fetch email statuses:', error);
+    }
+
+    // Check CRM integrations
+    try {
+      const [hubspot, pipedrive, salesforce, zohoData, odooData] = await Promise.allSettled([
+        integrationService.getHubSpotIntegration(),
+        integrationService.getPipedriveIntegration(),
+        integrationService.getSalesforceIntegration(),
+        integrationService.getZohoIntegration(),
+        integrationService.getOdooIntegration()
+      ]);
+
+      if (hubspot.status === 'fulfilled' && hubspot.value) {
+        setIntegrations(prev => ({ ...prev, hubspot: 'connected' }));
+      }
+      if (pipedrive.status === 'fulfilled' && pipedrive.value) {
+        setIntegrations(prev => ({ ...prev, pipedrive: 'connected' }));
+      }
+      if (salesforce.status === 'fulfilled' && salesforce.value) {
+        setIntegrations(prev => ({ ...prev, salesforce: 'connected' }));
+      }
+      if (zohoData.status === 'fulfilled' && zohoData.value) {
+        setIntegrations(prev => ({ ...prev, zoho: 'connected' }));
+      }
+      if (odooData.status === 'fulfilled' && odooData.value) {
+        setIntegrations(prev => ({ ...prev, odoo: 'connected' }));
+        setOdooExistingData(odooData.value);
+      }
+    } catch (error) {
+      console.log('Could not fetch CRM statuses:', error);
+    }
+
+    // Check social integrations
+    try {
+      const [linkedinData, facebookData] = await Promise.allSettled([
+        integrationService.getLinkedInIntegrations(),
+        integrationService.getFacebookIntegrations()
+      ]);
+
+      if (linkedinData.status === 'fulfilled' && linkedinData.value?.length > 0) {
+        setIntegrations(prev => ({ ...prev, linkedin: 'connected' }));
+      }
+      if (facebookData.status === 'fulfilled' && facebookData.value?.length > 0) {
+        setIntegrations(prev => ({ ...prev, facebook: 'connected' }));
+      }
+    } catch (error) {
+      console.log('Could not fetch social statuses:', error);
+    }
+
+    // Check messaging integrations
+    try {
+      const [telegramSessions, whatsappSessions] = await Promise.allSettled([
+        integrationService.getTelegramSessions(),
+        integrationService.getWhatsAppSessions()
+      ]);
+
+      if (telegramSessions.status === 'fulfilled' && telegramSessions.value?.length > 0) {
+        setIntegrations(prev => ({ ...prev, telegram: 'connected' }));
+      }
+      if (whatsappSessions.status === 'fulfilled' && whatsappSessions.value?.sessions?.length > 0) {
+        setIntegrations(prev => ({ ...prev, whatsapp: 'connected' }));
+      }
+    } catch (error) {
+      console.log('Could not fetch messaging statuses:', error);
+    }
   };
 
   const connectedCRM = Object.entries(integrations).find(
@@ -140,7 +238,158 @@ const IntegrationHubPage = () => {
 
   const hasAnyConnection = Object.values(integrations).some(status => status === 'connected');
 
-  // Handle OAuth connection
+  // Handle OAuth connection for CRM integrations (using V1 endpoints)
+  const handleCRMConnect = async (integrationKey, integrationName) => {
+    setCurrentIntegration({ key: integrationKey, name: integrationName });
+    setShowConnecting(true);
+
+    try {
+      let result;
+      switch (integrationKey) {
+        case 'salesforce':
+          result = await integrationService.connectSalesforce();
+          break;
+        case 'pipedrive':
+          result = await integrationService.connectPipedrive();
+          break;
+        case 'hubspot':
+          result = await integrationService.connectHubSpot();
+          break;
+        case 'zoho':
+          result = await integrationService.connectZoho();
+          break;
+        default:
+          throw new Error('Unknown CRM integration');
+      }
+
+      setShowConnecting(false);
+
+      if (result.success) {
+        setIntegrations(prev => ({ ...prev, [integrationKey]: 'connected' }));
+        setSuccessMessage(`We have successfully connected your ${integrationName} account.`);
+        setShowSuccess(true);
+      } else {
+        setIntegrations(prev => ({ ...prev, [integrationKey]: 'failed' }));
+        setErrorMessage(result.error || 'Please ensure that you have authorized the connection correctly.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, [integrationKey]: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Gmail connection
+  const handleGmailConnect = async () => {
+    setCurrentIntegration({ key: 'gmail', name: 'Gmail' });
+    setShowConnecting(true);
+
+    try {
+      const result = await integrationService.connectGmail();
+
+      setShowConnecting(false);
+
+      if (result.success) {
+        setIntegrations(prev => ({ ...prev, gmail: 'connected' }));
+        setSuccessMessage('We have successfully connected your Gmail account.');
+        setShowSuccess(true);
+      } else {
+        setIntegrations(prev => ({ ...prev, gmail: 'failed' }));
+        setErrorMessage(result.error || 'Please ensure that you have authorized the connection correctly.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, gmail: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect Gmail. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Outlook connection
+  const handleOutlookConnect = async () => {
+    setCurrentIntegration({ key: 'outlook', name: 'Outlook' });
+    setShowConnecting(true);
+
+    try {
+      const result = await integrationService.connectOutlook();
+
+      setShowConnecting(false);
+
+      if (result.success) {
+        setIntegrations(prev => ({ ...prev, outlook: 'connected' }));
+        setSuccessMessage('We have successfully connected your Outlook account.');
+        setShowSuccess(true);
+      } else {
+        setIntegrations(prev => ({ ...prev, outlook: 'failed' }));
+        setErrorMessage(result.error || 'Please ensure that you have authorized the connection correctly.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, outlook: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect Outlook. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle LinkedIn connection
+  const handleLinkedInConnect = async () => {
+    setCurrentIntegration({ key: 'linkedin', name: 'LinkedIn' });
+    setShowConnecting(true);
+
+    try {
+      const result = await integrationService.connectLinkedIn();
+
+      setShowConnecting(false);
+
+      if (result.success) {
+        setIntegrations(prev => ({ ...prev, linkedin: 'connected' }));
+        setSuccessMessage('We have successfully connected your LinkedIn account.');
+        setShowSuccess(true);
+      } else {
+        setIntegrations(prev => ({ ...prev, linkedin: 'failed' }));
+        setErrorMessage(result.error || 'Please ensure that you have authorized the connection correctly.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, linkedin: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect LinkedIn. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Facebook connection
+  const handleFacebookConnect = async () => {
+    setCurrentIntegration({ key: 'facebook', name: 'Facebook' });
+    setShowConnecting(true);
+
+    try {
+      const result = await integrationService.connectFacebook();
+
+      setShowConnecting(false);
+
+      if (result.success) {
+        setIntegrations(prev => ({ ...prev, facebook: 'connected' }));
+        setSuccessMessage('We have successfully connected your Facebook account.');
+        setShowSuccess(true);
+      } else {
+        setIntegrations(prev => ({ ...prev, facebook: 'failed' }));
+        setErrorMessage(result.error || 'Please ensure that you have authorized the connection correctly.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, facebook: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect Facebook. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle legacy OAuth connection (for Calendly)
   const handleConnect = async (integrationKey, integrationName) => {
     setCurrentIntegration({ key: integrationKey, name: integrationName });
     setShowConnecting(true);
@@ -164,6 +413,71 @@ const IntegrationHubPage = () => {
       setIntegrations(prev => ({ ...prev, [integrationKey]: 'failed' }));
       setErrorMessage(error.message || 'Failed to connect. Please try again.');
       setShowError(true);
+    }
+  };
+
+  // Handle Odoo connection
+  const handleOdooConnect = async (formData, isTest = false) => {
+    if (isTest) {
+      // Just test the connection
+      const result = await integrationService.testOdooConnection();
+      return result;
+    }
+
+    setShowOdooModal(false);
+    setCurrentIntegration({ key: 'odoo', name: 'Odoo' });
+    setShowConnecting(true);
+
+    try {
+      if (odooExistingData) {
+        await integrationService.updateOdooIntegration(formData);
+      } else {
+        await integrationService.createOdooIntegration(formData);
+      }
+
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, odoo: 'connected' }));
+      setSuccessMessage('We have successfully connected your Odoo CRM account.');
+      setShowSuccess(true);
+    } catch (error) {
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, odoo: 'failed' }));
+      setErrorMessage(error.message || 'Failed to connect Odoo.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Telegram connection
+  const handleTelegramConnect = async (action, data) => {
+    if (action === 'request') {
+      const result = await integrationService.requestTelegramLogin(data.phone_number);
+      return result;
+    } else if (action === 'verify') {
+      const result = await integrationService.verifyTelegramLogin(data);
+      if (result.success && !result.requires_2fa) {
+        setShowTelegramModal(false);
+        setIntegrations(prev => ({ ...prev, telegram: 'connected' }));
+        setSuccessMessage('We have successfully connected your Telegram account.');
+        setShowSuccess(true);
+      }
+      return result;
+    }
+  };
+
+  // Handle WhatsApp connection
+  const handleWhatsAppConnect = async (action, data) => {
+    if (action === 'create') {
+      const result = await integrationService.createWhatsAppSession(data);
+      return result;
+    } else if (action === 'qrcode') {
+      const result = await integrationService.getWhatsAppQRCode(data.session_id);
+      return result;
+    } else if (action === 'status') {
+      const result = await integrationService.getWhatsAppSessionStatus(data.session_id);
+      if (result.status === 'connected' || result.status === 'ready') {
+        setIntegrations(prev => ({ ...prev, whatsapp: 'connected' }));
+      }
+      return result;
     }
   };
 
@@ -213,6 +527,22 @@ const IntegrationHubPage = () => {
       setShowTwilioModal(true);
     } else if (integrationKey === 'vonage') {
       setShowVonageModal(true);
+    } else if (integrationKey === 'odoo') {
+      setShowOdooModal(true);
+    } else if (integrationKey === 'telegram') {
+      setShowTelegramModal(true);
+    } else if (integrationKey === 'whatsapp') {
+      setShowWhatsAppModal(true);
+    } else if (integrationKey === 'gmail') {
+      handleGmailConnect();
+    } else if (integrationKey === 'outlook') {
+      handleOutlookConnect();
+    } else if (integrationKey === 'linkedin') {
+      handleLinkedInConnect();
+    } else if (integrationKey === 'facebook') {
+      handleFacebookConnect();
+    } else if (['salesforce', 'pipedrive', 'hubspot', 'zoho'].includes(integrationKey)) {
+      handleCRMConnect(integrationKey, integrationName);
     } else {
       handleConnect(integrationKey, integrationName);
     }
@@ -273,7 +603,7 @@ const IntegrationHubPage = () => {
               icon={<SalesforceIcon />}
               name="Connect your Salesforce account"
               status={integrations.salesforce}
-              onConnect={() => handleConnect('salesforce', 'Salesforce')}
+              onConnect={() => handleCRMConnect('salesforce', 'Salesforce')}
               onRetry={() => handleRetry('salesforce', 'Salesforce')}
               disabled={connectedCRM && connectedCRM[0] !== 'salesforce'}
             />
@@ -281,7 +611,7 @@ const IntegrationHubPage = () => {
               icon={<PipedriveIcon />}
               name="Connect your Pipedrive account"
               status={integrations.pipedrive}
-              onConnect={() => handleConnect('pipedrive', 'Pipedrive')}
+              onConnect={() => handleCRMConnect('pipedrive', 'Pipedrive')}
               onRetry={() => handleRetry('pipedrive', 'Pipedrive')}
               disabled={connectedCRM && connectedCRM[0] !== 'pipedrive'}
             />
@@ -289,7 +619,7 @@ const IntegrationHubPage = () => {
               icon={<HubspotIcon />}
               name="Connect your Hubspot account"
               status={integrations.hubspot}
-              onConnect={() => handleConnect('hubspot', 'Hubspot')}
+              onConnect={() => handleCRMConnect('hubspot', 'Hubspot')}
               onRetry={() => handleRetry('hubspot', 'Hubspot')}
               disabled={connectedCRM && connectedCRM[0] !== 'hubspot'}
             />
@@ -297,15 +627,15 @@ const IntegrationHubPage = () => {
               icon={<ZohoIcon />}
               name="Connect your Zoho account"
               status={integrations.zoho}
-              onConnect={() => handleConnect('zoho', 'Zoho')}
+              onConnect={() => handleCRMConnect('zoho', 'Zoho')}
               onRetry={() => handleRetry('zoho', 'Zoho')}
               disabled={connectedCRM && connectedCRM[0] !== 'zoho'}
             />
             <IntegrationItem
               icon={<OdooIcon />}
-              name="Connect your Oddo account"
+              name="Connect your Odoo account"
               status={integrations.odoo}
-              onConnect={() => handleConnect('odoo', 'Odoo')}
+              onConnect={() => setShowOdooModal(true)}
               onRetry={() => handleRetry('odoo', 'Odoo')}
               disabled={connectedCRM && connectedCRM[0] !== 'odoo'}
             />
@@ -320,14 +650,14 @@ const IntegrationHubPage = () => {
               icon={<OutlookIcon />}
               name="Connect your Outlook account"
               status={integrations.outlook}
-              onConnect={() => handleConnect('outlook', 'Outlook')}
+              onConnect={handleOutlookConnect}
               onRetry={() => handleRetry('outlook', 'Outlook')}
             />
             <IntegrationItem
               icon={<GoogleIcon />}
               name="Connect your Google account"
               status={integrations.gmail}
-              onConnect={() => handleConnect('gmail', 'Gmail')}
+              onConnect={handleGmailConnect}
               onRetry={() => handleRetry('gmail', 'Gmail')}
             />
             <IntegrationItem
@@ -348,21 +678,28 @@ const IntegrationHubPage = () => {
               icon={<LinkedInIcon />}
               name="Connect your LinkedIn account"
               status={integrations.linkedin}
-              onConnect={() => handleConnect('linkedin', 'LinkedIn')}
+              onConnect={handleLinkedInConnect}
               onRetry={() => handleRetry('linkedin', 'LinkedIn')}
+            />
+            <IntegrationItem
+              icon={<FacebookIcon />}
+              name="Connect your Facebook account"
+              status={integrations.facebook}
+              onConnect={handleFacebookConnect}
+              onRetry={() => handleRetry('facebook', 'Facebook')}
             />
             <IntegrationItem
               icon={<WhatsAppIcon />}
               name="Connect your WhatsApp account"
               status={integrations.whatsapp}
-              onConnect={() => handleConnect('whatsapp', 'WhatsApp')}
+              onConnect={() => setShowWhatsAppModal(true)}
               onRetry={() => handleRetry('whatsapp', 'WhatsApp')}
             />
             <IntegrationItem
               icon={<TelegramIcon />}
               name="Connect your Telegram account"
               status={integrations.telegram}
-              onConnect={() => handleConnect('telegram', 'Telegram')}
+              onConnect={() => setShowTelegramModal(true)}
               onRetry={() => handleRetry('telegram', 'Telegram')}
             />
           </div>
@@ -437,6 +774,25 @@ const IntegrationHubPage = () => {
         isOpen={showVonageModal}
         onClose={() => setShowVonageModal(false)}
         onImport={handleVonageImport}
+      />
+
+      <OdooIntegrationModal
+        isOpen={showOdooModal}
+        onClose={() => setShowOdooModal(false)}
+        onConnect={handleOdooConnect}
+        existingData={odooExistingData}
+      />
+
+      <TelegramLoginModal
+        isOpen={showTelegramModal}
+        onClose={() => setShowTelegramModal(false)}
+        onConnect={handleTelegramConnect}
+      />
+
+      <WhatsAppConnectModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        onConnect={handleWhatsAppConnect}
       />
     </div>
   );

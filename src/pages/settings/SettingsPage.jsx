@@ -304,7 +304,17 @@ const IntegrationHubContent = () => {
         setShowConnecting(true);
 
         try {
-            const result = await integrationService.connectOAuth(integrationKey, integrationName);
+            let result;
+
+            // Use dedicated methods for Gmail and Outlook
+            if (integrationKey === 'gmail') {
+                result = await integrationService.connectGmail();
+            } else if (integrationKey === 'outlook') {
+                result = await integrationService.connectOutlook();
+            } else {
+                result = await integrationService.connectOAuth(integrationKey, integrationName);
+            }
+
             setShowConnecting(false);
 
             if (result.success) {

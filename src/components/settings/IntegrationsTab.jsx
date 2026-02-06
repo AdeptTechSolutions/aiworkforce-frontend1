@@ -1,97 +1,636 @@
-import React, { useState } from 'react';
-import { Search, CheckCircle, ExternalLink } from 'lucide-react';
-import { SectionCard, IntegrationCard } from './SettingsComponents';
+import React, { useState, useEffect } from 'react';
+import { Search, CheckCircle, ExternalLink, AlertCircle, RefreshCw } from 'lucide-react';
+import { SectionCard } from './SettingsComponents';
+import { integrationService } from '../../services/IntegrationService';
+import {
+  ConnectingModal,
+  IntegrationSuccessModal,
+  IntegrationErrorModal,
+  OdooIntegrationModal,
+  TelegramLoginModal,
+  WhatsAppConnectModal,
+  TwilioNumberModal,
+  VonageNumberModal
+} from '../modals/Modals';
 
-// Integration icons (simplified SVG representations)
-const LinkedInIcon = () => (
-  <svg className="w-5 h-5 text-[#0A66C2]" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-  </svg>
+// Import icons
+import salesforceIcon from '../../assets/IntegrationIcons/salesforce.png';
+import pipedriveIcon from '../../assets/IntegrationIcons/Pipedrive.png';
+import hubspotIcon from '../../assets/IntegrationIcons/hubspot.png';
+import zohoIcon from '../../assets/IntegrationIcons/zoho.png';
+import odooIcon from '../../assets/IntegrationIcons/odoo.png';
+import outlookIcon from '../../assets/IntegrationIcons/outlook.png';
+import googleIcon from '../../assets/IntegrationIcons/google.png';
+import linkedinIcon from '../../assets/IntegrationIcons/linkedin.png';
+import whatsappIcon from '../../assets/IntegrationIcons/whatsapp.png';
+import telegramIcon from '../../assets/IntegrationIcons/telegram.png';
+import twilioIcon from '../../assets/IntegrationIcons/twilio.png';
+import vonageIcon from '../../assets/IntegrationIcons/vonage.png';
+
+// Facebook placeholder icon
+const FacebookIcon = () => (
+  <div className="w-5 h-5 bg-[#1877F2] rounded flex items-center justify-center">
+    <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  </div>
 );
 
-const GmailIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24">
-    <path fill="#EA4335" d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
-  </svg>
-);
-
-const SlackIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24">
-    <path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z"/>
-    <path fill="#E01E5A" d="M6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/>
-    <path fill="#36C5F0" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834z"/>
-    <path fill="#36C5F0" d="M8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/>
-    <path fill="#2EB67D" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834z"/>
-    <path fill="#2EB67D" d="M17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/>
-    <path fill="#ECB22E" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52z"/>
-    <path fill="#ECB22E" d="M15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
-  </svg>
-);
-
-const SalesforceIcon = () => (
-  <svg className="w-5 h-5 text-[#00A1E0]" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.9 3.69 2.205.63-.3 1.35-.45 2.1-.45 2.85 0 5.159 2.34 5.159 5.22s-2.31 5.22-5.16 5.22c-.45 0-.87-.06-1.29-.165a3.9 3.9 0 0 1-3.42 2.025c-.45 0-.899-.075-1.305-.24a4.504 4.504 0 0 1-4.05 2.52c-1.845 0-3.42-1.11-4.125-2.7a3.74 3.74 0 0 1-.54.045c-2.13 0-3.855-1.755-3.855-3.915 0-1.56.915-2.895 2.22-3.51a4.8 4.8 0 0 1-.285-1.65c0-2.64 2.115-4.77 4.725-4.77 1.665 0 3.135.87 3.975 2.175l.116-.704z"/>
-  </svg>
-);
-
-const HubSpotIcon = () => (
-  <svg className="w-5 h-5 text-[#FF7A59]" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.164 7.93V5.084a2.198 2.198 0 0 0 1.267-1.984v-.066A2.2 2.2 0 0 0 17.23.833h-.066a2.2 2.2 0 0 0-2.2 2.2v.067c0 .87.506 1.62 1.238 1.974v2.864a6.152 6.152 0 0 0-2.894 1.303l-7.64-5.95a2.546 2.546 0 1 0-1.335 1.702l7.377 5.744a6.17 6.17 0 0 0-.108 1.14c0 .395.037.78.108 1.155l-2.35 1.328a2.887 2.887 0 0 0-1.627-.5 2.91 2.91 0 1 0 2.91 2.91c0-.437-.097-.85-.27-1.22l2.249-1.27a6.188 6.188 0 1 0 5.213-9.485"/>
-  </svg>
-);
-
-const CalendlyIcon = () => (
-  <svg className="w-5 h-5 text-[#006BFF]" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.655 14.262c-.207.586-.538 1.128-.973 1.586a4.133 4.133 0 0 1-1.567 1.069 5.016 5.016 0 0 1-1.952.387h-2.49a1.076 1.076 0 0 1-.758-.317 1.076 1.076 0 0 1-.317-.758v-8.46c0-.29.11-.551.317-.758s.468-.317.758-.317h2.49c.69 0 1.341.13 1.952.387.61.258 1.128.62 1.567 1.069.435.458.766 1 .973 1.586.207.586.31 1.21.31 1.877s-.103 1.29-.31 1.876z"/>
-  </svg>
-);
+// Integration configuration
+const INTEGRATION_CONFIG = {
+  // CRM Integrations
+  salesforce: {
+    id: 'salesforce',
+    name: 'Salesforce',
+    description: 'Sync CRM data',
+    icon: salesforceIcon,
+    category: 'CRM',
+    type: 'oauth'
+  },
+  pipedrive: {
+    id: 'pipedrive',
+    name: 'Pipedrive',
+    description: 'Sales pipeline management',
+    icon: pipedriveIcon,
+    category: 'CRM',
+    type: 'oauth'
+  },
+  hubspot: {
+    id: 'hubspot',
+    name: 'HubSpot',
+    description: 'Marketing automation',
+    icon: hubspotIcon,
+    category: 'CRM',
+    type: 'oauth'
+  },
+  zoho: {
+    id: 'zoho',
+    name: 'Zoho CRM',
+    description: 'Customer relationship management',
+    icon: zohoIcon,
+    category: 'CRM',
+    type: 'oauth'
+  },
+  odoo: {
+    id: 'odoo',
+    name: 'Odoo',
+    description: 'All-in-one business software',
+    icon: odooIcon,
+    category: 'CRM',
+    type: 'credentials'
+  },
+  // Email Integrations
+  gmail: {
+    id: 'gmail',
+    name: 'Gmail',
+    description: 'Sync email campaigns',
+    icon: googleIcon,
+    category: 'Email',
+    type: 'oauth'
+  },
+  outlook: {
+    id: 'outlook',
+    name: 'Outlook',
+    description: 'Microsoft email integration',
+    icon: outlookIcon,
+    category: 'Email',
+    type: 'oauth'
+  },
+  // Social Integrations
+  linkedin: {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    description: 'Professional networking',
+    icon: linkedinIcon,
+    category: 'Social',
+    type: 'oauth'
+  },
+  facebook: {
+    id: 'facebook',
+    name: 'Facebook',
+    description: 'Social media integration',
+    icon: null, // Using SVG component
+    category: 'Social',
+    type: 'oauth'
+  },
+  // Messaging Integrations
+  whatsapp: {
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    description: 'Business messaging',
+    icon: whatsappIcon,
+    category: 'Messaging',
+    type: 'qrcode'
+  },
+  telegram: {
+    id: 'telegram',
+    name: 'Telegram',
+    description: 'Secure messaging',
+    icon: telegramIcon,
+    category: 'Messaging',
+    type: 'phone'
+  },
+  // Phone Integrations
+  twilio: {
+    id: 'twilio',
+    name: 'Twilio',
+    description: 'Voice and SMS',
+    icon: twilioIcon,
+    category: 'Phone',
+    type: 'credentials'
+  },
+  vonage: {
+    id: 'vonage',
+    name: 'Vonage',
+    description: 'Communications platform',
+    icon: vonageIcon,
+    category: 'Phone',
+    type: 'credentials'
+  }
+};
 
 const IntegrationsTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [integrations, setIntegrations] = useState([
-    { id: 'linkedin', name: 'LinkedIn', description: 'Connect for lead generation', icon: <LinkedInIcon />, connected: true, category: 'Social' },
-    { id: 'gmail', name: 'Gmail', description: 'Sync email campaigns', icon: <GmailIcon />, connected: true, category: 'Email' },
-    { id: 'slack', name: 'Slack', description: 'Get notifications in Slack', icon: <SlackIcon />, connected: false, category: 'Communication' },
-    { id: 'salesforce', name: 'Salesforce', description: 'Sync CRM data', icon: <SalesforceIcon />, connected: false, category: 'CRM' },
-    { id: 'hubspot', name: 'HubSpot', description: 'Marketing automation', icon: <HubSpotIcon />, connected: false, category: 'CRM' },
-    { id: 'calendly', name: 'Calendly', description: 'Schedule meetings', icon: <CalendlyIcon />, connected: true, category: 'Scheduling' },
-  ]);
+  const [integrations, setIntegrations] = useState({});
+  const [integrationDetails, setIntegrationDetails] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleConnect = (id) => {
-    // In real implementation, this would open OAuth popup
-    setIntegrations(prev => prev.map(i => i.id === id ? { ...i, connected: true } : i));
+  // Modal states
+  const [showConnecting, setShowConnecting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [showOdooModal, setShowOdooModal] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showTwilioModal, setShowTwilioModal] = useState(false);
+  const [showVonageModal, setShowVonageModal] = useState(false);
+
+  const [currentIntegration, setCurrentIntegration] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    fetchIntegrationStatuses();
+  }, []);
+
+  const fetchIntegrationStatuses = async () => {
+    setIsLoading(true);
+
+    const statuses = {};
+    const details = {};
+
+    try {
+      // Fetch Gmail status
+      try {
+        const gmail = await integrationService.getGmailStatus();
+        statuses.gmail = gmail?.connected ? 'connected' : 'not_connected';
+        if (gmail?.connected) {
+          details.gmail = { email: gmail.email, connectedAt: gmail.connected_at };
+        }
+      } catch (e) {
+        statuses.gmail = 'not_connected';
+      }
+
+      // Fetch Outlook status
+      try {
+        const outlook = await integrationService.getOutlookStatus();
+        statuses.outlook = outlook?.connected ? 'connected' : 'not_connected';
+        if (outlook?.connected) {
+          details.outlook = { email: outlook.email, connectedAt: outlook.connected_at };
+        }
+      } catch (e) {
+        statuses.outlook = 'not_connected';
+      }
+
+      // Fetch CRM statuses
+      try {
+        const hubspot = await integrationService.getHubSpotIntegration();
+        statuses.hubspot = hubspot ? 'connected' : 'not_connected';
+        if (hubspot) details.hubspot = hubspot;
+      } catch (e) {
+        statuses.hubspot = 'not_connected';
+      }
+
+      try {
+        const pipedrive = await integrationService.getPipedriveIntegration();
+        statuses.pipedrive = pipedrive ? 'connected' : 'not_connected';
+        if (pipedrive) details.pipedrive = pipedrive;
+      } catch (e) {
+        statuses.pipedrive = 'not_connected';
+      }
+
+      try {
+        const salesforce = await integrationService.getSalesforceIntegration();
+        statuses.salesforce = salesforce ? 'connected' : 'not_connected';
+        if (salesforce) details.salesforce = salesforce;
+      } catch (e) {
+        statuses.salesforce = 'not_connected';
+      }
+
+      try {
+        const zoho = await integrationService.getZohoIntegration();
+        statuses.zoho = zoho ? 'connected' : 'not_connected';
+        if (zoho) details.zoho = zoho;
+      } catch (e) {
+        statuses.zoho = 'not_connected';
+      }
+
+      try {
+        const odoo = await integrationService.getOdooIntegration();
+        statuses.odoo = odoo ? 'connected' : 'not_connected';
+        if (odoo) details.odoo = odoo;
+      } catch (e) {
+        statuses.odoo = 'not_connected';
+      }
+
+      // Fetch Social statuses
+      try {
+        const linkedin = await integrationService.getLinkedInIntegrations();
+        statuses.linkedin = linkedin?.length > 0 ? 'connected' : 'not_connected';
+        if (linkedin?.length > 0) details.linkedin = linkedin[0];
+      } catch (e) {
+        statuses.linkedin = 'not_connected';
+      }
+
+      try {
+        const facebook = await integrationService.getFacebookIntegrations();
+        statuses.facebook = facebook?.length > 0 ? 'connected' : 'not_connected';
+        if (facebook?.length > 0) details.facebook = facebook[0];
+      } catch (e) {
+        statuses.facebook = 'not_connected';
+      }
+
+      // Fetch Messaging statuses
+      try {
+        const telegram = await integrationService.getTelegramSessions();
+        statuses.telegram = telegram?.length > 0 ? 'connected' : 'not_connected';
+        if (telegram?.length > 0) details.telegram = telegram[0];
+      } catch (e) {
+        statuses.telegram = 'not_connected';
+      }
+
+      try {
+        const whatsapp = await integrationService.getWhatsAppSessions();
+        statuses.whatsapp = whatsapp?.sessions?.length > 0 ? 'connected' : 'not_connected';
+        if (whatsapp?.sessions?.length > 0) details.whatsapp = whatsapp.sessions[0];
+      } catch (e) {
+        statuses.whatsapp = 'not_connected';
+      }
+
+      // Set default statuses for phone integrations
+      statuses.twilio = statuses.twilio || 'not_connected';
+      statuses.vonage = statuses.vonage || 'not_connected';
+
+    } catch (error) {
+      console.error('Error fetching integration statuses:', error);
+    }
+
+    setIntegrations(statuses);
+    setIntegrationDetails(details);
+    setIsLoading(false);
   };
 
-  const handleDisconnect = (id) => {
-    setIntegrations(prev => prev.map(i => i.id === id ? { ...i, connected: false } : i));
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchIntegrationStatuses();
+    setIsRefreshing(false);
   };
 
-  const filteredIntegrations = integrations.filter(i => 
-    i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleConnect = async (integrationId) => {
+    const config = INTEGRATION_CONFIG[integrationId];
+    if (!config) return;
 
+    setCurrentIntegration(config);
+
+    // Handle special integration types
+    if (config.type === 'credentials') {
+      if (integrationId === 'odoo') {
+        setShowOdooModal(true);
+      } else if (integrationId === 'twilio') {
+        setShowTwilioModal(true);
+      } else if (integrationId === 'vonage') {
+        setShowVonageModal(true);
+      }
+      return;
+    }
+
+    if (config.type === 'phone') {
+      setShowTelegramModal(true);
+      return;
+    }
+
+    if (config.type === 'qrcode') {
+      setShowWhatsAppModal(true);
+      return;
+    }
+
+    // OAuth flow
+    setShowConnecting(true);
+
+    try {
+      let result;
+
+      switch (integrationId) {
+        case 'gmail':
+          result = await integrationService.connectGmail();
+          break;
+        case 'outlook':
+          result = await integrationService.connectOutlook();
+          break;
+        case 'hubspot':
+          result = await integrationService.connectHubSpot();
+          break;
+        case 'pipedrive':
+          result = await integrationService.connectPipedrive();
+          break;
+        case 'salesforce':
+          result = await integrationService.connectSalesforce();
+          break;
+        case 'zoho':
+          result = await integrationService.connectZoho();
+          break;
+        case 'linkedin':
+          result = await integrationService.connectLinkedIn();
+          break;
+        case 'facebook':
+          result = await integrationService.connectFacebook();
+          break;
+        default:
+          throw new Error('Unknown integration');
+      }
+
+      setShowConnecting(false);
+
+      if (result?.success) {
+        setIntegrations(prev => ({ ...prev, [integrationId]: 'connected' }));
+        setSuccessMessage(`Successfully connected to ${config.name}.`);
+        setShowSuccess(true);
+        fetchIntegrationStatuses();
+      } else {
+        setErrorMessage(result?.error || 'Connection was not completed.');
+        setShowError(true);
+      }
+    } catch (error) {
+      setShowConnecting(false);
+      setErrorMessage(error.message || 'Failed to connect. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  const handleDisconnect = async (integrationId) => {
+    const config = INTEGRATION_CONFIG[integrationId];
+    if (!config) return;
+
+    setCurrentIntegration(config);
+    setShowConnecting(true);
+
+    try {
+      switch (integrationId) {
+        case 'gmail':
+          await integrationService.disconnectGmail();
+          break;
+        case 'outlook':
+          await integrationService.disconnectOutlook();
+          break;
+        case 'hubspot':
+          await integrationService.deleteHubSpotIntegration();
+          break;
+        case 'pipedrive':
+          await integrationService.deletePipedriveIntegration();
+          break;
+        case 'salesforce':
+          await integrationService.deleteSalesforceIntegration();
+          break;
+        case 'zoho':
+          await integrationService.deleteZohoIntegration();
+          break;
+        case 'odoo':
+          await integrationService.deleteOdooIntegration();
+          break;
+        case 'linkedin':
+          if (integrationDetails.linkedin?.id) {
+            await integrationService.deleteLinkedInIntegration(integrationDetails.linkedin.id);
+          }
+          break;
+        case 'facebook':
+          if (integrationDetails.facebook?.id) {
+            await integrationService.deleteFacebookIntegration(integrationDetails.facebook.id);
+          }
+          break;
+        case 'telegram':
+          if (integrationDetails.telegram?.telegram_user_id) {
+            await integrationService.disconnectTelegramSession(integrationDetails.telegram.telegram_user_id);
+          }
+          break;
+        case 'whatsapp':
+          if (integrationDetails.whatsapp?.id) {
+            await integrationService.deleteWhatsAppSession(integrationDetails.whatsapp.id);
+          }
+          break;
+        default:
+          await integrationService.disconnect(integrationId);
+      }
+
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, [integrationId]: 'not_connected' }));
+      setIntegrationDetails(prev => {
+        const newDetails = { ...prev };
+        delete newDetails[integrationId];
+        return newDetails;
+      });
+      setSuccessMessage(`Successfully disconnected from ${config.name}.`);
+      setShowSuccess(true);
+    } catch (error) {
+      setShowConnecting(false);
+      setErrorMessage(error.message || 'Failed to disconnect. Please try again.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Odoo connection
+  const handleOdooConnect = async (formData, isTest = false) => {
+    if (isTest) {
+      return await integrationService.testOdooConnection();
+    }
+
+    setShowOdooModal(false);
+    setShowConnecting(true);
+
+    try {
+      if (integrationDetails.odoo) {
+        await integrationService.updateOdooIntegration(formData);
+      } else {
+        await integrationService.createOdooIntegration(formData);
+      }
+
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, odoo: 'connected' }));
+      setSuccessMessage('Successfully connected to Odoo.');
+      setShowSuccess(true);
+      fetchIntegrationStatuses();
+    } catch (error) {
+      setShowConnecting(false);
+      setErrorMessage(error.message || 'Failed to connect Odoo.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Telegram connection
+  const handleTelegramConnect = async (action, data) => {
+    if (action === 'request') {
+      return await integrationService.requestTelegramLogin(data.phone_number);
+    } else if (action === 'verify') {
+      const result = await integrationService.verifyTelegramLogin(data);
+      if (result.success && !result.requires_2fa) {
+        setShowTelegramModal(false);
+        setIntegrations(prev => ({ ...prev, telegram: 'connected' }));
+        setSuccessMessage('Successfully connected to Telegram.');
+        setShowSuccess(true);
+        fetchIntegrationStatuses();
+      }
+      return result;
+    }
+  };
+
+  // Handle WhatsApp connection
+  const handleWhatsAppConnect = async (action, data) => {
+    if (action === 'create') {
+      return await integrationService.createWhatsAppSession(data);
+    } else if (action === 'qrcode') {
+      return await integrationService.getWhatsAppQRCode(data.session_id);
+    } else if (action === 'status') {
+      const result = await integrationService.getWhatsAppSessionStatus(data.session_id);
+      if (result.status === 'connected' || result.status === 'ready') {
+        setIntegrations(prev => ({ ...prev, whatsapp: 'connected' }));
+        fetchIntegrationStatuses();
+      }
+      return result;
+    }
+  };
+
+  // Handle Twilio import
+  const handleTwilioImport = async (formData) => {
+    setShowTwilioModal(false);
+    setShowConnecting(true);
+
+    try {
+      await integrationService.connectTwilio(formData);
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, twilio: 'connected' }));
+      setSuccessMessage('Successfully connected to Twilio.');
+      setShowSuccess(true);
+    } catch (error) {
+      setShowConnecting(false);
+      setErrorMessage(error.message || 'Failed to connect Twilio.');
+      setShowError(true);
+    }
+  };
+
+  // Handle Vonage import
+  const handleVonageImport = async (formData) => {
+    setShowVonageModal(false);
+    setShowConnecting(true);
+
+    try {
+      await integrationService.connectVonage(formData);
+      setShowConnecting(false);
+      setIntegrations(prev => ({ ...prev, vonage: 'connected' }));
+      setSuccessMessage('Successfully connected to Vonage.');
+      setShowSuccess(true);
+    } catch (error) {
+      setShowConnecting(false);
+      setErrorMessage(error.message || 'Failed to connect Vonage.');
+      setShowError(true);
+    }
+  };
+
+  // Filter integrations based on search
+  const getFilteredIntegrations = () => {
+    const allIntegrations = Object.values(INTEGRATION_CONFIG).map(config => ({
+      ...config,
+      connected: integrations[config.id] === 'connected',
+      details: integrationDetails[config.id]
+    }));
+
+    if (!searchQuery) return allIntegrations;
+
+    return allIntegrations.filter(i =>
+      i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      i.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  const filteredIntegrations = getFilteredIntegrations();
   const connectedIntegrations = filteredIntegrations.filter(i => i.connected);
   const availableIntegrations = filteredIntegrations.filter(i => !i.connected);
 
+  // Render integration icon
+  const renderIcon = (integration) => {
+    if (integration.id === 'facebook') {
+      return <FacebookIcon />;
+    }
+    return (
+      <img
+        src={integration.icon}
+        alt={integration.name}
+        className="w-5 h-5 object-contain"
+      />
+    );
+  };
+
+  // Get detail text for connected integration
+  const getDetailText = (integration) => {
+    const detail = integration.details;
+    if (!detail) return null;
+
+    if (detail.email) return detail.email;
+    if (detail.name) return detail.name;
+    if (detail.page_name) return detail.page_name;
+    if (detail.username) return `@${detail.username}`;
+    if (detail.phone_number) return detail.phone_number;
+    if (detail.odoo_url) return detail.odoo_url;
+
+    return null;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-500">Loading integrations...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search integrations..."
-          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+      {/* Search and Refresh */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search integrations..."
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Connected Integrations */}
-      <SectionCard 
-        title="Connected" 
-        description={`${connectedIntegrations.length} integrations active`}
+      <SectionCard
+        title="Connected"
+        description={`${connectedIntegrations.length} integration${connectedIntegrations.length !== 1 ? 's' : ''} active`}
       >
         {connectedIntegrations.length > 0 ? (
           <div className="space-y-3">
@@ -99,20 +638,22 @@ const IntegrationsTab = () => {
               <div key={integration.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-green-50/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                    {integration.icon}
+                    {renderIcon(integration)}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-900">{integration.name}</p>
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     </div>
-                    <p className="text-xs text-gray-500">{integration.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {getDetailText(integration) || integration.description}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-white rounded-lg transition-colors">
-                    <ExternalLink className="w-4 h-4 text-gray-500" />
-                  </button>
+                  <span className="text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded">
+                    {integration.category}
+                  </span>
                   <button
                     onClick={() => handleDisconnect(integration.id)}
                     className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -124,13 +665,17 @@ const IntegrationsTab = () => {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 text-center py-4">No connected integrations</p>
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">No connected integrations</p>
+            <p className="text-xs text-gray-400 mt-1">Connect integrations below to get started</p>
+          </div>
         )}
       </SectionCard>
 
       {/* Available Integrations */}
-      <SectionCard 
-        title="Available Integrations" 
+      <SectionCard
+        title="Available Integrations"
         description="Connect more tools to enhance your workflow"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -138,34 +683,39 @@ const IntegrationsTab = () => {
             <div key={integration.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                  {integration.icon}
+                  {renderIcon(integration)}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">{integration.name}</p>
                   <p className="text-xs text-gray-500">{integration.description}</p>
                 </div>
               </div>
-              <button
-                onClick={() => handleConnect(integration.id)}
-                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-              >
-                Connect
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 px-2 py-1 bg-gray-50 rounded hidden sm:block">
+                  {integration.category}
+                </span>
+                <button
+                  onClick={() => handleConnect(integration.id)}
+                  className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                >
+                  Connect
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </SectionCard>
 
       {/* API Access */}
-      <SectionCard 
-        title="API Access" 
+      <SectionCard
+        title="API Access"
         description="Manage your API keys for custom integrations"
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="text-sm font-medium text-gray-900">API Key</p>
-              <p className="text-xs text-gray-500 font-mono mt-1">sk-••••••••••••••••••••••••</p>
+              <p className="text-xs text-gray-500 font-mono mt-1">sk-************************</p>
             </div>
             <div className="flex items-center gap-2">
               <button className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">
@@ -177,11 +727,70 @@ const IntegrationsTab = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            Use this API key to integrate AI Workforce with your custom applications. 
-            <a href="#" className="text-blue-600 hover:underline ml-1">View documentation →</a>
+            Use this API key to integrate AI Workforce with your custom applications.
+            <a href="#" className="text-blue-600 hover:underline ml-1">View documentation</a>
           </p>
         </div>
       </SectionCard>
+
+      {/* Modals */}
+      <ConnectingModal
+        isOpen={showConnecting}
+        onClose={() => {
+          setShowConnecting(false);
+          integrationService.closePopup();
+        }}
+        title="Processing..."
+        message="Please wait while we process your request."
+      />
+
+      <IntegrationSuccessModal
+        isOpen={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        title="Success!"
+        message={successMessage}
+        buttonText="Done"
+      />
+
+      <IntegrationErrorModal
+        isOpen={showError}
+        onClose={() => setShowError(false)}
+        title="Error"
+        message={errorMessage}
+        buttonText="Close"
+        onRetry={() => setShowError(false)}
+      />
+
+      <OdooIntegrationModal
+        isOpen={showOdooModal}
+        onClose={() => setShowOdooModal(false)}
+        onConnect={handleOdooConnect}
+        existingData={integrationDetails.odoo}
+      />
+
+      <TelegramLoginModal
+        isOpen={showTelegramModal}
+        onClose={() => setShowTelegramModal(false)}
+        onConnect={handleTelegramConnect}
+      />
+
+      <WhatsAppConnectModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        onConnect={handleWhatsAppConnect}
+      />
+
+      <TwilioNumberModal
+        isOpen={showTwilioModal}
+        onClose={() => setShowTwilioModal(false)}
+        onImport={handleTwilioImport}
+      />
+
+      <VonageNumberModal
+        isOpen={showVonageModal}
+        onClose={() => setShowVonageModal(false)}
+        onImport={handleVonageImport}
+      />
     </div>
   );
 };

@@ -364,6 +364,9 @@ const CampaignManager = () => {
   const currentCampaigns = campaigns[activeTab] || [];
   const unenrichedCount = leads.filter((l) => !l.isEnriched).length;
 
+  // Store project IDs that have been converted to campaigns
+  const [campaignProjectIds, setCampaignProjectIds] = useState(new Set());
+
   // Fetch projects from API
   useEffect(() => {
     const fetchProjects = async () => {
@@ -378,8 +381,12 @@ const CampaignManager = () => {
           response.data.data?.projects
         ) {
           // Transform projects to campaign format
-          const transformedProjects = response.data.data.projects.map(
-            (project) => {
+          const transformedProjects = response.data.data.projects
+            .filter((project) => {
+              // Filter out projects that have been converted to campaigns
+              return !campaignProjectIds.has(project.id);
+            })
+            .map((project) => {
               // Format the created_at date
               const createdDate = new Date(project.created_at);
               const formattedDate = createdDate.toLocaleDateString("en-GB", {
@@ -405,14 +412,17 @@ const CampaignManager = () => {
                 sourceType: project.source, // Keep original API source for enrichment logic
                 createdAt: formattedDate,
               };
-            },
-          );
+            });
 
-          // Merge with existing campaigns
-          setCampaigns((prev) => ({
-            ...prev,
-            active: transformedProjects,
-          }));
+          // Merge projects with existing campaigns in active list
+          setCampaigns((prev) => {
+            // Filter out old projects, keep campaigns
+            const existingCampaigns = prev.active.filter(item => item.isCampaign);
+            return {
+              ...prev,
+              active: [...transformedProjects, ...existingCampaigns],
+            };
+          });
         }
       } catch (error) {
         console.error("❌ Error fetching B2B projects:", error);
@@ -423,7 +433,7 @@ const CampaignManager = () => {
     };
 
     fetchProjects();
-  }, []);
+  }, [campaignProjectIds]);
 
   // Fetch campaigns from scheduler API
   useEffect(() => {
@@ -434,6 +444,15 @@ const CampaignManager = () => {
         console.log("📥 Fetched campaigns:", response.data);
 
         if (response.data && response.data.campaigns) {
+          // Extract project IDs that have been converted to campaigns
+          const projectIds = new Set(
+            response.data.campaigns
+              .map((campaign) => campaign.b2b_b2c_project_id)
+              .filter(Boolean) // Filter out null/undefined values
+          );
+          setCampaignProjectIds(projectIds);
+          console.log("📋 Project IDs converted to campaigns:", Array.from(projectIds));
+
           // Transform campaigns to match the campaign card format
           const transformedCampaigns = response.data.campaigns.map((campaign) => {
             // Format the created_at date
@@ -504,11 +523,17 @@ const CampaignManager = () => {
           );
 
           // Merge campaigns with existing projects
-          setCampaigns((prev) => ({
-            ...prev,
-            active: [...prev.active, ...activeCampaigns],
-            completed: [...prev.completed, ...completedCampaigns],
-          }));
+          setCampaigns((prev) => {
+            // Filter out old campaigns, keep projects
+            const existingProjects = prev.active.filter(item => !item.isCampaign);
+            const existingCompletedCampaigns = prev.completed.filter(item => item.isCampaign);
+
+            return {
+              ...prev,
+              active: [...existingProjects, ...activeCampaigns],
+              completed: [...existingCompletedCampaigns, ...completedCampaigns],
+            };
+          });
         }
       } catch (error) {
         console.error("❌ Error fetching campaigns:", error);

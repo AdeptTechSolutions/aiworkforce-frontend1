@@ -1297,3 +1297,687 @@ export const MeetingCheatsheetModal = ({ isOpen, onClose, meeting }) => {
     </div>
   );
 };
+
+// ============================================
+// ODOO INTEGRATION MODAL
+// ============================================
+
+export const OdooIntegrationModal = ({
+  isOpen,
+  onClose,
+  onConnect,
+  isLoading = false,
+  existingData = null
+}) => {
+  const [formData, setFormData] = useState({
+    odoo_url: '',
+    odoo_db: '',
+    odoo_username: '',
+    odoo_api_key: ''
+  });
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  useEffect(() => {
+    if (existingData) {
+      setFormData({
+        odoo_url: existingData.odoo_url || '',
+        odoo_db: existingData.odoo_db || '',
+        odoo_username: existingData.odoo_username || '',
+        odoo_api_key: ''
+      });
+    }
+  }, [existingData]);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setTestResult(null);
+  };
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await onConnect(formData, true);
+      setTestResult({ success: true, message: result.message || 'Connection successful!' });
+    } catch (error) {
+      setTestResult({ success: false, message: error.message || 'Connection failed' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (isFormValid) {
+      onConnect(formData, false);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({ odoo_url: '', odoo_db: '', odoo_username: '', odoo_api_key: '' });
+    setTestResult(null);
+    onClose();
+  };
+
+  const isFormValid = formData.odoo_url && formData.odoo_db && formData.odoo_username && formData.odoo_api_key;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {existingData ? 'Update Odoo Connection' : 'Connect to Odoo'}
+          </h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-gray-500 text-sm mb-6">Enter your Odoo CRM credentials to connect.</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Odoo URL <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="url"
+              value={formData.odoo_url}
+              onChange={(e) => handleChange('odoo_url', e.target.value)}
+              placeholder="https://your-company.odoo.com"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Database Name <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.odoo_db}
+              onChange={(e) => handleChange('odoo_db', e.target.value)}
+              placeholder="Enter database name"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              Username <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.odoo_username}
+              onChange={(e) => handleChange('odoo_username', e.target.value)}
+              placeholder="Enter username or email"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-base font-medium text-gray-900 mb-2">
+              API Key <span className="text-[#4F46E5]">*</span>
+            </label>
+            <input
+              type="password"
+              value={formData.odoo_api_key}
+              onChange={(e) => handleChange('odoo_api_key', e.target.value)}
+              placeholder="Enter API key"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        {testResult && (
+          <div className={`mt-4 p-3 rounded-lg ${testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {testResult.message}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 mt-6">
+          <button
+            onClick={handleTestConnection}
+            disabled={!isFormValid || isTesting}
+            className={`px-6 py-3 rounded-full font-medium transition-colors border ${
+              isFormValid && !isTesting
+                ? 'border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5] hover:text-white'
+                : 'border-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isTesting ? 'Testing...' : 'Test Connection'}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!isFormValid || isLoading}
+            className={`px-10 py-3 rounded-full font-medium transition-colors ${
+              isFormValid && !isLoading
+                ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isLoading ? 'Connecting...' : (existingData ? 'Update' : 'Connect')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// TELEGRAM LOGIN MODAL
+// ============================================
+
+export const TelegramLoginModal = ({
+  isOpen,
+  onClose,
+  onConnect,
+  isLoading = false
+}) => {
+  const [step, setStep] = useState(1);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [sessionData, setSessionData] = useState(null);
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRequestCode = async () => {
+    if (!phoneNumber.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const result = await onConnect('request', { phone_number: phoneNumber });
+      setSessionData({
+        phone_code_hash: result.phone_code_hash,
+        session_string: result.session_string
+      });
+      setStep(2);
+    } catch (err) {
+      setError(err.message || 'Failed to send verification code');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const result = await onConnect('verify', {
+        phone_number: phoneNumber,
+        code: verificationCode,
+        phone_code_hash: sessionData.phone_code_hash,
+        session_string: sessionData.session_string,
+        password: password || undefined
+      });
+
+      if (result.requires_2fa) {
+        setRequires2FA(true);
+        setStep(3);
+      } else {
+        handleClose();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to verify code');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (!password.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await onConnect('verify', {
+        phone_number: phoneNumber,
+        code: verificationCode,
+        phone_code_hash: sessionData.phone_code_hash,
+        session_string: sessionData.session_string,
+        password: password
+      });
+      handleClose();
+    } catch (err) {
+      setError(err.message || 'Failed to verify 2FA password');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep(1);
+    setPhoneNumber('');
+    setVerificationCode('');
+    setPassword('');
+    setSessionData(null);
+    setRequires2FA(false);
+    setError('');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-2xl font-bold text-gray-900">Connect Telegram</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="flex items-center gap-2 mb-6">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full ${
+                s <= step ? 'bg-[#4F46E5]' : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Step 1: Phone Number */}
+        {step === 1 && (
+          <>
+            <p className="text-gray-500 text-sm mb-6">
+              Enter your phone number to receive a verification code.
+            </p>
+            <div className="mb-6">
+              <label className="block text-base font-medium text-gray-900 mb-2">
+                Phone Number <span className="text-[#4F46E5]">*</span>
+              </label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+1234567890"
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+              />
+              <p className="text-xs text-gray-500 mt-2">Include country code (e.g., +1 for US)</p>
+            </div>
+            <button
+              onClick={handleRequestCode}
+              disabled={!phoneNumber.trim() || isSubmitting}
+              className={`w-full py-3 rounded-full font-medium transition-colors ${
+                phoneNumber.trim() && !isSubmitting
+                  ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {isSubmitting ? 'Sending...' : 'Send Code'}
+            </button>
+          </>
+        )}
+
+        {/* Step 2: Verification Code */}
+        {step === 2 && !requires2FA && (
+          <>
+            <p className="text-gray-500 text-sm mb-6">
+              Enter the verification code sent to your Telegram app.
+            </p>
+            <div className="mb-6">
+              <label className="block text-base font-medium text-gray-900 mb-2">
+                Verification Code <span className="text-[#4F46E5]">*</span>
+              </label>
+              <input
+                type="text"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                placeholder="Enter code"
+                maxLength={6}
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all text-center text-2xl tracking-widest"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 py-3 rounded-full font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleVerifyCode}
+                disabled={!verificationCode.trim() || isSubmitting}
+                className={`flex-1 py-3 rounded-full font-medium transition-colors ${
+                  verificationCode.trim() && !isSubmitting
+                    ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? 'Verifying...' : 'Verify'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3: 2FA Password */}
+        {step === 3 || requires2FA ? (
+          <>
+            <p className="text-gray-500 text-sm mb-6">
+              Your account has two-factor authentication enabled. Please enter your password.
+            </p>
+            <div className="mb-6">
+              <label className="block text-base font-medium text-gray-900 mb-2">
+                Password <span className="text-[#4F46E5]">*</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your 2FA password"
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setRequires2FA(false);
+                  setStep(2);
+                }}
+                className="flex-1 py-3 rounded-full font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleVerify2FA}
+                disabled={!password.trim() || isSubmitting}
+                className={`flex-1 py-3 rounded-full font-medium transition-colors ${
+                  password.trim() && !isSubmitting
+                    ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? 'Verifying...' : 'Connect'}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// WHATSAPP CONNECT MODAL
+// ============================================
+
+export const WhatsAppConnectModal = ({
+  isOpen,
+  onClose,
+  onConnect,
+  isLoading = false
+}) => {
+  const [step, setStep] = useState(1);
+  const [sessionName, setSessionName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('pending');
+  const pollIntervalRef = useState(null);
+
+  const handleCreateSession = async () => {
+    if (!sessionName.trim()) return;
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const result = await onConnect('create', {
+        name: sessionName,
+        phone_number: phoneNumber || undefined,
+        account_protection: true,
+        log_messages: true,
+        webhook_enabled: false
+      });
+
+      setSessionId(result.id || result.session_id || result.wasender_session_id);
+      setStep(2);
+
+      // Fetch QR code
+      fetchQRCode(result.id || result.session_id || result.wasender_session_id);
+    } catch (err) {
+      setError(err.message || 'Failed to create session');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const fetchQRCode = async (sid) => {
+    try {
+      const qrResult = await onConnect('qrcode', { session_id: sid });
+      setQrCodeData(qrResult);
+
+      // Start polling for connection status
+      startStatusPolling(sid);
+    } catch (err) {
+      setError(err.message || 'Failed to get QR code');
+    }
+  };
+
+  const startStatusPolling = (sid) => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const status = await onConnect('status', { session_id: sid });
+        setConnectionStatus(status.status);
+
+        if (status.status === 'connected' || status.status === 'ready') {
+          clearInterval(pollIntervalRef.current);
+          setStep(3);
+        }
+      } catch (err) {
+        console.error('Status poll error:', err);
+      }
+    }, 3000);
+  };
+
+  const handleClose = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    setStep(1);
+    setSessionName('');
+    setPhoneNumber('');
+    setQrCodeData(null);
+    setSessionId(null);
+    setError('');
+    setConnectionStatus('pending');
+    onClose();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-2xl font-bold text-gray-900">Connect WhatsApp</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="flex items-center gap-2 mb-6">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full ${
+                s <= step ? 'bg-[#25D366]' : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Step 1: Session Details */}
+        {step === 1 && (
+          <>
+            <p className="text-gray-500 text-sm mb-6">
+              Create a new WhatsApp session to connect your account.
+            </p>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-base font-medium text-gray-900 mb-2">
+                  Session Name <span className="text-[#25D366]">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={sessionName}
+                  onChange={(e) => setSessionName(e.target.value)}
+                  placeholder="My WhatsApp"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#25D366] focus:ring-1 focus:ring-[#25D366] outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-base font-medium text-gray-900 mb-2">
+                  Phone Number <span className="text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+1234567890"
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:border-[#25D366] focus:ring-1 focus:ring-[#25D366] outline-none transition-all"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleCreateSession}
+              disabled={!sessionName.trim() || isSubmitting}
+              className={`w-full py-3 rounded-full font-medium transition-colors ${
+                sessionName.trim() && !isSubmitting
+                  ? 'bg-[#25D366] text-white hover:bg-[#128C7E]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Session'}
+            </button>
+          </>
+        )}
+
+        {/* Step 2: QR Code */}
+        {step === 2 && (
+          <>
+            <p className="text-gray-500 text-sm mb-6">
+              Scan this QR code with your WhatsApp mobile app.
+            </p>
+            <div className="flex flex-col items-center mb-6">
+              {qrCodeData?.qr_code_image ? (
+                <img
+                  src={qrCodeData.qr_code_image}
+                  alt="WhatsApp QR Code"
+                  className="w-64 h-64 border rounded-lg"
+                />
+              ) : qrCodeData?.qr_code ? (
+                <div className="w-64 h-64 border rounded-lg flex items-center justify-center bg-gray-50">
+                  <p className="text-xs text-gray-500 text-center p-4 break-all">
+                    {qrCodeData.qr_code}
+                  </p>
+                </div>
+              ) : (
+                <div className="w-64 h-64 border rounded-lg flex items-center justify-center bg-gray-50">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25D366]"></div>
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  connectionStatus === 'connected' || connectionStatus === 'ready'
+                    ? 'bg-green-500'
+                    : connectionStatus === 'pending'
+                    ? 'bg-yellow-500 animate-pulse'
+                    : 'bg-gray-400'
+                }`} />
+                <span className="text-sm text-gray-600 capitalize">
+                  {connectionStatus === 'pending' ? 'Waiting for scan...' : connectionStatus}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => fetchQRCode(sessionId)}
+              className="w-full py-3 rounded-full font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Refresh QR Code
+            </button>
+          </>
+        )}
+
+        {/* Step 3: Success */}
+        {step === 3 && (
+          <>
+            <div className="flex flex-col items-center py-6">
+              <div className="w-20 h-20 bg-[#25D366]/10 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Connected!</h3>
+              <p className="text-gray-500 text-center">
+                Your WhatsApp account has been successfully connected.
+              </p>
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-full py-3 rounded-full font-medium bg-[#25D366] text-white hover:bg-[#128C7E] transition-colors"
+            >
+              Done
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
