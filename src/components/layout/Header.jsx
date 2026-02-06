@@ -31,7 +31,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const Header = ({
   variant = "simple", // 'full', 'simple', 'minimal'
-  credits = 0,
   onBuyCredits,
   onLogoClick,
   showGetCredits = false,
@@ -41,12 +40,13 @@ const Header = ({
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [credits, setCredits] = useState(0);
   const profileRef = useRef(null);
 
   useEffect(() => {
     const fetchCredits = async () => {
-      const res = await api.get("/b2b/credits/balance");
-      console.log(res.data);
+      const res = await api.get(`${API_BASE_URL}/b2b/credits/balance`);
+      setCredits(res.data.data.credits);
     };
 
     fetchCredits();

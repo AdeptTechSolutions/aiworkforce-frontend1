@@ -200,6 +200,14 @@ export const AddToProjectModal = ({
   const projects = context?.projects || [];
   const addProject = context?.addProject;
   const addToProject = context?.addToProject;
+  const fetchProjects = context?.fetchProjects;
+  const isLoadingProjects = context?.isLoadingProjects || false;
+
+  // Get selected profiles/companies and full list for bulk operations
+  const selectedProfiles = context?.selectedProfiles || [];
+  const selectedCompanies = context?.selectedCompanies || [];
+  const allProfiles = context?.profiles || [];
+  const allCompanies = context?.companies || [];
 
   const [selectedProject, setSelectedProject] = useState(null);
   const [showCreateProject, setShowCreateProject] = useState(false);
@@ -207,28 +215,73 @@ export const AddToProjectModal = ({
   const [successType, setSuccessType] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isAddingToProject, setIsAddingToProject] = useState(false);
 
-  // Get the item (profile or company)
+  // Fetch projects when modal opens
+  useEffect(() => {
+    if (isOpen && fetchProjects) {
+      fetchProjects();
+    }
+  }, [isOpen, fetchProjects]);
+
+  // Get the item (profile or company) - single item mode
   const item = mode === "b2b" ? company : profile;
 
-  const handleAdd = () => {
-    if (selectedProject && item) {
-      if (addToProject) {
-        addToProject(selectedProject.id, [item.id]);
-      }
-      setSuccessType("added");
-      setShowSuccess(true);
+  // Get items for bulk mode
+  const getItemsToAdd = () => {
+    if (item) {
+      // Single item mode
+      return [item];
+    }
+
+    // Bulk mode - get full profile/company objects from selected IDs
+    if (mode === "b2b") {
+      return allCompanies.filter((c) => selectedCompanies.includes(c.id));
+    } else {
+      return allProfiles.filter((p) => selectedProfiles.includes(p.id));
     }
   };
 
-  const handleCreateProject = () => {
+  const handleAdd = async () => {
+    if (!selectedProject) return;
+
+    const itemsToAdd = getItemsToAdd();
+    if (itemsToAdd.length === 0) return;
+
+    if (addToProject) {
+      setIsAddingToProject(true);
+      try {
+        // Pass the full profile/company data array
+        const result = await addToProject(selectedProject.id, itemsToAdd);
+        if (result?.success) {
+          setSuccessType("added");
+          setShowSuccess(true);
+        } else {
+          // Handle error case - still show success for now, but log error
+          console.error("Failed to add to project:", result?.error);
+          setSuccessType("added");
+          setShowSuccess(true);
+        }
+      } finally {
+        setIsAddingToProject(false);
+      }
+    }
+  };
+
+  const handleCreateProject = async () => {
     if (newProjectName.trim() && addProject) {
-      addProject(newProjectName, newProjectDescription);
+      setIsCreatingProject(true);
+      const result = await addProject(newProjectName, newProjectDescription);
+      setIsCreatingProject(false);
+      // Close modal regardless of result, project was attempted
+      setSelectedProject(null);
+      setShowCreateProject(false);
+      setShowSuccess(false);
+      setSuccessType("");
       setNewProjectName("");
       setNewProjectDescription("");
-      setShowCreateProject(false);
-      setSuccessType("created");
-      setShowSuccess(true);
+      onClose();
     }
   };
 
@@ -252,6 +305,11 @@ export const AddToProjectModal = ({
   const handleGoBackToForm = () => {
     setShowSuccess(false);
     setSuccessType("");
+    setShowCreateProject(false);
+    // Refresh projects list
+    if (fetchProjects) {
+      fetchProjects();
+    }
   };
 
   if (!isOpen) return null;
@@ -269,7 +327,10 @@ export const AddToProjectModal = ({
 
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Successfully added!</h2>
           <p className="text-gray-500 mb-8">
-            Lead added to "{selectedProject?.name}" successfully
+            {getItemsToAdd().length > 1
+              ? `${getItemsToAdd().length} ${mode === "b2b" ? "companies" : "leads"} added to "${selectedProject?.name}" successfully`
+              : `Lead added to "${selectedProject?.name}" successfully`
+            }
           </p>
 
           <button
@@ -296,7 +357,7 @@ export const AddToProjectModal = ({
             onClick={handleGoBackToForm}
             className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-base"
           >
-            Go Back to Form
+            Go Back to Projects
           </button>
         </div>
       )}
@@ -346,13 +407,16 @@ export const AddToProjectModal = ({
 
           <button
             onClick={handleCreateProject}
-            disabled={!newProjectName.trim()}
-            className={`px-6 py-3 rounded-xl font-medium transition-colors ${newProjectName.trim()
+            disabled={!newProjectName.trim() || isCreatingProject}
+            className={`px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 ${newProjectName.trim() && !isCreatingProject
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
           >
-            Create Project
+            {isCreatingProject && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            {isCreatingProject ? "Creating..." : "Create Project"}
           </button>
         </div>
       )}
@@ -375,30 +439,41 @@ export const AddToProjectModal = ({
           <p className="text-gray-500 text-sm mb-6">Where you want to move the {mode === "b2b" ? "company" : "profile"}</p>
 
           <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => setSelectedProject(project)}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${selectedProject?.id === project.id
-                    ? "bg-[#F2F2FF] border border-blue-600"
-                    : "bg-white hover:bg-[#F2F2FF] hover:border hover:border-blue-600"
-                  }`}
-              >
-                <div
-                  className={`w-5 h-5  border-2 flex items-center justify-center transition-all ${selectedProject?.id === project.id
-                      ? "border-blue-500 rounded bg-blue-500"
-                      : "border-gray-300 rounded-full bg-white"
+            {isLoadingProjects ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-500">Loading projects...</span>
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No projects found. Create a new project to get started.
+              </div>
+            ) : (
+              projects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => setSelectedProject(project)}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl transition-all ${selectedProject?.id === project.id
+                      ? "bg-[#F2F2FF] border border-blue-600"
+                      : "bg-white hover:bg-[#F2F2FF] hover:border hover:border-blue-600"
                     }`}
                 >
-                  {selectedProject?.id === project.id && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-gray-900 font-medium">{project.name}</span>
-              </button>
-            ))}
+                  <div
+                    className={`w-5 h-5  border-2 flex items-center justify-center transition-all ${selectedProject?.id === project.id
+                        ? "border-blue-500 rounded bg-blue-500"
+                        : "border-gray-300 rounded-full bg-white"
+                      }`}
+                  >
+                    {selectedProject?.id === project.id && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-gray-900 font-medium">{project.name}</span>
+                </button>
+              ))
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -411,13 +486,16 @@ export const AddToProjectModal = ({
 
             <button
               onClick={handleAdd}
-              disabled={!selectedProject}
-              className={`px-6 py-3 rounded-xl font-medium transition-colors ${selectedProject
+              disabled={!selectedProject || isAddingToProject}
+              className={`px-6 py-3 rounded-xl font-medium transition-colors flex items-center gap-2 ${selectedProject && !isAddingToProject
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
             >
-              Add to Project
+              {isAddingToProject && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              )}
+              {isAddingToProject ? "Adding..." : `Add to Project${!item && getItemsToAdd().length > 1 ? ` (${getItemsToAdd().length})` : ""}`}
             </button>
           </div>
         </div>

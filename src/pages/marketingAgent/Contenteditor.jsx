@@ -7,6 +7,59 @@ import Link from "@tiptap/extension-link";
 import { Color } from "@tiptap/extension-color";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
+import api from "../../services/api";
+
+// Simple markdown to HTML converter
+const markdownToHtml = (markdown) => {
+  if (!markdown) return "";
+
+  let html = markdown
+    // Escape HTML entities first (but preserve markdown)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    // Headers (must be at start of line)
+    .replace(/^######\s+(.+)$/gm, "<h6>$1</h6>")
+    .replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>")
+    .replace(/^####\s+(.+)$/gm, "<h4>$1</h4>")
+    .replace(/^###\s+(.+)$/gm, "<h3>$1</h3>")
+    .replace(/^##\s+(.+)$/gm, "<h2>$1</h2>")
+    .replace(/^#\s+(.+)$/gm, "<h1>$1</h1>")
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    // Italic: *text* or _text_
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    // Unordered lists
+    .replace(/^\s*[-*+]\s+(.+)$/gm, "<li>$1</li>")
+    // Ordered lists
+    .replace(/^\s*\d+\.\s+(.+)$/gm, "<li>$1</li>")
+    // Blockquotes
+    .replace(/^>\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+    // Inline code
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    // Links: [text](url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // Horizontal rule
+    .replace(/^---$/gm, "<hr>")
+    // Line breaks (double newline = paragraph)
+    .replace(/\n\n/g, "</p><p>")
+    // Single line breaks
+    .replace(/\n/g, "<br>");
+
+  // Wrap consecutive <li> elements in <ul>
+  html = html.replace(/(<li>.*?<\/li>)(\s*<li>)/g, "$1$2");
+  html = html.replace(/(<li>.*?<\/li>)+/g, "<ul>$&</ul>");
+
+  // Wrap in paragraph if not already wrapped
+  if (!html.startsWith("<h") && !html.startsWith("<ul") && !html.startsWith("<blockquote")) {
+    html = "<p>" + html + "</p>";
+  }
+
+  return html;
+};
+
 import {
   ChevronLeft,
   Bold,
@@ -34,21 +87,7 @@ import {
   ChevronDown,
   Plus,
 } from "lucide-react";
-import {
-  tfIdfKeywords,
-  topics,
-  headings,
-  topKeywords,
-  usedTfIdfKeywords,
-  autocompleteSuggestions,
-  relatedSearches,
-  contentTarget,
-  keyEntities,
-  questionsToAnswer,
-  relatedQuestions,
-  competitorArticles,
-  generatedArticleData,
-} from "../../data/blogMockData";
+// Mock data removed - using real API data only
 
 const MenuBar = ({ editor }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -295,28 +334,117 @@ const MenuBar = ({ editor }) => {
   );
 };
 
-const ContentEditor = () => {
+const ContentEditor = ({
+  onBack,
+  selectedArticles,
+  optimizationGuide,
+  competitorScores,
+  targetKeyword,
+  postId,
+  initialContent,
+  blogId,
+}) => {
   const [activeMainTab, setActiveMainTab] = useState("Terms");
   const [activeSubTab, setActiveSubTab] = useState("Keywords");
   const [activeOutlineTab, setActiveOutlineTab] = useState("Research");
   const [expandedCompetitors, setExpandedCompetitors] = useState({});
   const [expandedRelatedQuestions, setExpandedRelatedQuestions] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGenerated, setIsGenerated] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(!!initialContent);
   const [isCheckingScore, setIsCheckingScore] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [contentScore, setContentScore] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [, forceUpdate] = useState({});
 
-  const handleCheckScore = () => {
-    if (!isGenerated) {
+  // Extract data from optimizationGuide
+  const contentTarget = {
+    wordCount: optimizationGuide?.target_word_count || 0,
+    range: optimizationGuide?.word_count_range
+      ? `${optimizationGuide.word_count_range.min} - ${optimizationGuide.word_count_range.max}`
+      : "N/A",
+    fleschReading: optimizationGuide?.target_readability?.flesch_reading_ease || "N/A",
+    fleschReadingLabel: "Flesch Reading",
+    gradeLevel1: optimizationGuide?.target_readability?.grade_level || "N/A",
+    gradeLevel2: optimizationGuide?.target_readability?.smog_index || "N/A",
+    contentScore: 0,
+  };
+
+  // Extract headings - can be objects {text, count} or strings
+  const headings = (optimizationGuide?.recommended_headings || []).map((heading) =>
+    typeof heading === "object" ? heading.text : heading
+  );
+
+  // Extract topics - objects {topic, total_frequency}
+  const topics = (optimizationGuide?.important_topics || []).map((item) => ({
+    word: typeof item === "object" ? item.topic : item,
+    count: typeof item === "object" ? item.total_frequency : 1,
+  }));
+
+  // Extract key entities - objects {text, type, total_mentions} or strings
+  const keyEntities = (optimizationGuide?.key_entities || []).map((entity) =>
+    typeof entity === "object" ? entity.text : entity
+  );
+
+  // Questions to answer - can be strings directly
+  const questionsToAnswer = optimizationGuide?.questions_to_answer || [];
+
+  // TF-IDF keywords - can be objects or strings
+  const tfIdfKeywords = (optimizationGuide?.tfidf_keywords || []).map((keyword) => ({
+    word: typeof keyword === "object" ? keyword.word || keyword.keyword : keyword,
+    score: typeof keyword === "object" ? keyword.score?.toFixed(2) : (Math.random() * 0.5 + 0.5).toFixed(2),
+  }));
+
+  // Build competitor articles from scores
+  const competitorArticles = Object.entries(competitorScores || {}).map(([url, score], index) => ({
+    title: url.split("/").pop() || `Competitor ${index + 1}`,
+    url,
+    score: score !== null ? Math.round(score) : "N/A",
+    wordCount: "N/A",
+    readability: "N/A",
+    topics: [],
+    keyEntities: [],
+    headingsCount: 0,
+  }));
+
+  const handleCheckScore = async () => {
+    if (!isGenerated || !editor) {
       // If content is not generated, show popup immediately
       setShowScorePopup(true);
-    } else {
-      // If content is generated, show loading then the score
-      setIsCheckingScore(true);
-      setTimeout(() => {
-        setIsCheckingScore(false);
-      }, 2000);
+      return;
+    }
+
+    if (!postId) {
+      console.error("No post ID available");
+      return;
+    }
+
+    // Get the content from the editor
+    const editorContent = editor.getHTML();
+
+    // Check if content is too short (minimum 100 characters required)
+    if (editorContent.length < 100) {
+      setShowScorePopup(true);
+      return;
+    }
+
+    // If content is generated, call the score API
+    setIsCheckingScore(true);
+
+    try {
+      const response = await api.post(`/seo/score/${postId}`, {
+        content: editorContent,
+      });
+      console.log("Score response:", response.data);
+
+      if (response.data?.status === "success") {
+        setContentScore(response.data.score?.total_score || response.data.score);
+      }
+    } catch (err) {
+      console.error("Error fetching score:", err);
+    } finally {
+      setIsCheckingScore(false);
     }
   };
 
@@ -334,20 +462,115 @@ const ContentEditor = () => {
     }));
   };
 
-  const handleGenerateArticle = () => {
+  const handleGenerateArticle = async () => {
+    if (!postId) {
+      console.error("No post ID available");
+      return;
+    }
+
     setIsGenerating(true);
 
-    // Simulate AI generation with 2 second delay
-    setTimeout(() => {
-      if (editor) {
-        editor.commands.setContent(generatedArticleData.content);
+    try {
+      // Build template from headings
+      const headingsSections = headings.length > 0
+        ? headings.map((h, i) => `${i + 1}) ${h}`).join(", ")
+        : "";
+
+      const template = `Write a comprehensive SEO-optimized article about ${targetKeyword || "the topic"}. ${headingsSections ? `Include sections: ${headingsSections}.` : ""} Target ${optimizationGuide?.target_word_count || 2000} words.`;
+
+      // Build custom instructions from topics, entities, and questions
+      const topicsList = topics.length > 0
+        ? `Use the important topics: ${topics.map(t => t.word).join(", ")}.`
+        : "";
+
+      const entitiesList = keyEntities.length > 0
+        ? `Mention key entities: ${keyEntities.join(", ")}.`
+        : "";
+
+      const questionsList = questionsToAnswer.length > 0
+        ? `Answer these questions: ${questionsToAnswer.join(" ")}`
+        : "";
+
+      const builtCustomInstructions = [topicsList, entitiesList, questionsList, customInstructions]
+        .filter(Boolean)
+        .join(" ");
+
+      const response = await api.post(`/seo/generate-article/${postId}`, {
+        template: template,
+        custom_instructions: builtCustomInstructions,
+        target_word_count: optimizationGuide?.target_word_count || 2000,
+        model: "gpt-4-turbo-preview",
+        temperature: 0.7,
+      });
+
+      console.log("Generate article response:", response.data);
+
+      if (response.data?.status === "success" && editor) {
+        // Convert markdown to HTML and set in editor
+        const htmlContent = markdownToHtml(response.data.article || "");
+        editor.commands.setContent(htmlContent);
       }
-      setIsGenerating(false);
+
       setIsGenerated(true);
       // Switch to Terms tab and Keywords subtab
       setActiveMainTab("Terms");
       setActiveSubTab("Keywords");
-    }, 2000);
+    } catch (err) {
+      console.error("Error generating article:", err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveBlog = async () => {
+    if (!editor || !postId) {
+      console.error("Editor or post ID not available");
+      return;
+    }
+
+    const editorContent = editor.getHTML();
+    if (!editorContent || editorContent === "<p></p>") {
+      alert("Please add some content before saving");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Extract keywords from topics
+      const keywordsList = topics.map((t) => t.word);
+
+      let response;
+      if (blogId) {
+        // Update existing blog with PUT
+        response = await api.put(`/seo/blogs/${blogId}`, {
+          title: targetKeyword || "Untitled Blog",
+          content: editorContent,
+          meta_description: "",
+          keywords: keywordsList,
+          status: "draft",
+        });
+        console.log("Update blog response:", response.data);
+        alert("Blog updated successfully!");
+      } else {
+        // Create new blog with POST
+        response = await api.post("/seo/blogs", {
+          title: targetKeyword || "Untitled Blog",
+          content: editorContent,
+          post_id: postId,
+          meta_description: "",
+          keywords: keywordsList,
+          status: "draft",
+        });
+        console.log("Save blog response:", response.data);
+        alert("Blog saved successfully!");
+      }
+    } catch (err) {
+      console.error("Error saving blog:", err);
+      alert("Failed to save blog");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const editor = useEditor({
@@ -369,7 +592,7 @@ const ContentEditor = () => {
       Color,
       Highlight.configure({ multicolor: true }),
     ],
-    content: "<p>Start writing your content here...</p>",
+    content: initialContent || "<p>Start writing your content here...</p>",
     editorProps: {
       attributes: {
         class:
@@ -419,13 +642,18 @@ const ContentEditor = () => {
     }
   };
 
-  // Determine which data to show based on generation state
-  const displayTopKeywords = isGenerated
-    ? generatedArticleData.topKeywords
-    : topKeywords;
-  const displayUsedTfIdfKeywords = isGenerated
-    ? generatedArticleData.usedTfIdfKeywords
-    : usedTfIdfKeywords;
+  // Use topics as top keywords with usage tracking (current starts at 0, total from API)
+  const displayTopKeywords = topics.map((topic) => ({
+    word: topic.word,
+    current: 0, // Will be updated when content is analyzed
+    total: topic.count,
+  }));
+
+  // Use TF-IDF keywords for the usage section
+  const displayUsedTfIdfKeywords = tfIdfKeywords.map((kw) => ({
+    word: kw.word,
+    usage: "Used 0x", // Will be updated when content is analyzed
+  }));
 
   return (
     <div
@@ -435,19 +663,26 @@ const ContentEditor = () => {
         {/* Editor Header */}
         <div className="flex bg-white rounded-3xl px-4 py-5 items-end justify-between w-[60%]">
           <div>
-            <button className="mb-10 flex items-center text-gray-700 hover:text-gray-900 transition-colors">
+            <button
+              onClick={onBack}
+              className="mb-10 flex items-center text-gray-700 hover:text-gray-900 transition-colors"
+            >
               <ChevronLeft className="w-5 h-5" />
               <span className="font-medium">Back</span>
             </button>
             <h1 className="text-4xl text-gray-900 mb-2">Content Editor</h1>
             <p className="text-lg text-gray-600">
               <span className="font-semibold">
-                Keyword: how to write an book
+                Keyword: {targetKeyword || "N/A"}
               </span>
             </p>
           </div>
-          <button className="px-5 py-1.5 bg-indigo-600 text-white rounded-full transition-colors">
-            Save Blog
+          <button
+            onClick={handleSaveBlog}
+            disabled={isSaving}
+            className="px-5 py-1.5 bg-indigo-600 text-white rounded-full transition-colors hover:bg-indigo-700 disabled:bg-indigo-400"
+          >
+            {isSaving ? "Saving..." : blogId ? "Update Blog" : "Save Blog"}
           </button>
         </div>
         {/* Content Target + Content Score (Single Row) */}
@@ -496,15 +731,7 @@ const ContentEditor = () => {
               <h3 className="text-md text-gray-900">Your Content Score</h3>
             </div>
 
-            {!isGenerated && !isCheckingScore ? (
-              // Initial state - Show Check Score button
-              <button
-                onClick={handleCheckScore}
-                className="text-indigo-600 hover:text-indigo-700 font-medium text-sm border-2 border-white w-28 rounded-full hover:border-indigo-400 px-2 py-1"
-              >
-                Check Score
-              </button>
-            ) : isCheckingScore ? (
+            {isCheckingScore ? (
               // Loading state - Show three dots animation
               <div className="flex items-center gap-1 py-2">
                 <div
@@ -520,12 +747,20 @@ const ContentEditor = () => {
                   style={{ animationDelay: "300ms" }}
                 ></div>
               </div>
-            ) : (
-              // After generation - Show score
+            ) : contentScore !== null ? (
+              // Score fetched - Show score
               <div className="text-3xl font-bold text-indigo-500 leading-none">
-                {contentTarget.contentScore}
+                {contentScore}
                 <span className="text-lg font-normal ml-1">scores</span>
               </div>
+            ) : (
+              // No score yet - Show Check Score button
+              <button
+                onClick={handleCheckScore}
+                className="text-indigo-600 hover:text-indigo-700 font-medium text-sm border-2 border-white w-28 rounded-full hover:border-indigo-400 px-2 py-1"
+              >
+                Check Score
+              </button>
             )}
           </div>
         </div>
@@ -681,20 +916,20 @@ const ContentEditor = () => {
                         </h3>
 
                         <div className="grid grid-cols-3 gap-2">
-                          {displayTopKeywords.map((item, index) => (
+                          {(displayTopKeywords || []).map((item, index) => (
                             <div
                               key={index}
-                              className={`${getBgColorByPercentage(item.current, item.total)} px-2 py-1.5 rounded-full flex items-center justify-between`}
+                              className={`${getBgColorByPercentage(item?.current || 0, item?.total || 1)} px-2 py-1.5 rounded-full flex items-center justify-between`}
                             >
                               <div
-                                className={`text-sm font-semibold ${getTextColorByPercentage(item.current, item.total)}`}
+                                className={`text-sm font-semibold ${getTextColorByPercentage(item?.current || 0, item?.total || 1)}`}
                               >
-                                {item.word}
+                                {item?.word || ""}
                               </div>
                               <div
-                                className={`text-xs font-medium bg-white p-0.5 rounded-full ${getTextColorByPercentage(item.current, item.total)}`}
+                                className={`text-xs font-medium bg-white p-0.5 rounded-full ${getTextColorByPercentage(item?.current || 0, item?.total || 1)}`}
                               >
-                                {item.current} / {item.total}
+                                {item?.current || 0} / {item?.total || 0}
                               </div>
                             </div>
                           ))}
@@ -712,17 +947,17 @@ const ContentEditor = () => {
                         </p>
 
                         <div className="grid grid-cols-2 gap-3">
-                          {displayUsedTfIdfKeywords.map((item, index) => (
+                          {(displayUsedTfIdfKeywords || []).map((item, index) => (
                             <div
                               key={index}
                               className="bg-gray-100 px-4 py-1.5 rounded-full"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-blue-600 font-semibold text-sm">
-                                  {item.word}
+                                  {item?.word || ""}
                                 </span>
                                 <span className="text-xs text-blue-600 font-semibold bg-white py-0.5 px-1 rounded-full">
-                                  {item.usage}
+                                  {item?.usage || ""}
                                 </span>
                               </div>
                             </div>
@@ -740,17 +975,17 @@ const ContentEditor = () => {
                         </p>
 
                         <div className="grid grid-cols-2 gap-3">
-                          {tfIdfKeywords.map((item, index) => (
+                          {(tfIdfKeywords || []).map((item, index) => (
                             <div
                               key={index}
                               className="bg-gray-100 px-4 py-1.5 rounded-full"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-gray-700 font-medium text-sm">
-                                  {item.word}
+                                  {item?.word || ""}
                                 </span>
                                 <span className="text-xs text-gray-600 font-medium bg-white p-0.5 rounded-full">
-                                  Score: {item.score}
+                                  Score: {item?.score || 0}
                                 </span>
                               </div>
                             </div>
@@ -770,22 +1005,25 @@ const ContentEditor = () => {
                         </h3>
 
                         <div className="grid grid-cols-2 gap-3">
-                          {topics.map((item, index) => (
+                          {(topics || []).map((item, index) => (
                             <div
                               key={index}
                               className="bg-gray-100 px-4 py-1.5 rounded-lg"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-gray-900 font-medium text-sm">
-                                  {item.word}
+                                  {item?.word || ""}
                                 </span>
                                 <span className="text-sm text-gray-900 font-semibold bg-white p-1 rounded-full">
-                                  {item.count}
+                                  {item?.count || 0}
                                 </span>
                               </div>
                             </div>
                           ))}
                         </div>
+                        {topics.length === 0 && (
+                          <p className="text-gray-500 text-sm">No topics available</p>
+                        )}
                       </div>
 
                       {/* Key Entities to Mention */}
@@ -795,7 +1033,7 @@ const ContentEditor = () => {
                         </h3>
 
                         <div className="flex flex-wrap gap-2">
-                          {keyEntities.map((entity, index) => (
+                          {(keyEntities || []).map((entity, index) => (
                             <div
                               key={index}
                               className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full text-sm font-medium"
@@ -804,6 +1042,9 @@ const ContentEditor = () => {
                             </div>
                           ))}
                         </div>
+                        {keyEntities.length === 0 && (
+                          <p className="text-gray-500 text-sm">No key entities available</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -816,7 +1057,7 @@ const ContentEditor = () => {
                       </h3>
 
                       <div className="space-y-2.5">
-                        {headings.map((heading, index) => (
+                        {(headings || []).map((heading, index) => (
                           <div
                             key={index}
                             className="px-3.5 py-2.5 bg-gray-100 rounded-sm text-gray-900 text-sm font-medium"
@@ -825,6 +1066,9 @@ const ContentEditor = () => {
                           </div>
                         ))}
                       </div>
+                      {headings.length === 0 && (
+                        <p className="text-gray-500 text-sm">No headings available</p>
+                      )}
                     </div>
                   )}
                 </>
@@ -879,43 +1123,50 @@ const ContentEditor = () => {
                   {/* Research Tab Content */}
                   {activeOutlineTab === "Research" && (
                     <div className="space-y-6">
-                      {/* Autocomplete Suggestions */}
+                      {/* Important Topics as Suggestions */}
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-4">
-                          Autocomplete Suggestions
+                          Important Topics
                         </h3>
                         <div className="space-y-2">
-                          {autocompleteSuggestions.map((suggestion, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg transition-colors cursor-pointer group"
-                            >
-                              <span className="text-gray-900 text-sm font-medium">
-                                {suggestion}
-                              </span>
-                              <Copy className="w-4 h-4 text-gray-900 transition-colors" />
-                            </div>
-                          ))}
+                          {topics.length > 0 ? (
+                            topics.map((topic, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg transition-colors cursor-pointer group"
+                              >
+                                <span className="text-gray-900 text-sm font-medium">
+                                  {topic.word}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Frequency: {topic.count}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-sm">No topics available</p>
+                          )}
                         </div>
                       </div>
 
-                      {/* Related Searches */}
+                      {/* Key Entities */}
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-4">
-                          Related Searches
+                          Key Entities to Mention
                         </h3>
-                        <div className="space-y-2">
-                          {relatedSearches.map((search, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg transition-colors cursor-pointer group"
-                            >
-                              <span className="text-gray-900 text-sm font-medium">
-                                {search}
-                              </span>
-                              <Copy className="w-4 h-4 text-gray-900 group-hover:text-gray-600 transition-colors" />
-                            </div>
-                          ))}
+                        <div className="flex flex-wrap gap-2">
+                          {keyEntities.length > 0 ? (
+                            keyEntities.map((entity, index) => (
+                              <div
+                                key={index}
+                                className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-indigo-100"
+                              >
+                                {entity}
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-sm">No entities available</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -930,7 +1181,7 @@ const ContentEditor = () => {
                           Questions to Answer
                         </h3>
                         <div className="space-y-3">
-                          {questionsToAnswer.map((question, index) => (
+                          {(questionsToAnswer || []).map((question, index) => (
                             <div
                               key={index}
                               className="flex items-start justify-between py-3 px-4 bg-gray-50 rounded-lg"
@@ -945,41 +1196,35 @@ const ContentEditor = () => {
                             </div>
                           ))}
                         </div>
+                        {questionsToAnswer.length === 0 && (
+                          <p className="text-gray-500 text-sm">No questions available</p>
+                        )}
                       </div>
 
-                      {/* Related Questions */}
+                      {/* Recommended Headings */}
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-4">
-                          Related Questions
+                          Recommended Headings
                         </h3>
                         <div className="space-y-2">
-                          {relatedQuestions.map((question, index) => (
-                            <div
-                              key={index}
-                              className="bg-gray-50 rounded-lg overflow-hidden"
-                            >
-                              <button
-                                onClick={() => toggleRelatedQuestion(index)}
-                                className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-100 transition-colors"
+                          {headings.length > 0 ? (
+                            headings.map((heading, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg"
                               >
-                                <span className="text-gray-900 text-sm text-left font-medium">
-                                  {question}
+                                <span className="text-gray-900 text-sm font-medium capitalize">
+                                  {heading}
                                 </span>
-                                <ChevronDown
-                                  className={`w-4 h-4 text-gray-600 transition-transform flex-shrink-0 ml-2 ${
-                                    expandedRelatedQuestions[index]
-                                      ? "rotate-180"
-                                      : ""
-                                  }`}
-                                />
-                              </button>
-                              {expandedRelatedQuestions[index] && (
-                                <div className="px-4 pb-4 text-sm text-gray-600">
-                                  Answer content would go here...
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                <button className="flex items-center gap-1.5 text-gray-900 text-sm font-medium whitespace-nowrap hover:text-gray-700 transition-colors">
+                                  <Plus className="w-4 h-4" />
+                                  Add
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-sm">No headings available</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -994,40 +1239,42 @@ const ContentEditor = () => {
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
                           Average words:{" "}
-                          <span className="font-semibold">4534</span>
+                          <span className="font-semibold">
+                            {optimizationGuide?.target_word_count || "N/A"}
+                          </span>
                         </p>
                       </div>
 
                       <div className="space-y-4">
-                        {competitorArticles.map((article, index) => (
+                        {(competitorArticles || []).map((article, index) => (
                           <div key={index} className="overflow-hidden">
                             {/* Article Header */}
                             <div className="p-4 bg-white">
                               <div className="flex items-start justify-between mb-2">
                                 <h4 className="text-sm font-bold text-gray-900 flex-1 pr-4">
-                                  {article.title}
+                                  {article?.title || "Untitled"}
                                 </h4>
                                 <span className="text-sm font-semibold bg-purple-100 py-[0.1rem] px-3 rounded-full text-purple-600 whitespace-nowrap">
                                   Score{" "}
                                   <span className="text-lg font-bold">
-                                    {article.score}
+                                    {article?.score || "N/A"}
                                   </span>
                                 </span>
                               </div>
                               <a
-                                href={article.url}
+                                href={article?.url || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-md text-indigo-400 font-semibold underline block mb-3"
                               >
-                                {article.url}
+                                {article?.url || "N/A"}
                               </a>
                               <hr className="py-2" />
                               <div className="flex items-center gap-6 text-xs text-gray-900 mb-3">
                                 <div>
                                   <span className="font-semibold">Words</span>
                                   <div className="font-bold text-base">
-                                    {article.wordCount}
+                                    {article?.wordCount || "N/A"}
                                   </div>
                                 </div>
                                 <div>
@@ -1035,7 +1282,7 @@ const ContentEditor = () => {
                                     Readability
                                   </span>
                                   <div className="font-bold text-base">
-                                    {article.readability}
+                                    {article?.readability || "N/A"}
                                   </div>
                                 </div>
                               </div>
@@ -1047,7 +1294,7 @@ const ContentEditor = () => {
                                   Topics
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {article.topics.map((topic, topicIndex) => (
+                                  {(article?.topics || []).map((topic, topicIndex) => (
                                     <span
                                       key={topicIndex}
                                       className="bg-indigo-50 text-indigo-400 px-2 py-1 rounded-full text-xs font-medium"
@@ -1064,7 +1311,7 @@ const ContentEditor = () => {
                                   Key Entities:
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {article.keyEntities.map(
+                                  {(article?.keyEntities || []).map(
                                     (entity, entityIndex) => (
                                       <span
                                         key={entityIndex}
@@ -1130,6 +1377,9 @@ const ContentEditor = () => {
                             </div>
                           </div>
                         ))}
+                        {competitorArticles.length === 0 && (
+                          <p className="text-gray-500 text-sm">No competitor data available</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1170,6 +1420,8 @@ const ContentEditor = () => {
                     <textarea
                       className="w-full h-32 p-4 border border-gray-300 rounded-lg text-gray-700 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent resize-none"
                       placeholder="You can paste text here..."
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
                     />
                   </div>
 

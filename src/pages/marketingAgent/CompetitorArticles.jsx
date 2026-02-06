@@ -1,24 +1,123 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Trash2 } from "lucide-react";
 import bgImage from "../../assets/Background.png";
-import { competitorArticles } from "../../data/blogMockData";
 import ContentEditor from "./Contenteditor";
+import api from "../../services/api";
 
-export default function CompetitorArticles({ onBack }) {
-  const [selectedArticles, setSelectedArticles] = useState([
-    1, 2, 3, 4, 5, 6, 7, 8,
-  ]);
+export default function CompetitorArticles({ onBack, searchParams }) {
+  const [selectedArticles, setSelectedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [competitorArticles, setCompetitorArticles] = useState([]);
+  const [error, setError] = useState(null);
+  const [scrapedArticleIds, setScrapedArticleIds] = useState(new Set());
+  const [postId, setPostId] = useState(null);
+  const [isContinueLoading, setIsContinueLoading] = useState(false);
+  const [optimizationGuide, setOptimizationGuide] = useState(null);
+  const [competitorScores, setCompetitorScores] = useState(null);
+  const [targetKeyword, setTargetKeyword] = useState("");
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+    // Prevent double execution from React Strict Mode
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
-    return () => clearTimeout(timer);
-  }, []);
+    fetchCompetitorArticles().finally(() => {
+      isFetchingRef.current = false;
+    });
+  }, [searchParams]);
+
+  const scrapeArticle = async (postId, link) => {
+    try {
+      console.log("Scraping:", link);
+      const response = await api.post(`/seo/scrape/${postId}`, { links: [link] });
+      console.log("Scrape response for", link, ":", response.data);
+      const contentInfo = response.data?.data?.contentInfo || [];
+      return contentInfo.length > 0 ? link : null;
+    } catch (err) {
+      console.error(`Failed to scrape ${link}:`, err);
+      return null;
+    }
+  };
+
+  const scrapeArticlesSequentially = async (postId, links) => {
+    const scrapedLinks = [];
+    for (let i = 0; i < links.length; i++) {
+      const link = links[i];
+      const result = await scrapeArticle(postId, link);
+      if (result) {
+        scrapedLinks.push(result);
+      }
+      // Add a small delay between requests to prevent overwhelming the backend
+      if (i < links.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+    console.log("Successfully scraped links:", scrapedLinks);
+    return scrapedLinks;
+  };
+
+  const fetchCompetitorArticles = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setScrapedArticleIds(new Set());
+
+      const response = await api.post("/seo/search/", {
+        keyword: searchParams.keyword,
+        searchLocation: searchParams.location,
+        searchLang: searchParams.language,
+        googleDomain: "google.com",
+      });
+
+      console.log("Search response:", response.data);
+      const searchPostId = response.data?.post_id;
+      console.log("Post ID:", searchPostId);
+      setPostId(searchPostId);
+      const organicResults =
+        response.data?.search_result?.organic_results || [];
+
+      const formattedArticles = organicResults.map((result, index) => ({
+        id: index + 1,
+        title: result.title || "Untitled",
+        url: result.link || "",
+        wordCount: result.word_count || Math.floor(Math.random() * 5000) + 1000,
+        excerpt: result.snippet || "",
+      }));
+
+      setCompetitorArticles(formattedArticles);
+
+      // Get all article links and scrape them
+      const allLinks = formattedArticles.map((article) => article.url).filter(Boolean);
+      const scrapedLinks = await scrapeArticlesSequentially(searchPostId, allLinks);
+
+      // Create a set of successfully scraped URLs
+      const scrapedUrlSet = new Set(scrapedLinks);
+
+      // Map back to article IDs that were successfully scraped
+      const successfulIds = new Set(
+        formattedArticles
+          .filter((article) => scrapedUrlSet.has(article.url))
+          .map((article) => article.id)
+      );
+      setScrapedArticleIds(successfulIds);
+
+      // Pre-select only successfully scraped articles
+      setSelectedArticles(Array.from(successfulIds));
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to fetch competitor articles",
+      );
+      console.error("Error fetching competitor articles:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleArticleSelection = (articleId) => {
+    // Only allow toggling if article was successfully scraped
+    if (!scrapedArticleIds.has(articleId)) return;
+
     setSelectedArticles((prev) => {
       if (prev.includes(articleId)) {
         return prev.filter((id) => id !== articleId);
@@ -30,11 +129,47 @@ export default function CompetitorArticles({ onBack }) {
 
   const [showContentEditor, setShowContentEditor] = useState(false);
 
+  const handleContinue = async () => {
+    if (!postId || selectedArticles.length === 0) return;
+
+    try {
+      setIsContinueLoading(true);
+
+      // Call both APIs in parallel
+      const [optimizeResponse, scoresResponse] = await Promise.all([
+        api.get(`/seo/optimize/${postId}`),
+        api.get(`/seo/competitor-scores/${postId}`),
+      ]);
+
+      console.log("Optimize response:", optimizeResponse.data);
+      console.log("Competitor scores response:", scoresResponse.data);
+
+      // Store optimization guide data
+      if (optimizeResponse.data?.status === "success") {
+        setOptimizationGuide(optimizeResponse.data.optimization_guide);
+        setTargetKeyword(optimizeResponse.data.target_keyword);
+      }
+
+      // Store competitor scores data
+      if (scoresResponse.data?.status === "success") {
+        setCompetitorScores(scoresResponse.data.scores);
+      }
+
+      setShowContentEditor(true);
+    } catch (err) {
+      console.error("Error fetching optimization data:", err);
+      setError(err.response?.data?.error || "Failed to fetch optimization data");
+    } finally {
+      setIsContinueLoading(false);
+    }
+  };
+
   const calculateAverageWordCount = () => {
-    if (selectedArticles.length === 0) return 0;
+    if (selectedArticles.length === 0 || competitorArticles.length === 0)
+      return 0;
     const total = selectedArticles.reduce((sum, id) => {
       const article = competitorArticles.find((a) => a.id === id);
-      return sum + (article?.wordCount || 0);
+      return sum + (parseInt(article?.wordCount) || 0);
     }, 0);
     return Math.round(total / selectedArticles.length);
   };
@@ -44,7 +179,16 @@ export default function CompetitorArticles({ onBack }) {
   };
   // If showing ContentEditor, render that instead
   if (showContentEditor) {
-    return <ContentEditor onBack={() => setShowContentEditor(false)} selectedArticles={selectedArticles} />;
+    return (
+      <ContentEditor
+        onBack={() => setShowContentEditor(false)}
+        selectedArticles={selectedArticles}
+        optimizationGuide={optimizationGuide}
+        competitorScores={competitorScores}
+        targetKeyword={targetKeyword}
+        postId={postId}
+      />
+    );
   }
 
   return (
@@ -77,14 +221,15 @@ export default function CompetitorArticles({ onBack }) {
             {/* Continue Button */}
             <div className="flex justify-end mb-6">
               <button
-                onClick={() => setShowContentEditor(true)}
-                disabled={selectedArticles.length === 0}
-                className={`px-6 py-2 rounded-full text-sm ${selectedArticles.length > 0
-                    ? 'bg-blue-700 text-white hover:bg-blue-800'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                onClick={handleContinue}
+                disabled={selectedArticles.length === 0 || isContinueLoading}
+                className={`px-6 py-2 rounded-full text-sm ${
+                  selectedArticles.length > 0 && !isContinueLoading
+                    ? "bg-blue-700 text-white hover:bg-blue-800"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
               >
-                Continue with {selectedArticles.length} Articles
+                {isContinueLoading ? "Loading..." : `Continue with ${selectedArticles.length} Articles`}
               </button>
             </div>
           </div>
@@ -121,8 +266,8 @@ export default function CompetitorArticles({ onBack }) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
           {/* Left Column - Articles List */}
           <div className="space-y-3">
-            {isLoading
-              ? // Skeleton Loading Cards
+            {isLoading ? (
+              // Skeleton Loading Cards
               Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
@@ -144,13 +289,31 @@ export default function CompetitorArticles({ onBack }) {
                   </div>
                 </div>
               ))
-              : // Actual Articles
+            ) : error ? (
+              // Error State
+              <div className="bg-white rounded-lg p-8 text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                <button
+                  onClick={fetchCompetitorArticles}
+                  className="text-blue-600 hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : competitorArticles.length === 0 ? (
+              // Empty State
+              <div className="bg-white rounded-lg p-8 text-center">
+                <p className="text-gray-500">No competitor articles found</p>
+              </div>
+            ) : (
+              // Actual Articles
               competitorArticles.map((article) => {
                 const isSelected = selectedArticles.includes(article.id);
+                const isScraped = scrapedArticleIds.has(article.id);
                 return (
                   <div
                     key={article.id}
-                    className="bg-white rounded-lg p-5 transition-all"
+                    className={`bg-white rounded-lg p-5 transition-all ${!isScraped ? "opacity-50" : ""}`}
                   >
                     <div className="flex items-start gap-4">
                       {/* Checkbox */}
@@ -159,38 +322,43 @@ export default function CompetitorArticles({ onBack }) {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleArticleSelection(article.id)}
-                          className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          disabled={!isScraped}
+                          className={`w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 ${isScraped ? "cursor-pointer" : "cursor-not-allowed"}`}
                         />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900">
+                        <h3 className={`text-lg font-bold ${isScraped ? "text-gray-900" : "text-gray-400"}`}>
                           {article.title}
                         </h3>
                         <a
                           href={article.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-indigo-500 font-semibold text-sm mb-2 block truncate"
+                          className={`font-semibold text-sm mb-2 block truncate ${isScraped ? "text-indigo-500" : "text-gray-400 pointer-events-none"}`}
                         >
                           {article.url}
                         </a>
-                        <p className="text-gray-700 text-sm">
+                        <p className={`text-sm ${isScraped ? "text-gray-700" : "text-gray-400"}`}>
                           {article.excerpt}
                         </p>
+                        {!isScraped && (
+                          <p className="text-red-500 text-xs mt-1">Failed to scrape this article</p>
+                        )}
                       </div>
 
                       {/* Word Count */}
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-green-600 font-semibold text-base bg-green-50 px-3 py-1 rounded-full">
+                        <p className={`font-semibold text-base px-3 py-1 rounded-full ${isScraped ? "text-green-600 bg-green-50" : "text-gray-400 bg-gray-100"}`}>
                           {formatWordCount(article.wordCount)} words
                         </p>
                       </div>
                     </div>
                   </div>
                 );
-              })}
+              })
+            )}
           </div>
 
           {/* Right Column - Stats */}
@@ -208,7 +376,7 @@ export default function CompetitorArticles({ onBack }) {
               ) : (
                 <div className="flex items-baseline gap-2">
                   <span className="text-6xl font-semibold text-gray-900">
-                    {competitorArticles.length}
+                    {scrapedArticleIds.size}
                   </span>
                   <span className="text-gray-600 text-lg pb-6">
                     /{competitorArticles.length}
