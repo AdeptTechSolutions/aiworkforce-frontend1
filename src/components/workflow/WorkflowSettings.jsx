@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronDown, ChevronRight } from "lucide-react";
+import api from "../../services/api";
 
 // Import the illustration
 import settingsIllustration from "../../assets/WF4.png"; // Update path as needed
@@ -65,7 +66,7 @@ const CampaignLiveModal = ({ isOpen, onClose }) => {
     );
 };
 
-const WorkflowSettings = ({ onBack, workflowName, onSave, onLaunch }) => {
+const WorkflowSettings = ({ onBack, workflowName, steps = [], stepConfigs = {}, projectId, onSave, onLaunch }) => {
     // General Settings
     const [showGeneralSettings, setShowGeneralSettings] = useState(false);
     const [selectedEmail, setSelectedEmail] = useState("");
@@ -133,13 +134,152 @@ const WorkflowSettings = ({ onBack, workflowName, onSave, onLaunch }) => {
         setShowLaunchConfirmation(true);
     };
 
-    const handleConfirmLaunch = () => {
+    const handleConfirmLaunch = async () => {
         setShowLaunchConfirmation(false);
-        setShowCampaignLive(true);
-        setTimeout(() => {
-            setShowCampaignLive(false);
-            onLaunch?.();
-        }, 3000);
+
+        try {
+            // Transform steps to API format
+            const transformedSteps = steps.map((step, index) => {
+                const config = stepConfigs[step.id] || {};
+
+                // Determine channel based on step type (use correct channel names)
+                let channel = step.type;
+                let action = "send";
+
+                if (step.type === "email") {
+                    channel = "email_gmail";
+                    action = "send_email";
+                } else if (step.type === "telegram") {
+                    channel = "telegram";
+                    action = "send_message";
+                } else if (step.type === "whatsapp") {
+                    channel = "whatsapp";
+                    action = "send_message";
+                } else if (step.type === "linkedin") {
+                    channel = "linkedin";
+                    action = step.subAction || "send_message";
+                } else if (step.type === "call") {
+                    channel = "call";
+                    action = "make_call";
+                }
+
+                // Build step config based on type
+                let stepConfig = {};
+                if (step.type === "email") {
+                    stepConfig = {
+                        subject: config.subject || "",
+                        body: config.body || "",
+                    };
+                } else if (step.type === "telegram") {
+                    stepConfig = {
+                        message: config.message || "",
+                    };
+                } else if (step.type === "whatsapp") {
+                    stepConfig = {
+                        message: config.message || "",
+                    };
+                } else if (step.type === "linkedin") {
+                    stepConfig = {
+                        message: config.message || "",
+                    };
+                } else if (step.type === "call") {
+                    stepConfig = {
+                        opening_line: config.openingLine || "",
+                        website_url: config.websiteUrl || "",
+                        call_prompt: config.callPrompt || "",
+                    };
+                }
+
+                // Create descriptive step ID
+                const stepId = `step_${index + 1}_${step.type}`;
+
+                return {
+                    step_id: stepId,
+                    name: step.label || `Step ${index + 1}`,
+                    channel: channel,
+                    action: action,
+                    delay: {
+                        days: Math.floor(step.delay / (24 * 60)),
+                        hours: Math.floor((step.delay % (24 * 60)) / 60),
+                        minutes: step.delay % 60,
+                    },
+                    config: stepConfig,
+                    conditions: {
+                        run_if: "always",
+                    },
+                    reply_branch: null, // Set to null instead of object with enabled: false
+                };
+            });
+
+            // Get active days as array of numbers (1=Monday, 7=Sunday)
+            const daysOfWeek = [];
+            const dayMapping = {
+                'Monday': 1,
+                'Tuesday': 2,
+                'Wednesday': 3,
+                'Thursday': 4,
+                'Friday': 5,
+                'Saturday': 6,
+                'Sunday': 7,
+            };
+            Object.entries(activeDays).forEach(([day, isActive]) => {
+                if (isActive) {
+                    daysOfWeek.push(dayMapping[day]);
+                }
+            });
+
+            // Step 1: Create workflow
+            console.log("📤 Creating workflow...");
+            const workflowPayload = {
+                name: workflowName,
+                description: `Workflow for ${workflowName}`,
+                definition: {
+                    name: workflowName,
+                    settings: {
+                        timezone: defaultTimezone || "UTC",
+                        stop_on_response: false,
+                    },
+                    steps: transformedSteps,
+                },
+                is_template: false,
+            };
+
+            const workflowResponse = await api.post("/scheduler/v1/workflows", workflowPayload);
+            console.log("✅ Workflow created:", workflowResponse.data);
+
+            const workflowId = workflowResponse.data.id;
+
+            // Step 2: Create campaign
+            console.log("📤 Creating campaign...");
+            const campaignPayload = {
+                name: workflowName,
+                description: `Campaign for ${workflowName}`,
+                workflow_id: workflowId,
+                b2b_b2c_project_id: projectId,
+                start_date: new Date().toISOString(),
+                timezone: defaultTimezone || "UTC",
+                execution_windows: {
+                    start_time: startsFrom || "09:00",
+                    end_time: endsAt || "17:00",
+                    days_of_week: daysOfWeek.length > 0 ? daysOfWeek : [1, 2, 3, 4, 5],
+                },
+            };
+
+            const campaignResponse = await api.post("/scheduler/v1/campaigns", campaignPayload);
+            console.log("✅ Campaign created:", campaignResponse.data);
+
+            // Show success modal
+            setShowCampaignLive(true);
+            setTimeout(() => {
+                setShowCampaignLive(false);
+                onLaunch?.();
+            }, 3000);
+
+        } catch (error) {
+            console.error("❌ Error creating workflow/campaign:", error);
+            console.error("Error details:", error.response?.data || error.message);
+            alert("Failed to create campaign. Please try again.");
+        }
     };
 
     return (

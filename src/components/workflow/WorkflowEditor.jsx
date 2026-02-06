@@ -21,7 +21,8 @@ const WorkflowEditor = ({
     workflowDate,
     onSave,
     onSaveAndContinue,
-    initialSteps = []
+    initialSteps = [],
+    projectId
 }) => {
     // View state
     const [view, setView] = useState("list");
@@ -322,6 +323,9 @@ const WorkflowEditor = ({
             <WorkflowSettings
                 onBack={() => setShowSettings(false)}
                 workflowName={workflowName}
+                steps={steps}
+                stepConfigs={stepConfigs}
+                projectId={projectId}
                 onSave={() => {
                     console.log("Saving settings");
                     onSave?.();

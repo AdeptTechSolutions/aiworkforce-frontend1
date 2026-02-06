@@ -2,22 +2,14 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Upload, Trash2, RotateCcw, Check, Grid3X3, Scissors, TrendingUp } from "lucide-react";
 import WorkflowEditor from "./WorkflowEditor";
+import api from "../../services/api";
 
 // Import your illustration images from assets
 import pencilIllustration from "../../assets/WF1.png";
 import fishingIllustration from "../../assets/WF2.png";
 import workflowIllustration from "../../assets/WF3.png"; // Add this illustration for empty state
 
-// Sample data for campaigns
-const CAMPAIGN_MANAGER_CAMPAIGNS = [
-    { id: 1, name: "ABC Studio", createdAt: null },
-    { id: 2, name: "Abacus Corporate", createdAt: null },
-];
-
-const ORGANIC_CAMPAIGNS = [
-    { id: 1, name: "New Campaign", createdAt: "28 October, 2025" },
-    { id: 2, name: "New Campaign", createdAt: "12 October, 2025" },
-];
+// Data will be fetched from API - no hardcoded samples
 
 // Template data
 const TEMPLATES = {
@@ -205,6 +197,12 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
     const [selectedCampaign, setSelectedCampaign] = useState(null);
     const [leadsReady, setLeadsReady] = useState(false);
 
+    // API data state
+    const [projects, setProjects] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+
     // CSV upload state
     const [uploadedFile, setUploadedFile] = useState(null);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -231,6 +229,96 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
             }, 2000);
         }
     }, [isOpen, entrySource]);
+
+    // Fetch projects from API (same as Campaign Manager)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const fetchProjects = async () => {
+            setIsLoadingProjects(true);
+            try {
+                const response = await api.get("/b2b/projects/all");
+                console.log("📥 Fetched all B2B projects for WorkflowBuilder:", response.data);
+
+                if (
+                    response.data &&
+                    response.data.success &&
+                    response.data.data?.projects
+                ) {
+                    // Transform projects to campaign format (same as Campaign Manager)
+                    const transformedProjects = response.data.data.projects.map(
+                        (project) => {
+                            // Format the created_at date
+                            const createdDate = new Date(project.created_at);
+                            const formattedDate = createdDate.toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                            });
+
+                            return {
+                                id: project.id,
+                                name: project.name,
+                                createdAt: formattedDate,
+                                source: project.source,
+                            };
+                        }
+                    );
+
+                    setProjects(transformedProjects);
+                }
+            } catch (error) {
+                console.error("❌ Error fetching B2B projects:", error);
+                console.error("Error details:", error.response?.data || error.message);
+            } finally {
+                setIsLoadingProjects(false);
+            }
+        };
+
+        fetchProjects();
+    }, [isOpen]);
+
+    // Fetch campaigns from scheduler API (same as Campaign Manager)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const fetchCampaigns = async () => {
+            setIsLoadingCampaigns(true);
+            try {
+                const response = await api.get("/scheduler/v1/campaigns");
+                console.log("📥 Fetched campaigns for WorkflowBuilder:", response.data);
+
+                if (response.data && response.data.campaigns) {
+                    // Transform campaigns to match the format needed
+                    const transformedCampaigns = response.data.campaigns.map((campaign) => {
+                        // Format the created_at date
+                        const createdDate = new Date(campaign.created_at);
+                        const formattedDate = createdDate.toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                        });
+
+                        return {
+                            id: campaign.id,
+                            name: campaign.name,
+                            createdAt: formattedDate,
+                            source: "campaign",
+                        };
+                    });
+
+                    setCampaigns(transformedCampaigns);
+                }
+            } catch (error) {
+                console.error("❌ Error fetching campaigns:", error);
+                console.error("Error details:", error.response?.data || error.message);
+            } finally {
+                setIsLoadingCampaigns(false);
+            }
+        };
+
+        fetchCampaigns();
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -358,10 +446,16 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
         }
     };
 
-    // Get current campaigns based on source
+    // Get current campaigns based on source (using API data)
     const getCurrentCampaigns = () => {
-        if (selectedSource === "campaign") return CAMPAIGN_MANAGER_CAMPAIGNS;
-        if (selectedSource === "organic") return ORGANIC_CAMPAIGNS;
+        if (selectedSource === "campaign") {
+            // Return all projects and campaigns
+            return [...projects, ...campaigns];
+        }
+        if (selectedSource === "organic") {
+            // Return only organic projects
+            return projects.filter(p => p.source === "organic");
+        }
         return [];
     };
 
@@ -421,10 +515,12 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
 
     // Render campaign selection
     const renderCampaignSelection = () => {
-        const campaigns = getCurrentCampaigns();
+        const campaignsList = getCurrentCampaigns();
         const title = selectedSource === "campaign"
             ? "Pull leads from Campaign Manager"
             : "Use leads from organic search";
+
+        const isLoading = isLoadingProjects || isLoadingCampaigns;
 
         return (
             <div>
@@ -432,8 +528,20 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                 <p className="text-gray-600 mb-6">Pick a campaign</p>
                 <hr className="mb-6" />
 
-                <div className="space-y-3">
-                    {campaigns.map((campaign) => (
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3C49F7]"></div>
+                            <p className="text-sm text-gray-500">Loading projects and campaigns...</p>
+                        </div>
+                    </div>
+                ) : campaignsList.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-sm text-gray-500">No campaigns or projects found</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {campaignsList.map((campaign) => (
                         <button
                             key={campaign.id}
                             onClick={() => handleCampaignSelect(campaign)}
@@ -458,9 +566,10 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                             </div>
                         </button>
                     ))}
-                </div>
+                    </div>
+                )}
 
-                {selectedCampaign && (
+                {selectedCampaign && !isLoading && (
                     <button
                         onClick={handlePullLeads}
                         className="mt-6 bg-[#3C49F7] text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
@@ -749,6 +858,7 @@ const WorkflowBuilder = ({ isOpen, onClose, campaignName = "New Campaign", entry
                 onClose();
             }}
             initialSteps={getInitialSteps()}
+            projectId={selectedCampaign?.id}
         />
     );
 
