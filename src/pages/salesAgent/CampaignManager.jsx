@@ -417,7 +417,9 @@ const CampaignManager = () => {
           // Merge projects with existing campaigns in active list
           setCampaigns((prev) => {
             // Filter out old projects, keep campaigns
-            const existingCampaigns = prev.active.filter(item => item.isCampaign);
+            const existingCampaigns = prev.active.filter(
+              (item) => item.isCampaign,
+            );
             return {
               ...prev,
               active: [...transformedProjects, ...existingCampaigns],
@@ -448,85 +450,110 @@ const CampaignManager = () => {
           const projectIds = new Set(
             response.data.campaigns
               .map((campaign) => campaign.b2b_b2c_project_id)
-              .filter(Boolean) // Filter out null/undefined values
+              .filter(Boolean), // Filter out null/undefined values
           );
           setCampaignProjectIds(projectIds);
-          console.log("📋 Project IDs converted to campaigns:", Array.from(projectIds));
+          console.log(
+            "📋 Project IDs converted to campaigns:",
+            Array.from(projectIds),
+          );
 
           // Transform campaigns to match the campaign card format
-          const transformedCampaigns = response.data.campaigns.map((campaign) => {
-            // Format the created_at date
-            const createdDate = new Date(campaign.created_at);
-            const formattedDate = createdDate.toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            });
+          const transformedCampaigns = response.data.campaigns.map(
+            (campaign) => {
+              // Format the created_at date
+              const createdDate = new Date(campaign.created_at);
+              const formattedDate = createdDate.toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              });
 
-            // Determine status based on campaign status
-            let displayStatus = "draft";
-            if (campaign.status === "running" || campaign.status === "active") {
-              displayStatus = "running";
-            } else if (campaign.status === "paused") {
-              displayStatus = "paused";
-            } else if (campaign.status === "completed" || campaign.status === "done") {
-              displayStatus = "done";
-            }
+              // Determine status based on campaign status
+              let displayStatus = "draft";
+              if (
+                campaign.status === "running" ||
+                campaign.status === "active"
+              ) {
+                displayStatus = "running";
+              } else if (campaign.status === "paused") {
+                displayStatus = "paused";
+              } else if (
+                campaign.status === "completed" ||
+                campaign.status === "done"
+              ) {
+                displayStatus = "done";
+              }
 
-            // Calculate progress percentage
-            const progress = campaign.total_leads > 0
-              ? Math.round((campaign.leads_completed / campaign.total_leads) * 100)
-              : null;
+              // Calculate progress percentage
+              const progress =
+                campaign.total_leads > 0
+                  ? Math.round(
+                      (campaign.leads_completed / campaign.total_leads) * 100,
+                    )
+                  : null;
 
-            // Calculate engaged and replied percentages
-            const engaged = campaign.total_leads > 0
-              ? Math.round((campaign.leads_in_progress / campaign.total_leads) * 100)
-              : null;
-            const replied = campaign.total_leads > 0
-              ? Math.round((campaign.leads_responded / campaign.total_leads) * 100)
-              : null;
+              // Calculate engaged and replied percentages
+              const engaged =
+                campaign.total_leads > 0
+                  ? Math.round(
+                      (campaign.leads_in_progress / campaign.total_leads) * 100,
+                    )
+                  : null;
+              const replied =
+                campaign.total_leads > 0
+                  ? Math.round(
+                      (campaign.leads_responded / campaign.total_leads) * 100,
+                    )
+                  : null;
 
-            return {
-              id: campaign.id,
-              name: campaign.name,
-              description: campaign.description,
-              prospects: campaign.total_leads > 0
-                ? `${campaign.leads_completed}/${campaign.total_leads}`
-                : null,
-              progress: progress,
-              engaged: engaged,
-              replied: replied,
-              status: displayStatus,
-              source: "campaign", // Mark as campaign type
-              sourceType: "campaign",
-              createdAt: formattedDate,
-              isCampaign: true, // Flag to distinguish from projects
-              // Additional campaign-specific data
-              workflowId: campaign.workflow_id,
-              b2bB2cProjectId: campaign.b2b_b2c_project_id,
-              totalLeads: campaign.total_leads,
-              leadsCompleted: campaign.leads_completed,
-              leadsInProgress: campaign.leads_in_progress,
-              leadsFailed: campaign.leads_failed,
-              leadsResponded: campaign.leads_responded,
-              startDate: campaign.start_date,
-              timezone: campaign.timezone,
-            };
-          });
+              return {
+                id: campaign.id,
+                name: campaign.name,
+                description: campaign.description,
+                prospects:
+                  campaign.total_leads > 0
+                    ? `${campaign.leads_completed}/${campaign.total_leads}`
+                    : null,
+                progress: progress,
+                engaged: engaged,
+                replied: replied,
+                status: displayStatus,
+                source: "campaign", // Mark as campaign type
+                sourceType: "campaign",
+                createdAt: formattedDate,
+                isCampaign: true, // Flag to distinguish from projects
+                // Additional campaign-specific data
+                workflowId: campaign.workflow_id,
+                b2bB2cProjectId: campaign.b2b_b2c_project_id,
+                totalLeads: campaign.total_leads,
+                leadsCompleted: campaign.leads_completed,
+                leadsInProgress: campaign.leads_in_progress,
+                leadsFailed: campaign.leads_failed,
+                leadsResponded: campaign.leads_responded,
+                startDate: campaign.start_date,
+                timezone: campaign.timezone,
+              };
+            },
+          );
 
           // Separate campaigns into active and completed
           const activeCampaigns = transformedCampaigns.filter(
-            (c) => c.status !== "done"
+            (c) => c.status !== "done",
           );
           const completedCampaigns = transformedCampaigns.filter(
-            (c) => c.status === "done"
+            (c) => c.status === "done",
           );
 
           // Merge campaigns with existing projects
           setCampaigns((prev) => {
             // Filter out old campaigns, keep projects
-            const existingProjects = prev.active.filter(item => !item.isCampaign);
-            const existingCompletedCampaigns = prev.completed.filter(item => item.isCampaign);
+            const existingProjects = prev.active.filter(
+              (item) => !item.isCampaign,
+            );
+            const existingCompletedCampaigns = prev.completed.filter(
+              (item) => item.isCampaign,
+            );
 
             return {
               ...prev,
@@ -563,34 +590,44 @@ const CampaignManager = () => {
 
         if (isB2B) {
           // For B2B projects, transform to CompanyCard format (exactly like B2B advanced search)
-          const transformedCompanies = response.data.data.results.map((company) => {
-            return {
-              id: company.id,
-              // Store company_number separately for directors API (external_id contains the Companies House number)
-              companyNumber: company.external_id || company.company_number || "",
-              name: company.name || "Unknown",
-              email_domain: company.website ? company.website.replace(/^https?:\/\//, '').replace(/^www\./, '') : "",
-              ticker_symbol: "",
-              industry_str: company.description || company.sic_codes?.[0] || "",
-              city: "",
-              region: "",
-              country_code: "",
-              location: company.location || company.address || "N/A",
-              status: company.company_status || "Active",
-              logo: company.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name || "Unknown")}&background=3C49F7&color=fff`,
-              hasWebsite: !!company.website,
-              hasInstagram: false,
-              hasLinkedin: false,
-              incorporatedDate: company.date_of_creation || "N/A",
-              sicCodes: company.sic_codes || [],
-              companyType: company.company_type || "N/A",
-              directors: [],
-              originalId: company.id,
-              website: company.website || "",
-              email: company.email || "",
-              phone: company.phone || "",
-            };
-          });
+          const transformedCompanies = response.data.data.results.map(
+            (company) => {
+              return {
+                id: company.id,
+                // Store company_number separately for directors API (external_id contains the Companies House number)
+                companyNumber:
+                  company.external_id || company.company_number || "",
+                name: company.name || "Unknown",
+                email_domain: company.website
+                  ? company.website
+                      .replace(/^https?:\/\//, "")
+                      .replace(/^www\./, "")
+                  : "",
+                ticker_symbol: "",
+                industry_str:
+                  company.description || company.sic_codes?.[0] || "",
+                city: "",
+                region: "",
+                country_code: "",
+                location: company.location || company.address || "N/A",
+                status: company.company_status || "Active",
+                logo:
+                  company.logo ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name || "Unknown")}&background=3C49F7&color=fff`,
+                hasWebsite: !!company.website,
+                hasInstagram: false,
+                hasLinkedin: false,
+                incorporatedDate: company.date_of_creation || "N/A",
+                sicCodes: company.sic_codes || [],
+                companyType: company.company_type || "N/A",
+                directors: [],
+                originalId: company.id,
+                website: company.website || "",
+                email: company.email || "",
+                phone: company.phone || "",
+              };
+            },
+          );
 
           setB2bCompanies(transformedCompanies);
           setLeads([]); // Clear leads for B2B
@@ -737,14 +774,21 @@ const CampaignManager = () => {
       let enrichedData = null;
 
       // B2C Enrichment
-      console.log("🔍 Enriching B2C lead:", lead.name, "with external ID:", lead.externalId);
+      console.log(
+        "🔍 Enriching B2C lead:",
+        lead.name,
+        "with external ID:",
+        lead.externalId,
+      );
 
       if (!lead.externalId) {
         console.error("❌ No external ID found for B2C lead");
         return;
       }
 
-      const response = await api.get(`/b2b/v1/b2c/lookup-person-raw/${lead.externalId}`);
+      const response = await api.get(
+        `/b2b/v1/b2c/lookup-person-raw/${lead.externalId}`,
+      );
       console.log("✅ B2C Enrichment Response:", response.data);
 
       if (response.data) {
@@ -784,8 +828,14 @@ const CampaignManager = () => {
               ? {
                   ...l,
                   isEnriched: true,
-                  phones: enrichedData.phones?.length > 0 ? enrichedData.phones : l.phones,
-                  emails: enrichedData.emails?.length > 0 ? enrichedData.emails : l.emails,
+                  phones:
+                    enrichedData.phones?.length > 0
+                      ? enrichedData.phones
+                      : l.phones,
+                  emails:
+                    enrichedData.emails?.length > 0
+                      ? enrichedData.emails
+                      : l.emails,
                   website: enrichedData.website || l.website,
                   past: enrichedData.pastPositions || l.past || [],
                   education: enrichedData.education || l.education || [],
@@ -804,23 +854,29 @@ const CampaignManager = () => {
 
   // Workflow Builder handler
   const handleStartWorkflow = (campaign = null) => {
-  // Check if there are unenriched leads
-  const hasUnenriched = leads.some(l => !l.isEnriched);
-  if (hasUnenriched) {
-    setShowCannotStartModal(true);
-    return;
-  }
-  
-  setWorkflowCampaign(campaign || viewingCampaign);
-  setShowWorkflowBuilder(true);
-};
+    // Check if there are unenriched leads
+    const hasUnenriched = leads.some((l) => !l.isEnriched);
+    if (hasUnenriched) {
+      setShowCannotStartModal(true);
+      return;
+    }
+
+    setWorkflowCampaign(campaign || viewingCampaign);
+    setShowWorkflowBuilder(true);
+  };
 
   // Campaign Details View (for draft and completed campaigns)
   if (viewingCampaign) {
-    const isB2BProject = (viewingCampaign.sourceType || viewingCampaign.source || "").toLowerCase() === "b2b";
+    const isB2BProject =
+      (
+        viewingCampaign.sourceType ||
+        viewingCampaign.source ||
+        ""
+      ).toLowerCase() === "b2b";
     const totalLeads = isLoadingResults
       ? "..."
-      : viewingCampaign.leadsGenerated || (isB2BProject ? b2bCompanies.length : leads.length);
+      : viewingCampaign.leadsGenerated ||
+        (isB2BProject ? b2bCompanies.length : leads.length);
 
     return (
       <div className="flex-1 min-h-full p-8 overflow-y-auto bg-[#F8F9FC]">
@@ -881,7 +937,12 @@ const CampaignManager = () => {
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-gray-600">
               {(() => {
-                const isB2B = (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b";
+                const isB2B =
+                  (
+                    viewingCampaign?.sourceType ||
+                    viewingCampaign?.source ||
+                    ""
+                  ).toLowerCase() === "b2b";
                 const count = isB2B ? b2bCompanies.length : leads.length;
                 const label = isB2B ? "companies" : "results";
                 return count > 0
@@ -890,21 +951,37 @@ const CampaignManager = () => {
               })()}
             </p>
             <div className="flex items-center gap-3">
-              {((viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b"
+              {((
+                viewingCampaign?.sourceType ||
+                viewingCampaign?.source ||
+                ""
+              ).toLowerCase() === "b2b"
                 ? b2bCompanies.length > 0
                 : leads.length > 0) && (
                 <>
                   <button className="text-[#3C49F7] text-sm font-medium hover:underline">
-                    Export {(viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b" ? "Companies" : "Leads"}
+                    Export{" "}
+                    {(
+                      viewingCampaign?.sourceType ||
+                      viewingCampaign?.source ||
+                      ""
+                    ).toLowerCase() === "b2b"
+                      ? "Companies"
+                      : "Leads"}
                   </button>
-                  {(viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() !== "b2b" && unenrichedCount > 0 && (
-                    <button
-                      onClick={handleEnrichAll}
-                      className="border border-[#3C49F7] text-[#3C49F7] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#F2F2FF]"
-                    >
-                      Enrich All {unenrichedCount} Leads
-                    </button>
-                  )}
+                  {(
+                    viewingCampaign?.sourceType ||
+                    viewingCampaign?.source ||
+                    ""
+                  ).toLowerCase() !== "b2b" &&
+                    unenrichedCount > 0 && (
+                      <button
+                        onClick={handleEnrichAll}
+                        className="border border-[#3C49F7] text-[#3C49F7] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#F2F2FF]"
+                      >
+                        Enrich All {unenrichedCount} Leads
+                      </button>
+                    )}
                   <button
                     onClick={() => handleStartWorkflow()}
                     className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
@@ -924,16 +1001,30 @@ const CampaignManager = () => {
               type="checkbox"
               className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
               onChange={(e) => {
-                const isB2B = (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b";
+                const isB2B =
+                  (
+                    viewingCampaign?.sourceType ||
+                    viewingCampaign?.source ||
+                    ""
+                  ).toLowerCase() === "b2b";
                 if (isB2B) {
-                  setSelectedCompanies(e.target.checked ? b2bCompanies.map((c) => c.id) : []);
+                  setSelectedCompanies(
+                    e.target.checked ? b2bCompanies.map((c) => c.id) : [],
+                  );
                 } else {
-                  setSelectedLeads(e.target.checked ? leads.map((l) => l.id) : []);
+                  setSelectedLeads(
+                    e.target.checked ? leads.map((l) => l.id) : [],
+                  );
                 }
               }}
               checked={
-                (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b"
-                  ? selectedCompanies.length === b2bCompanies.length && b2bCompanies.length > 0
+                (
+                  viewingCampaign?.sourceType ||
+                  viewingCampaign?.source ||
+                  ""
+                ).toLowerCase() === "b2b"
+                  ? selectedCompanies.length === b2bCompanies.length &&
+                    b2bCompanies.length > 0
                   : selectedLeads.length === leads.length && leads.length > 0
               }
             />
@@ -950,7 +1041,11 @@ const CampaignManager = () => {
                 <p className="text-sm text-gray-500">Loading results...</p>
               </div>
             </div>
-          ) : (viewingCampaign?.sourceType || viewingCampaign?.source || "").toLowerCase() === "b2b" ? (
+          ) : (
+              viewingCampaign?.sourceType ||
+              viewingCampaign?.source ||
+              ""
+            ).toLowerCase() === "b2b" ? (
             // B2B Projects - Show CompanyCard with View Active Directors (exactly like B2B advanced search)
             b2bCompanies.length === 0 ? (
               <div className="flex items-center justify-center py-12">
@@ -966,7 +1061,7 @@ const CampaignManager = () => {
                     setSelectedCompanies((prev) =>
                       prev.includes(companyId)
                         ? prev.filter((id) => id !== companyId)
-                        : [...prev, companyId]
+                        : [...prev, companyId],
                     );
                   }}
                   onAddToProject={() => handleRemoveLead(company)}
@@ -974,60 +1069,69 @@ const CampaignManager = () => {
                   context={{
                     fetchDirectors: async (companyId) => {
                       // Find the company to get the companyNumber (Companies House number)
-                      const targetCompany = b2bCompanies.find((c) => c.id === companyId);
+                      const targetCompany = b2bCompanies.find(
+                        (c) => c.id === companyId,
+                      );
                       const companyNumber = targetCompany?.companyNumber;
 
                       if (!companyNumber) {
-                        console.error("No company number found for company:", companyId);
+                        console.error(
+                          "No company number found for company:",
+                          companyId,
+                        );
                         return [];
                       }
 
                       // Fetch directors using the same API as B2BSearchContext
                       try {
                         const response = await api.get(
-                          `/b2b/v1/companies-house/company/${companyNumber}/directors`
+                          `/b2b/v1/companies-house/company/${companyNumber}/directors`,
                         );
 
-                        const transformedDirectors = (response.data.directors || []).map(
-                          (director, index) => {
-                            const address = director.address
-                              ? [
-                                  director.address.premises,
-                                  director.address.address_line_1,
-                                  director.address.address_line_2,
-                                  director.address.locality,
-                                  director.address.region,
-                                  director.address.postal_code,
-                                  director.address.country,
-                                ]
-                                  .filter(Boolean)
-                                  .join(", ")
-                              : "N/A";
+                        const transformedDirectors = (
+                          response.data.directors || []
+                        ).map((director, index) => {
+                          const address = director.address
+                            ? [
+                                director.address.premises,
+                                director.address.address_line_1,
+                                director.address.address_line_2,
+                                director.address.locality,
+                                director.address.region,
+                                director.address.postal_code,
+                                director.address.country,
+                              ]
+                                .filter(Boolean)
+                                .join(", ")
+                            : "N/A";
 
-                            return {
-                              id: `${companyNumber}-director-${index}`,
-                              name: director.formatted_name || director.original_name,
-                              title: director.officer_role || "Director",
-                              email: "***@company.com",
-                              secondaryEmail: null,
-                              phones: ["***-***-****"],
-                              maskedName: director.formatted_name || director.original_name,
-                              maskedEmail: "***@company.com",
-                              maskedSecondaryEmail: null,
-                              maskedPhones: ["***-***-****"],
-                              isEnriched: false,
-                              appointed_on: director.appointed_on,
-                              address: address,
-                              officer_role: director.officer_role,
-                            };
-                          }
-                        );
+                          return {
+                            id: `${companyNumber}-director-${index}`,
+                            name:
+                              director.formatted_name || director.original_name,
+                            title: director.officer_role || "Director",
+                            email: "***@company.com",
+                            secondaryEmail: null,
+                            phones: ["***-***-****"],
+                            maskedName:
+                              director.formatted_name || director.original_name,
+                            maskedEmail: "***@company.com",
+                            maskedSecondaryEmail: null,
+                            maskedPhones: ["***-***-****"],
+                            isEnriched: false,
+                            appointed_on: director.appointed_on,
+                            address: address,
+                            officer_role: director.officer_role,
+                          };
+                        });
 
                         // Update the company with directors
                         setB2bCompanies((prev) =>
                           prev.map((c) =>
-                            c.id === companyId ? { ...c, directors: transformedDirectors } : c
-                          )
+                            c.id === companyId
+                              ? { ...c, directors: transformedDirectors }
+                              : c,
+                          ),
                         );
 
                         return transformedDirectors;
@@ -1038,15 +1142,24 @@ const CampaignManager = () => {
                     },
                     enrichDirector: async (companyId, directorId) => {
                       // Enrich director using the same API flow as B2BSearchContext
-                      const company = b2bCompanies.find((c) => c.id === companyId);
-                      const director = company?.directors?.find((d) => d.id === directorId);
+                      const company = b2bCompanies.find(
+                        (c) => c.id === companyId,
+                      );
+                      const director = company?.directors?.find(
+                        (d) => d.id === directorId,
+                      );
 
                       if (!company || !director) {
                         console.error("Company or director not found");
                         return false;
                       }
 
-                      console.log("🔍 Enriching director:", director.name, "at", company.name);
+                      console.log(
+                        "🔍 Enriching director:",
+                        director.name,
+                        "at",
+                        company.name,
+                      );
 
                       let enrichedData = null;
                       let dataSource = null;
@@ -1060,17 +1173,24 @@ const CampaignManager = () => {
                           },
                         };
 
-                        console.log("📡 Calling RocketReach API with:", rocketReachBody);
+                        console.log(
+                          "📡 Calling RocketReach API with:",
+                          rocketReachBody,
+                        );
                         const rocketReachResponse = await api.post(
                           "/b2b/v1/rocketreach/person-lookup",
-                          rocketReachBody
+                          rocketReachBody,
                         );
 
-                        console.log("✅ RocketReach API Response:", rocketReachResponse.data);
+                        console.log(
+                          "✅ RocketReach API Response:",
+                          rocketReachResponse.data,
+                        );
 
                         if (
                           rocketReachResponse.data?.profile &&
-                          Object.keys(rocketReachResponse.data.profile).length > 0 &&
+                          Object.keys(rocketReachResponse.data.profile).length >
+                            0 &&
                           rocketReachResponse.data.profile.id
                         ) {
                           enrichedData = rocketReachResponse.data.profile;
@@ -1078,7 +1198,10 @@ const CampaignManager = () => {
                           console.log("✅ Using RocketReach data");
                         }
                       } catch (rocketReachError) {
-                        console.log("⚠️ RocketReach failed, trying ContactOut...", rocketReachError.message);
+                        console.log(
+                          "⚠️ RocketReach failed, trying ContactOut...",
+                          rocketReachError.message,
+                        );
                       }
 
                       // Fallback to ContactOut
@@ -1089,17 +1212,24 @@ const CampaignManager = () => {
                             company: [company.name],
                           };
 
-                          console.log("📡 Calling ContactOut API with:", contactOutBody);
+                          console.log(
+                            "📡 Calling ContactOut API with:",
+                            contactOutBody,
+                          );
                           const contactOutResponse = await api.post(
                             "/b2b/v1/contactout/enrich",
-                            contactOutBody
+                            contactOutBody,
                           );
 
-                          console.log("✅ ContactOut API Response:", contactOutResponse.data);
+                          console.log(
+                            "✅ ContactOut API Response:",
+                            contactOutResponse.data,
+                          );
 
                           if (
                             contactOutResponse.data?.profile &&
-                            Object.keys(contactOutResponse.data.profile).length > 0
+                            Object.keys(contactOutResponse.data.profile)
+                              .length > 0
                           ) {
                             enrichedData = contactOutResponse.data.profile;
                             dataSource = "contactout";
@@ -1109,7 +1239,10 @@ const CampaignManager = () => {
                             return false;
                           }
                         } catch (contactOutError) {
-                          console.error("❌ Both enrichment APIs failed:", contactOutError.message);
+                          console.error(
+                            "❌ Both enrichment APIs failed:",
+                            contactOutError.message,
+                          );
                           return false;
                         }
                       }
@@ -1121,8 +1254,12 @@ const CampaignManager = () => {
                       let linkedin_url = director.linkedin_url;
 
                       if (dataSource === "rocketreach") {
-                        phones = (enrichedData.phones || []).map((phone) => phone.number);
-                        emails = (enrichedData.emails || []).map((email) => email.email);
+                        phones = (enrichedData.phones || []).map(
+                          (phone) => phone.number,
+                        );
+                        emails = (enrichedData.emails || []).map(
+                          (email) => email.email,
+                        );
                         title = enrichedData.current_title || director.title;
                         linkedin_url = enrichedData.linkedin_url;
                       } else if (dataSource === "contactout") {
@@ -1148,100 +1285,105 @@ const CampaignManager = () => {
                                   ? {
                                       ...d,
                                       isEnriched: true,
-                                      name: enrichedData.name || enrichedData.full_name || d.name,
+                                      name:
+                                        enrichedData.name ||
+                                        enrichedData.full_name ||
+                                        d.name,
                                       title: title,
                                       email: emails[0] || d.email,
                                       secondaryEmail: emails[1] || null,
-                                      phones: phones.length > 0 ? phones : d.phones,
+                                      phones:
+                                        phones.length > 0 ? phones : d.phones,
                                       linkedin_url: linkedin_url,
                                       enrichmentSource: dataSource,
                                     }
-                                  : d
+                                  : d,
                               ),
                             };
                           }
                           return c;
-                        })
+                        }),
                       );
 
-                      console.log(`✅ Successfully enriched director using ${dataSource}`);
+                      console.log(
+                        `✅ Successfully enriched director using ${dataSource}`,
+                      );
                       return true;
                     },
                   }}
                 />
               ))
             )
+          ) : // Non-B2B Projects - Show ProfileCard for leads
+          leads.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-sm text-gray-500">No results found</p>
+            </div>
           ) : (
-            // Non-B2B Projects - Show ProfileCard for leads
-            leads.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-sm text-gray-500">No results found</p>
-              </div>
-            ) : (
-              leads.map((lead) => (
-                <ProfileCard
-                  key={lead.id}
-                  profile={lead}
-                  isSelected={selectedLeads.includes(lead.id)}
-                  onSelect={handleSelectLead}
-                  onEnrich={handleEnrichLead}
-                  onAddToProject={() => handleRemoveLead(lead)}
-                />
-              ))
-            )
+            leads.map((lead) => (
+              <ProfileCard
+                key={lead.id}
+                profile={lead}
+                isSelected={selectedLeads.includes(lead.id)}
+                onSelect={handleSelectLead}
+                onEnrich={handleEnrichLead}
+                onAddToProject={() => handleRemoveLead(lead)}
+              />
+            ))
           )}
         </div>
 
         {/* Pagination */}
-        {!isLoadingResults && (isB2BProject ? b2bCompanies.length > 0 : leads.length > 0) && (
-          <div className="flex items-center justify-between mt-6">
-            <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <div className="flex items-center gap-1">
-              <button className="p-2 rounded hover:bg-gray-100">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((page) => (
-                <button
-                  key={page}
-                  className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}
-                >
-                  {page}
+        {!isLoadingResults &&
+          (isB2BProject ? b2bCompanies.length > 0 : leads.length > 0) && (
+            <div className="flex items-center justify-between mt-6">
+              <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white">
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <div className="flex items-center gap-1">
+                <button className="p-2 rounded hover:bg-gray-100">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
                 </button>
-              ))}
-              <button className="p-2 rounded hover:bg-gray-100">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((page) => (
+                  <button
+                    key={page}
+                    className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button className="p-2 rounded hover:bg-gray-100">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Modals */}
         <CampaignManagerModals
@@ -1445,11 +1587,13 @@ const CampaignManager = () => {
 
       {/* Table Body */}
       <div className="bg-white rounded-b-xl">
-        {(isLoadingProjects || isLoadingCampaigns) ? (
+        {isLoadingProjects || isLoadingCampaigns ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3C49F7]"></div>
-              <p className="text-sm text-gray-500">Loading projects and campaigns...</p>
+              <p className="text-sm text-gray-500">
+                Loading projects and campaigns...
+              </p>
             </div>
           </div>
         ) : currentCampaigns.length === 0 ? (

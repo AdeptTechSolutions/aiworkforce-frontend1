@@ -268,6 +268,20 @@ const WorkflowSettings = ({ onBack, workflowName, steps = [], stepConfigs = {}, 
             const campaignResponse = await api.post("/scheduler/v1/campaigns", campaignPayload);
             console.log("✅ Campaign created:", campaignResponse.data);
 
+            const campaignId = campaignResponse.data.id;
+
+            // Step 3: Start the campaign
+            console.log("📤 Starting campaign...");
+            const startCampaignPayload = {
+                import_leads: true
+            };
+
+            const startResponse = await api.post(
+                `/scheduler/v1/campaigns/${campaignId}/start`,
+                startCampaignPayload
+            );
+            console.log("✅ Campaign started:", startResponse.data);
+
             // Show success modal
             setShowCampaignLive(true);
             setTimeout(() => {
