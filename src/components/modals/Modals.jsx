@@ -1482,6 +1482,10 @@ export const TelegramLoginModal = ({ isOpen, onClose, onConnect }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Store data from first API response
+  const [phoneCodeHash, setPhoneCodeHash] = useState('');
+  const [sessionString, setSessionString] = useState('');
+
   const handlePhoneSubmit = async () => {
     if (!phoneNumber.trim()) {
       setError('Please enter your phone number');
@@ -1494,9 +1498,12 @@ export const TelegramLoginModal = ({ isOpen, onClose, onConnect }) => {
     try {
       const result = await onConnect('request', { phone_number: phoneNumber });
       if (result.success) {
+        // Store phone_code_hash and session_string from the response
+        setPhoneCodeHash(result.phone_code_hash);
+        setSessionString(result.session_string);
         setStep('verify');
       } else {
-        setError(result.error || 'Failed to send verification code');
+        setError(result.error || result.message || 'Failed to send verification code');
       }
     } catch (err) {
       setError(err.message || 'Failed to send verification code');
@@ -1515,14 +1522,17 @@ export const TelegramLoginModal = ({ isOpen, onClose, onConnect }) => {
     setError('');
 
     try {
-      const result = await onConnect('verify', { 
+      // Pass all required data including phone_code_hash and session_string
+      const result = await onConnect('verify', {
         phone_number: phoneNumber,
-        code: verificationCode 
+        code: verificationCode,
+        phone_code_hash: phoneCodeHash,
+        session_string: sessionString
       });
       if (result.success) {
         handleClose();
       } else {
-        setError(result.error || 'Invalid verification code');
+        setError(result.error || result.message || 'Invalid verification code');
       }
     } catch (err) {
       setError(err.message || 'Failed to verify code');
@@ -1535,6 +1545,8 @@ export const TelegramLoginModal = ({ isOpen, onClose, onConnect }) => {
     setStep('phone');
     setPhoneNumber('');
     setVerificationCode('');
+    setPhoneCodeHash('');
+    setSessionString('');
     setError('');
     setIsLoading(false);
     onClose();
@@ -1625,7 +1637,13 @@ export const TelegramLoginModal = ({ isOpen, onClose, onConnect }) => {
               </button>
 
               <button
-                onClick={() => { setStep('phone'); setVerificationCode(''); setError(''); }}
+                onClick={() => {
+                  setStep('phone');
+                  setVerificationCode('');
+                  setPhoneCodeHash('');
+                  setSessionString('');
+                  setError('');
+                }}
                 className="w-full py-2 text-[#4F46E5] font-medium hover:text-[#4338CA] transition-colors"
               >
                 Change Phone Number
@@ -1664,13 +1682,23 @@ export const WhatsAppConnectModal = ({ isOpen, onClose, onConnect }) => {
     setError('');
 
     try {
-      const result = await onConnect('create', { phone_number: phoneNumber });
-      
-      if (result.success || result.qr_code || result.qr_code_image) {
-        setQrData(result);
+      // Step 1: Create WhatsApp session with phone number
+      const createResult = await onConnect('create', { phone_number: phoneNumber });
+
+      if (!createResult || createResult.error) {
+        setError(createResult?.error || createResult?.message || 'Failed to create WhatsApp session');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Get QR code
+      const qrResult = await onConnect('qrcode');
+
+      if (qrResult && (qrResult.success || qrResult.qr_code || qrResult.qr_code_image)) {
+        setQrData(qrResult);
         setStep('qrcode');
       } else {
-        setError(result.error || result.message || 'Failed to connect WhatsApp');
+        setError(qrResult?.error || qrResult?.message || 'Failed to get QR code');
       }
     } catch (err) {
       setError(err.message || 'Failed to connect WhatsApp');
@@ -1680,17 +1708,15 @@ export const WhatsAppConnectModal = ({ isOpen, onClose, onConnect }) => {
   };
 
   const handleRefreshQR = async () => {
-    if (!qrData?.session_id) return;
-    
     setIsLoading(true);
     setError('');
 
     try {
-      const result = await onConnect('qrcode', { session_id: qrData.session_id });
-      if (result.qr_code || result.qr_code_image) {
+      const result = await onConnect('qrcode');
+      if (result && (result.qr_code || result.qr_code_image)) {
         setQrData(prev => ({ ...prev, ...result }));
       } else {
-        setError(result.error || 'Failed to refresh QR code');
+        setError(result?.error || 'Failed to refresh QR code');
       }
     } catch (err) {
       setError(err.message || 'Failed to refresh QR code');

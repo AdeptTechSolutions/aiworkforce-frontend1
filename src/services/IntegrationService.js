@@ -870,7 +870,20 @@ export const integrationService = {
 
   createWhatsAppSession: async (data) => {
     try {
-      const response = await api.post("/platform/v1/whatsapp/sessions", data);
+      // Add implicit parameters
+      const requestBody = {
+        name: data.phone_number,
+        phone_number: data.phone_number,
+        account_protection: true,
+        log_messages: true,
+        webhook_url: "string",
+        webhook_enabled: false,
+      };
+
+      const response = await api.post(
+        "/platform/v1/whatsapp/session",
+        requestBody,
+      );
       return response.data;
     } catch (error) {
       console.error("Error creating WhatsApp session:", error);
@@ -878,11 +891,9 @@ export const integrationService = {
     }
   },
 
-  getWhatsAppQRCode: async (sessionId) => {
+  getWhatsAppQRCode: async () => {
     try {
-      const response = await api.get(
-        `/platform/v1/whatsapp/sessions/${sessionId}/qrcode`,
-      );
+      const response = await api.get("/platform/v1/whatsapp/session/qrcode");
       return response.data;
     } catch (error) {
       console.error("Error getting WhatsApp QR code:", error);

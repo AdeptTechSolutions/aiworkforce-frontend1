@@ -389,7 +389,7 @@ const IntegrationHubContent = () => {
             const result = await integrationService.createWhatsAppSession(data);
             return result;
         } else if (action === 'qrcode') {
-            const result = await integrationService.getWhatsAppQRCode(data.session_id);
+            const result = await integrationService.getWhatsAppQRCode();
             return result;
         } else if (action === 'status') {
             const result = await integrationService.getWhatsAppSessionStatus(data.session_id);

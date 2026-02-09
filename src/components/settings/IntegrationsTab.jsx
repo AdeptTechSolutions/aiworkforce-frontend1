@@ -498,7 +498,7 @@ const IntegrationsTab = () => {
     if (action === 'create') {
       return await integrationService.createWhatsAppSession(data);
     } else if (action === 'qrcode') {
-      return await integrationService.getWhatsAppQRCode(data.session_id);
+      return await integrationService.getWhatsAppQRCode();
     } else if (action === 'status') {
       const result = await integrationService.getWhatsAppSessionStatus(data.session_id);
       if (result.status === 'connected' || result.status === 'ready') {
