@@ -5,6 +5,7 @@ import { useSearch } from "../../context/SearchContext";
 import { Modal, LoadingSpinner, SuccessIcon } from "../common/CommonComponents";
 import { savedSearches, projects } from "../../data/profilesData";
 import { X, Check, Sparkles } from "lucide-react";
+import { QRCodeSVG } from 'qrcode.react';
 // Save Search Modal
 export const SaveSearchModal = ({ isOpen, onClose, onSave }) => {
   const [searchName, setSearchName] = useState("");
@@ -1836,19 +1837,21 @@ export const WhatsAppConnectModal = ({ isOpen, onClose, onConnect }) => {
 
             {/* QR Code Display */}
             <div className="flex flex-col items-center mb-6">
-              {qrData.qr_code_image ? (
+              {qrData.qr_code ? (
+                <div className="p-6 bg-white border-2 border-gray-100 rounded-2xl shadow-sm">
+                  <QRCodeSVG
+                    value={qrData.qr_code}
+                    size={224}
+                    level="H"
+                  />
+                </div>
+              ) : qrData.qr_code_image ? (
                 <div className="p-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm">
                   <img
                     src={qrData.qr_code_image.startsWith('data:') ? qrData.qr_code_image : `data:image/png;base64,${qrData.qr_code_image}`}
                     alt="WhatsApp QR Code"
                     className="w-56 h-56 object-contain"
                   />
-                </div>
-              ) : qrData.qr_code ? (
-                <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl w-full">
-                  <p className="text-xs text-gray-600 text-center break-all font-mono">
-                    {qrData.qr_code}
-                  </p>
                 </div>
               ) : (
                 <div className="w-56 h-56 bg-gray-100 rounded-2xl flex items-center justify-center">
