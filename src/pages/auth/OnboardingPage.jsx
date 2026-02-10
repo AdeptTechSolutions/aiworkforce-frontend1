@@ -8,6 +8,7 @@ import step1Image from '../../assets/step-1.png';
 import step2Image from '../../assets/step-2.png';
 import step3Image from '../../assets/step-3.png';
 import thankYouImage from '../../assets/step-4.png';
+import { knowledgeBaseService } from '../../services/KnowledgeBaseService';
 
 const API_BASE_URL = 'http://localhost:8001';
 
@@ -193,34 +194,69 @@ const ObjectionCard = ({ index, questions, data, onChange, onRemove, canRemove }
 };
 
 // Add File Modal
-const AddFileModal = ({ isOpen, onClose, onAddFile }) => {
-  const [fileName, setFileName] = useState('');
+const AddFileModal = ({ isOpen, onClose, onFileUploaded }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   if (!isOpen) return null;
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) { setSelectedFile(file); if (!fileName) setFileName(file.name.split('.')[0]); }
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('File size exceeds 5MB limit');
+        return;
+      }
+      setSelectedFile(file);
+      setUploadError('');
+    }
   };
 
   const handleDrop = (e) => {
-    e.preventDefault(); setDragOver(false);
+    e.preventDefault();
+    setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file) { setSelectedFile(file); if (!fileName) setFileName(file.name.split('.')[0]); }
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('File size exceeds 5MB limit');
+        return;
+      }
+      setSelectedFile(file);
+      setUploadError('');
+    }
   };
 
-  const handleAdd = () => {
-    if (fileName && selectedFile) {
-      onAddFile({ name: fileName, file: selectedFile, size: (selectedFile.size / (1024 * 1024)).toFixed(1) + ' MB', status: 'Completed' });
-      setFileName(''); setSelectedFile(null); onClose();
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const result = await knowledgeBaseService.uploadFile(selectedFile);
+      const transformedFile = knowledgeBaseService.transformFile(result);
+      onFileUploaded(transformedFile);
+      setSelectedFile(null);
+      onClose();
+    } catch (error) {
+      setUploadError(error.message || 'Failed to upload file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isUploading) {
+      setSelectedFile(null);
+      setUploadError('');
+      onClose();
     }
   };
 
   const getFileIcon = (file) => {
     const ext = file.name.split('.').pop().toLowerCase();
-    const colors = { csv: 'bg-green-100 text-green-600', pdf: 'bg-red-100 text-red-600', png: 'bg-blue-100 text-blue-600', jpg: 'bg-blue-100 text-blue-600', jpeg: 'bg-blue-100 text-blue-600' };
+    const colors = { csv: 'bg-green-100 text-green-600', pdf: 'bg-red-100 text-red-600', png: 'bg-blue-100 text-blue-600', jpg: 'bg-blue-100 text-blue-600', jpeg: 'bg-blue-100 text-blue-600', txt: 'bg-gray-100 text-gray-600' };
     return colors[ext] || 'bg-gray-100 text-gray-600';
   };
 
@@ -228,52 +264,104 @@ const AddFileModal = ({ isOpen, onClose, onAddFile }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-xl font-semibold text-[#1a1a1a]">{selectedFile ? 'Create a new project' : 'Add file to knowledge'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+          <h3 className="text-xl font-semibold text-[#1a1a1a]">Add file to knowledge</h3>
+          <button onClick={handleClose} disabled={isUploading} className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><X className="w-5 h-5" /></button>
         </div>
-        <p className="text-sm text-gray-600 mb-5">{selectedFile ? 'Fill details for new project' : 'Help Katie to learn about your company and improve AI drafts.'}</p>
-        <div className="mb-4">
-          <label className="text-sm text-gray-700 mb-2 block">File Name</label>
-          <input type="text" value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="Enter File Name" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-[#4F46E5]" />
-        </div>
+        <p className="text-sm text-gray-600 mb-5">Help AI learn about your company and improve drafts.</p>
+
         <div onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} className={`border-2 border-dashed rounded-xl p-8 text-center mb-4 transition-colors ${dragOver ? 'border-[#4F46E5] bg-[#F8F9FC]' : 'border-gray-300'}`}>
           <div className="w-12 h-12 bg-[#E8EAFF] rounded-lg flex items-center justify-center mx-auto mb-3"><Upload className="w-6 h-6 text-[#4F46E5]" /></div>
           <p className="text-gray-700 mb-1">Drag your file(s) to start uploading</p>
           <p className="text-gray-400 text-sm mb-3">OR</p>
-          <label className="px-4 py-2 border border-[#4F46E5] text-[#4F46E5] rounded-lg text-sm font-medium cursor-pointer hover:bg-[#F8F9FC]">Browse File<input type="file" accept=".csv,.pdf,.png,.jpg,.jpeg,.txt" onChange={handleFileSelect} className="hidden" /></label>
+          <label className="px-4 py-2 border border-[#4F46E5] text-[#4F46E5] rounded-lg text-sm font-medium cursor-pointer hover:bg-[#F8F9FC] inline-block">
+            Browse File<input type="file" accept=".csv,.pdf,.png,.jpg,.jpeg,.txt" onChange={handleFileSelect} className="hidden" disabled={isUploading} />
+          </label>
         </div>
+
         {selectedFile && (
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${getFileIcon(selectedFile)}`}>{selectedFile.name.split('.').pop().toUpperCase()}</div>
-            <div className="flex-1"><p className="text-sm font-medium text-gray-900">{selectedFile.name}</p><p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(1)}MB</p></div>
-            <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
+            <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p><p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p></div>
+            {!isUploading && <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>}
           </div>
         )}
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-4"><span>Supported formats: csv, pdf, plain, png, jpeg</span><span>Maximum size: 5MB</span></div>
-        <button onClick={handleAdd} disabled={!fileName || !selectedFile} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${fileName && selectedFile ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Add File</button>
+
+        {uploadError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{uploadError}</div>}
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-4"><span>Supported: csv, pdf, txt, png, jpeg</span><span>Max: 5MB</span></div>
+        <button onClick={handleUpload} disabled={!selectedFile || isUploading} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedFile && !isUploading ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+          {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}{isUploading ? 'Uploading...' : 'Add File'}
+        </button>
       </div>
     </div>
   );
 };
 
 // Add URL Modal
-const AddURLModal = ({ isOpen, onClose, onAddURL }) => {
+const AddURLModal = ({ isOpen, onClose, onUrlAdded }) => {
   const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
   if (!isOpen) return null;
 
-  const handleAdd = () => {
-    if (url) { onAddURL({ name: title || url, url, size: '-', status: 'Completed' }); setUrl(''); setTitle(''); onClose(); }
+  const validateUrl = (urlString) => {
+    try {
+      new URL(urlString.startsWith('http') ? urlString : `https://${urlString}`);
+      return true;
+    } catch { return false; }
+  };
+
+  const handleSubmit = async () => {
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    if (!validateUrl(fullUrl)) {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const result = await knowledgeBaseService.scrapeUrl(fullUrl, { max_depth: 1, follow_links: false, max_pages: 10 });
+      onUrlAdded(result);
+      setUrl('');
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to add URL.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isSubmitting) { setUrl(''); setError(''); onClose(); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl">
-        <div className="flex items-center justify-between mb-1"><h3 className="text-xl font-semibold text-[#1a1a1a]">Add URL to knowledge</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button></div>
-        <p className="text-sm text-gray-600 mb-5">Help Katie to learn about your company and improve AI drafts.</p>
-        <div className="mb-4"><label className="text-sm text-gray-700 mb-2 block">URL</label><input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Enter URI Here" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-[#4F46E5]" /></div>
-        <div className="mb-6"><label className="text-sm text-gray-700 mb-2 block">Title (Optional)</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter Title Name" className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-700 outline-none focus:border-[#4F46E5]" /></div>
-        <button onClick={handleAdd} disabled={!url} className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${url ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Add File</button>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-xl font-semibold text-[#1a1a1a]">Add URL to knowledge</h3>
+          <button onClick={handleClose} disabled={isSubmitting} className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-sm text-gray-600 mb-5">Add a website URL to help AI learn about your company.</p>
+
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Website URL</label>
+          <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#4F46E5]">
+            <span className="px-3 py-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">https://</span>
+            <input type="text" value={url.replace(/^https?:\/\//, '')} onChange={(e) => setUrl(e.target.value)} placeholder="www.example.com" className="flex-1 px-3 py-3 text-sm text-gray-700 outline-none" disabled={isSubmitting} />
+          </div>
+        </div>
+
+        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>}
+
+        <div className="flex gap-3">
+          <button onClick={handleClose} disabled={isSubmitting} className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+          <button onClick={handleSubmit} disabled={!url.trim() || isSubmitting} className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 ${url.trim() && !isSubmitting ? 'bg-[#4F46E5] text-white hover:bg-[#4338CA]' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}{isSubmitting ? 'Adding...' : 'Add URL'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -286,30 +374,128 @@ const SuccessModal = ({ isOpen, onClose, type }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-xl">
         <div className="w-16 h-16 bg-[#F2F2FF] rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-[#4F46E5]" /></div>
-        <h3 className="text-xl font-semibold text-[#1a1a1a] mb-2">{type === 'file' ? 'Your file is added successfully.' : 'URL is added successfully.'}</h3>
-        <p className="text-gray-600 mb-6">{type === 'file' ? 'We have added your file.' : 'We have added your url.'}</p>
+        <h3 className="text-xl font-semibold text-[#1a1a1a] mb-2">{type === 'file' ? 'File added successfully!' : 'URL added successfully!'}</h3>
+        <p className="text-gray-600 mb-6">{type === 'file' ? 'Your file has been uploaded.' : 'Your URL is being scraped.'}</p>
         <button onClick={onClose} className="w-full py-3 bg-[#4F46E5] text-white rounded-lg text-sm font-medium hover:bg-[#4338CA]">Close</button>
       </div>
     </div>
   );
 };
 
-// Knowledge Files Step Component
-const KnowledgeFilesStep = ({ files, onAddFile, onAddURL, onDeleteFile, onSelectFile, selectedFiles }) => {
+// Delete Confirmation Modal
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, itemName, isDeleting }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-[#1a1a1a]">Delete Item</h3>
+          <button onClick={onClose} disabled={isDeleting} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-gray-600 mb-6">Are you sure you want to delete "<span className="font-medium">{itemName}</span>"?</p>
+        <div className="flex gap-3">
+          <button onClick={onClose} disabled={isDeleting} className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+          <button onClick={onConfirm} disabled={isDeleting} className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2">
+            {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}{isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Knowledge Files Step Component - Main Component
+const KnowledgeFilesStep = () => {
+  const [files, setFiles] = useState([]);
+  const [urls, setUrls] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Modal states
   const [showAddDropdown, setShowAddDropdown] = useState(false);
   const [showFileModal, setShowFileModal] = useState(false);
   const [showURLModal, setShowURLModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successType, setSuccessType] = useState('file');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleAddFile = (fileData) => { onAddFile(fileData); setSuccessType('file'); setShowSuccessModal(true); };
-  const handleAddURL = (urlData) => { onAddURL(urlData); setSuccessType('url'); setShowSuccessModal(true); };
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const [filesRes, urlsRes] = await Promise.allSettled([
+        knowledgeBaseService.listFiles(),
+        knowledgeBaseService.getScrapedContent()
+      ]);
+
+      if (filesRes.status === 'fulfilled') {
+        setFiles(knowledgeBaseService.transformFiles(filesRes.value));
+      }
+      if (urlsRes.status === 'fulfilled') {
+        setUrls(knowledgeBaseService.transformScrapedContents(urlsRes.value));
+      }
+    } catch (err) {
+      setError('Failed to load data.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileUploaded = (newFile) => {
+    setFiles(prev => [newFile, ...prev]);
+    setSuccessType('file');
+    setShowSuccessModal(true);
+  };
+
+  const handleUrlAdded = () => {
+    fetchData();
+    setSuccessType('url');
+    setShowSuccessModal(true);
+  };
+
+  const handleDeleteClick = (item, type) => {
+    setItemToDelete({ ...item, itemType: type });
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      if (itemToDelete.itemType === 'file') {
+        await knowledgeBaseService.deleteFile(itemToDelete.id);
+        setFiles(prev => prev.filter(f => f.id !== itemToDelete.id));
+      } else {
+        await knowledgeBaseService.deleteScrapedContent();
+        setUrls([]);
+      }
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (err) {
+      setError('Failed to delete.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSelectItem = (itemId, selected) => {
+    setSelectedItems(prev => selected ? [...prev, itemId] : prev.filter(id => id !== itemId));
+  };
+
+  const allItems = [...files.map(f => ({ ...f, itemType: 'file' })), ...urls.map(u => ({ ...u, itemType: 'url' }))];
 
   const getStatusStyle = (status) => {
     switch (status) {
       case 'Completed': return 'text-green-500';
       case 'Failed': return 'bg-red-50 text-red-500 px-3 py-1 rounded-full';
-      case 'In Progress': return 'text-gray-700';
+      case 'In Progress': return 'text-yellow-600';
       default: return 'text-gray-500';
     }
   };
@@ -317,41 +503,77 @@ const KnowledgeFilesStep = ({ files, onAddFile, onAddURL, onDeleteFile, onSelect
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <div><h2 className="text-xl font-semibold text-[#1a1a1a]">Knowledge Files</h2><p className="text-gray-600">Add relevant knowledge to your outreach.</p></div>
+        <div><h2 className="text-xl font-semibold text-[#1a1a1a]">Knowledge Files</h2><p className="text-gray-600">Add files and URLs to train your AI.</p></div>
         <div className="relative">
           <button onClick={() => setShowAddDropdown(!showAddDropdown)} className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">+ Add</button>
           {showAddDropdown && (
-            <><div className="fixed inset-0 z-40" onClick={() => setShowAddDropdown(false)} />
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowAddDropdown(false)} />
               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] py-1">
                 <button onClick={() => { setShowFileModal(true); setShowAddDropdown(false); }} className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50">Add File</button>
                 <button onClick={() => { setShowURLModal(true); setShowAddDropdown(false); }} className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50">Add URL</button>
-              </div></>
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>}
+
       <div className="bg-[#F8F9FC] rounded-xl overflow-hidden">
         <div className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-gray-200">
-          <div className="col-span-5 flex items-center gap-3"><input type="checkbox" className="w-4 h-4 rounded border-gray-300" onChange={(e) => e.target.checked ? files.forEach(f => onSelectFile(f.id, true)) : files.forEach(f => onSelectFile(f.id, false))} /><span className="text-sm font-medium text-gray-600">Name</span></div>
-          <div className="col-span-3 text-sm font-medium text-gray-600">Status</div>
-          <div className="col-span-2 text-sm font-medium text-gray-600">Size</div>
+          <div className="col-span-5 flex items-center gap-3">
+            <input type="checkbox" className="w-4 h-4 rounded border-gray-300" onChange={(e) => e.target.checked ? setSelectedItems(allItems.map(i => i.id)) : setSelectedItems([])} />
+            <span className="text-sm font-medium text-gray-600">Name</span>
+          </div>
+          <div className="col-span-2 text-sm font-medium text-gray-600">Type</div>
+          <div className="col-span-2 text-sm font-medium text-gray-600">Status</div>
+          <div className="col-span-1 text-sm font-medium text-gray-600">Size</div>
           <div className="col-span-2 text-sm font-medium text-gray-600 text-right">Actions</div>
         </div>
-        {files.map((file) => (
-          <div key={file.id} className="grid grid-cols-12 gap-4 px-4 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-            <div className="col-span-5 flex items-center gap-3"><input type="checkbox" checked={selectedFiles.includes(file.id)} onChange={(e) => onSelectFile(file.id, e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-[#4F46E5]" /><span className="text-sm font-medium text-gray-900">{file.name}</span></div>
-            <div className="col-span-3"><span className={`text-sm ${getStatusStyle(file.status)}`}>{file.status}</span></div>
-            <div className="col-span-2 text-sm text-gray-600">{file.size}</div>
+
+        {isLoading && (
+          <div className="px-4 py-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-[#4F46E5] mx-auto mb-2" />
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        )}
+
+        {!isLoading && allItems.length === 0 && (
+          <div className="px-4 py-12 text-center text-gray-500">
+            <Upload className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p>No files or URLs added yet. Click "+ Add" to get started.</p>
+          </div>
+        )}
+
+        {!isLoading && allItems.map((item) => (
+          <div key={`${item.itemType}-${item.id}`} className="grid grid-cols-12 gap-4 px-4 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+            <div className="col-span-5 flex items-center gap-3">
+              <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={(e) => handleSelectItem(item.id, e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-[#4F46E5]" />
+              <span className="text-sm font-medium text-gray-900 truncate">{item.name}</span>
+            </div>
+            <div className="col-span-2 text-sm text-gray-600 flex items-center">
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.itemType === 'file' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                {item.itemType === 'file' ? 'File' : 'URL'}
+              </span>
+            </div>
+            <div className="col-span-2"><span className={`text-sm ${getStatusStyle(item.status)}`}>{item.status}</span></div>
+            <div className="col-span-1 text-sm text-gray-600">{item.size || '-'}</div>
             <div className="col-span-2 flex items-center justify-end gap-2">
-              <button className="p-2 text-gray-400 hover:text-[#4F46E5] hover:bg-[#F2F2FF] rounded-lg"><Send className="w-4 h-4" /></button>
-              <button onClick={() => onDeleteFile(file.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => handleDeleteClick(item, item.itemType)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
             </div>
           </div>
         ))}
-        {files.length === 0 && <div className="px-4 py-12 text-center text-gray-500"><p>No files added yet. Click "+ Add" to add files or URLs.</p></div>}
       </div>
-      <AddFileModal isOpen={showFileModal} onClose={() => setShowFileModal(false)} onAddFile={handleAddFile} />
-      <AddURLModal isOpen={showURLModal} onClose={() => setShowURLModal(false)} onAddURL={handleAddURL} />
+
+      {!isLoading && allItems.length > 0 && (
+        <p className="text-sm text-gray-500 mt-3">{files.length} file(s) • {urls.length} URL(s)</p>
+      )}
+
+      <AddFileModal isOpen={showFileModal} onClose={() => setShowFileModal(false)} onFileUploaded={handleFileUploaded} />
+      <AddURLModal isOpen={showURLModal} onClose={() => setShowURLModal(false)} onUrlAdded={handleUrlAdded} />
       <SuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} type={successType} />
+      <DeleteConfirmModal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setItemToDelete(null); }} onConfirm={handleDeleteConfirm} itemName={itemToDelete?.name} isDeleting={isDeleting} />
     </div>
   );
 };
@@ -367,12 +589,12 @@ const ThankYouScreen = ({ onStart }) => (
       <p className="text-gray-600 mb-8">We'll notify you as soon as everything is ready.</p>
       <button onClick={onStart} className="w-fit px-8 py-3 bg-[#4F46E5] text-white font-medium rounded-full hover:bg-[#4338CA] transition-colors">Start</button>
     </div>
-    <div className="hidden lg:flex w-1/2 bg-[#4F46E5] items-center justify-center p-8">
-      <div className="text-center">
-        <h2 className="text-4xl lg:text-5xl font-bold text-white mb-8">Thank you for choosing AI Workforce</h2>
-        <div className="bg-white rounded-2xl p-6 max-w-md mx-auto"><img src={thankYouImage} alt="Thank you" className="w-full h-auto" onError={(e) => { e.target.style.display = 'none'; }} /></div>
+    <div className="hidden lg:flex w-1/2 items-center justify-center p-0">
+      {/* <div className="text-center"> */}
+        {/* <h2 className="text-4xl lg:text-5xl font-bold text-white mb-8">Thank you for choosing AI Workforce</h2> */}
+        <div className="bg-white rounded-2xl p-0 w-full mx-auto"><img src={thankYouImage} alt="Thank you" className="w-full h-auto" onError={(e) => { e.target.style.display = 'none'; }} /></div>
       </div>
-    </div>
+    {/* </div> */}
   </div>
 );
 
