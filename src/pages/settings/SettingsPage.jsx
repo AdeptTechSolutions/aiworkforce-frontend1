@@ -343,6 +343,18 @@ const IntegrationHubContent = () => {
                 result = await integrationService.connectGmail();
             } else if (integrationKey === 'outlook') {
                 result = await integrationService.connectOutlook();
+            } else if (integrationKey === 'salesforce') {
+                result = await integrationService.connectSalesforce();
+            } else if (integrationKey === 'hubspot') {
+                result = await integrationService.connectHubSpot();
+            } else if (integrationKey === 'pipedrive') {
+                result = await integrationService.connectPipedrive();
+            } else if (integrationKey === 'zoho') {
+                result = await integrationService.connectZoho();
+            } else if (integrationKey === 'linkedin') {
+                result = await integrationService.connectLinkedIn();
+            } else if (integrationKey === 'facebook') {
+                result = await integrationService.connectFacebook();
             } else {
                 result = await integrationService.connectOAuth(integrationKey, integrationName);
             }

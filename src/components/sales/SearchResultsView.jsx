@@ -4,6 +4,7 @@ import { ProfileCard } from "../profiles/ProfileComponents";
 import { CompanyCard } from "../profiles/CompanyCard";
 import { Pagination } from "../common/CommonComponents";
 import { AddToProjectModal, ExportLeadsModal } from "../modals/Modals";
+import { exportToCSV } from "../../services/api";
 
 export default function SearchResultsView({ mode = "b2c", config, context, searchType }) {
   // Default searchType based on mode
@@ -61,8 +62,78 @@ export default function SearchResultsView({ mode = "b2c", config, context, searc
   };
 
   // Handler for export
-  const handleExportLeads = (exportType) => {
+  const handleExportLeads = async (exportType) => {
     console.log("Exporting as:", exportType);
+
+    // Only handle CSV export for now
+    if (exportType === "csv") {
+      try {
+        // Get the data to export based on mode
+        let dataToExport;
+        let filename;
+
+        if (isB2B) {
+          // For B2B, export selected companies or all paginated companies
+          const companiesToExport = selectedItems.length > 0
+            ? paginatedItems.filter(item => selectedItems.includes(item.id))
+            : paginatedItems;
+
+          // Transform company data for CSV export
+          dataToExport = companiesToExport.map(company => ({
+            company_name: company.name,
+            website: company.website,
+            phone: company.phone,
+            email: company.email,
+            address: company.address,
+            city: company.city,
+            state: company.state,
+            country: company.country,
+            postcode: company.postcode,
+            industry: company.industry,
+            sic_code: company.sicCode,
+            employee_count: company.employees,
+            revenue: company.revenue,
+            // Include directors if available
+            directors: company.directors ? company.directors.map(d => d.name).join('; ') : '',
+          }));
+
+          filename = "b2b_companies_export";
+        } else {
+          // For B2C, export selected profiles or all paginated profiles
+          const profilesToExport = selectedItems.length > 0
+            ? paginatedItems.filter(item => selectedItems.includes(item.id))
+            : paginatedItems;
+
+          // Transform profile data for CSV export
+          dataToExport = profilesToExport.map(profile => ({
+            name: profile.name,
+            title: profile.title,
+            company: profile.company,
+            location: profile.location,
+            email: profile.email,
+            phone: profile.phone,
+            linkedin: profile.linkedin,
+            website: profile.website,
+            skills: Array.isArray(profile.skills) ? profile.skills.join('; ') : profile.skills,
+            experience_years: profile.experienceYears,
+            is_enriched: profile.isEnriched ? 'Yes' : 'No',
+          }));
+
+          filename = "b2c_profiles_export";
+        }
+
+        // Call the API to export
+        await exportToCSV(dataToExport, filename, true);
+
+        console.log("Export successful!");
+      } catch (error) {
+        console.error("Error exporting to CSV:", error);
+        alert("Failed to export data. Please try again.");
+      }
+    } else {
+      // For other export types (Odoo, Hubspot, etc.), show a message
+      alert(`Export to ${exportType} is not yet implemented.`);
+    }
   };
 
   const handleEnrichAll = () => {
