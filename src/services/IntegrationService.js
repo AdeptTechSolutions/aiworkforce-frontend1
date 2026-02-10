@@ -116,6 +116,7 @@ export const integrationService = {
     return new Promise(async (resolve, reject) => {
       try {
         // Step 1: Get OAuth URL from backend via POST
+        console.log(`🔗 Connecting ${integrationName} via POST /platform${authEndpoint}`);
         const response = await api.post(`/platform${authEndpoint}`);
         const authUrl =
           response.data.authorization_url || response.data.auth_url;
@@ -431,6 +432,7 @@ export const integrationService = {
   },
 
   connectHubSpot: () => {
+    console.log('📞 connectHubSpot called');
     return integrationService.connectOAuthV1(
       "hubspot",
       "HubSpot",
@@ -533,6 +535,7 @@ export const integrationService = {
   },
 
   connectPipedrive: () => {
+    console.log('📞 connectPipedrive called');
     return integrationService.connectOAuthV1(
       "pipedrive",
       "Pipedrive",
@@ -580,6 +583,7 @@ export const integrationService = {
   },
 
   connectSalesforce: () => {
+    console.log('📞 connectSalesforce called');
     return integrationService.connectOAuthV1(
       "salesforce",
       "Salesforce",
@@ -627,6 +631,7 @@ export const integrationService = {
   },
 
   connectZoho: () => {
+    console.log('📞 connectZoho called');
     return integrationService.connectOAuthV1(
       "zoho",
       "Zoho",
