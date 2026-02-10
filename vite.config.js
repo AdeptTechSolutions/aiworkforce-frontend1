@@ -11,11 +11,5 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'aiworkforce-prod-alb-240576262.us-east-1.elb.amazonaws.com',
-        changeOrigin: true,
-      },
-    },
   },
 })
