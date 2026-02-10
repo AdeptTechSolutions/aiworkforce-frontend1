@@ -1,5 +1,5 @@
 // src/services/subscriptionService.js
-const API_BASE = 'http://localhost:8000/api/platform';
+const API_BASE = import.meta.env.VITE_API_BASE_URL;;
 
 export const subscriptionService = {
   // Get all available services/plans
