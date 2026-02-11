@@ -632,7 +632,7 @@ export default function Layout({ children, activePage, setActivePage, credits })
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 transition-all duration-300 ease-in-out py-0">
+                <div className="flex-1 transition-all duration-300 ease-in-out py-0 overflow-scroll">
                     <div className="rounded-3xl h-full shadow-sm">
                         {isOnCreditsPage ? (
                             <CreditsPage userName={userData.name || "Max"} />
