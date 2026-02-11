@@ -495,13 +495,19 @@ const ContentEditor = ({
         .filter(Boolean)
         .join(" ");
 
-      const response = await api.post(`/seo/generate-article/${postId}`, {
-        template: template,
-        custom_instructions: builtCustomInstructions,
-        target_word_count: optimizationGuide?.target_word_count || 2000,
-        model: "gpt-4-turbo",
-        temperature: 0.7,
-      });
+      const response = await api.post(
+        `/seo/generate-article/${postId}`,
+        {
+          template: template,
+          custom_instructions: builtCustomInstructions,
+          target_word_count: optimizationGuide?.target_word_count || 2000,
+          model: "gpt-4-turbo",
+          temperature: 0.7,
+        },
+        {
+          timeout: 0, // Disable timeout - wait indefinitely for article generation
+        }
+      );
 
       console.log("Generate article response:", response.data);
 
