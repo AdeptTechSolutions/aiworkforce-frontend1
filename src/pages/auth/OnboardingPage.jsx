@@ -9,8 +9,7 @@ import step2Image from '../../assets/step-2.png';
 import step3Image from '../../assets/step-3.png';
 import thankYouImage from '../../assets/step-4.png';
 import { knowledgeBaseService } from '../../services/KnowledgeBaseService';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import api from '../../services/api.js';
 
 // Step configuration - maps question_keys to steps
 // Step configuration - maps question_keys to steps
@@ -49,50 +48,38 @@ const getStepQuestionsForObjections = () => {
 };
 
 // API Service
-const api = {
+const questionnaireApi = {
   getQuestions: async () => {
-    const response = await fetch(`${API_BASE_URL}/platform/questionnaire/questions`);
-    if (!response.ok) throw new Error('Failed to fetch questions');
-    return response.json();
+    const response = await api.get('/platform/questionnaire/questions');
+    return response.data;
   },
 
   getAnswers: async (organizationId) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/platform/questionnaire/organizations/${organizationId}/answers`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Failed to fetch answers');
-    return response.json();
+    const response = await api.get(`/platform/questionnaire/organizations/${organizationId}/answers`);
+    return response.data;
   },
 
   submitAnswers: async (organizationId, answers) => {
-  const token = localStorage.getItem('token');
-  
-  console.log('Submitting answers:', {
-    organizationId,
-    answers,
-    url: `${API_BASE_URL}/platform/questionnaire/organizations/${organizationId}/answers`
-  });
-  
-  const response = await fetch(`${API_BASE_URL}/platform/questionnaire/organizations/${organizationId}/answers`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ answers })
-  });
-  
-  const data = await response.json();
-  console.log('API Response:', response.status, data);
-  
-  if (!response.ok) {
-    console.error('Submit failed:', data);
-    throw new Error(data.detail || data.message || 'Failed to submit answers');
+    console.log('Submitting answers:', {
+      organizationId,
+      answers,
+      url: `/platform/questionnaire/organizations/${organizationId}/answers`
+    });
+
+    try {
+      const response = await api.post(
+        `/platform/questionnaire/organizations/${organizationId}/answers`,
+        { answers }
+      );
+
+      console.log('API Response:', response.status, response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Submit failed:', error.response?.data);
+      const data = error.response?.data;
+      throw new Error(data?.detail || data?.message || 'Failed to submit answers');
+    }
   }
-  
-  return data;
-}
 };
 
 // Progress Indicator Component
@@ -649,14 +636,14 @@ const getOrganizationId = () => {
         setError(null);
 
         // Fetch questions
-        const questionsData = await api.getQuestions();
+        const questionsData = await questionnaireApi.getQuestions();
         setQuestions(questionsData);
 
         // Try to fetch existing answers
         const orgId = getOrganizationId();
         if (orgId) {
           try {
-            const answersData = await api.getAnswers(orgId);
+            const answersData = await questionnaireApi.getAnswers(orgId);
             if (answersData && answersData.length > 0) {
               // Map answers to our state
               const answersMap = {};
@@ -781,7 +768,7 @@ const handleSubmit = async () => {
     }
 
     // Submit to API
-    await api.submitAnswers(orgId, answersArray);
+    await questionnaireApi.submitAnswers(orgId, answersArray);
 
     // Mark onboarding as complete
     const userId = user?.id || localStorage.getItem('user_id');

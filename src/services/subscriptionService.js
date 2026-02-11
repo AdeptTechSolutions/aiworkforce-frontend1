@@ -1,82 +1,41 @@
 // src/services/subscriptionService.js
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+import api from './api.js';
 
 export const subscriptionService = {
   // Get all available services/plans
   getServices: async () => {
     try {
-      const response = await fetch(`${API_BASE}/platform/services`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch services: ${response.status}`);
-      }
-      
-      return await response.json();
+      const response = await api.get('/platform/services');
+      return response.data;
     } catch (error) {
       console.error('Error fetching services:', error);
       throw error;
     }
   },
 
-// Create Stripe checkout session
-subscribe: async (serviceIds) => {
-  try {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Get token from localStorage (matches your authService pattern)
-    const token = localStorage.getItem('token');
-    console.log(token);
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE}/platform/solo/subscribe`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ service_ids: serviceIds }),
-    });
-        
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
+  // Create Stripe checkout session
+  subscribe: async (serviceIds) => {
+    try {
+      const response = await api.post('/platform/solo/subscribe', {
+        service_ids: serviceIds,
+      });
+      return response.data;
+    } catch (error) {
       // Handle 401 Unauthorized specifically
-      if (response.status === 401) {
+      if (error.response?.status === 401) {
         throw new Error('Please login to continue with checkout');
       }
-      
-      throw new Error(errorData.detail || errorData.message || `Failed to create checkout: ${response.status}`);
-    }
 
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating subscription:', error);
-    throw error;
-  }
-},
+      const errorData = error.response?.data || {};
+      throw new Error(errorData.detail || errorData.message || `Failed to create checkout: ${error.response?.status || 'Unknown error'}`);
+    }
+  },
+
   // Sync services with Stripe (admin only)
   syncWithStripe: async (force = false) => {
     try {
-      const response = await fetch(`${API_BASE}/platform/stripe/sync/all`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ force }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to sync with Stripe: ${response.status}`);
-      }
-
-      return await response.json();
+      const response = await api.post('/platform/stripe/sync/all', { force });
+      return response.data;
     } catch (error) {
       console.error('Error syncing with Stripe:', error);
       throw error;

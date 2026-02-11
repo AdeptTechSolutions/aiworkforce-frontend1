@@ -1,6 +1,5 @@
 // src/services/authService.js
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import api from './api.js';
 
 export const authService = {
   /**
@@ -12,28 +11,12 @@ export const authService = {
 
   login: async (email, password) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/platform/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+      const response = await api.post('/platform/auth/login', {
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error:
-            data.message ||
-            data.detail ||
-            "Login failed. Please check your credentials.",
-        };
-      }
+      const data = response.data;
 
       // Check subscription status from response
       const hasSubscription = !!(
@@ -52,9 +35,13 @@ export const authService = {
       };
     } catch (error) {
       console.error("Login error:", error);
+      const data = error.response?.data;
       return {
         success: false,
-        error: "Network error. Please try again.",
+        error:
+          data?.message ||
+          data?.detail ||
+          "Login failed. Please check your credentials.",
       };
     }
   },
@@ -66,35 +53,16 @@ export const authService = {
    */
   signUp: async (userData) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/platform/auth/owner/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: userData.email,
-            password: userData.password,
-            first_name: userData.firstName,
-            last_name: userData.lastName,
-            organization_name: userData.organisation,
-            organization_type: "solo", // Default value
-          }),
-        },
-      );
+      const response = await api.post('/platform/auth/owner/register', {
+        email: userData.email,
+        password: userData.password,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        organization_name: userData.organisation,
+        organization_type: "solo", // Default value
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error:
-            data.message ||
-            data.detail ||
-            "Registration failed. Please try again.",
-        };
-      }
+      const data = response.data;
 
       return {
         success: true,
@@ -103,9 +71,13 @@ export const authService = {
       };
     } catch (error) {
       console.error("SignUp error:", error);
+      const data = error.response?.data;
       return {
         success: false,
-        error: "Network error. Please try again.",
+        error:
+          data?.message ||
+          data?.detail ||
+          "Registration failed. Please try again.",
       };
     }
   },
@@ -117,14 +89,7 @@ export const authService = {
   logout: async () => {
     try {
       // If your backend has a logout endpoint, uncomment below:
-      // const token = localStorage.getItem('token');
-      // await fetch(`${API_BASE_URL}/logout`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
+      // await api.post('/logout');
 
       return { success: true };
     } catch (error) {
@@ -140,22 +105,8 @@ export const authService = {
    */
   forgotPassword: async (email) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.message || data.detail || "Failed to send reset email.",
-        };
-      }
+      const response = await api.post('/forgot-password', { email });
+      const data = response.data;
 
       return {
         success: true,
@@ -163,9 +114,10 @@ export const authService = {
       };
     } catch (error) {
       console.error("Forgot password error:", error);
+      const data = error.response?.data;
       return {
         success: false,
-        error: "Network error. Please try again.",
+        error: data?.message || data?.detail || "Failed to send reset email.",
       };
     }
   },
@@ -179,19 +131,9 @@ export const authService = {
       const token = localStorage.getItem("token");
       if (!token) return { valid: false };
 
-      const response = await fetch(`${API_BASE_URL}/verify`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await api.get('/verify');
+      const data = response.data;
 
-      if (!response.ok) {
-        return { valid: false };
-      }
-
-      const data = await response.json();
       return {
         valid: true,
         user: data.user || data,

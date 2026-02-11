@@ -3,7 +3,7 @@ import axios from "axios";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const api = axios.create({
-  baseURL: '',
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use(
@@ -24,7 +24,11 @@ api.interceptors.request.use(
  * @param {boolean} flattenNested - Whether to flatten nested objects (default: true)
  * @returns {Promise<Blob>} - CSV file as blob
  */
-export const exportToCSV = async (data, filename = "export", flattenNested = true) => {
+export const exportToCSV = async (
+  data,
+  filename = "export",
+  flattenNested = true,
+) => {
   try {
     const response = await api.post(
       "/b2b/v1/utils/json-to-csv",
@@ -35,7 +39,7 @@ export const exportToCSV = async (data, filename = "export", flattenNested = tru
       },
       {
         responseType: "blob",
-      }
+      },
     );
 
     // Extract filename from Content-Disposition header if available
