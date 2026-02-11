@@ -499,7 +499,7 @@ const ContentEditor = ({
         template: template,
         custom_instructions: builtCustomInstructions,
         target_word_count: optimizationGuide?.target_word_count || 2000,
-        model: "gpt-5.1",
+        model: "gpt-4-turbo",
         temperature: 0.7,
       });
 
