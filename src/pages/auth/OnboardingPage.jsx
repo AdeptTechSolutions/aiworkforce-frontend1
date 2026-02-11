@@ -957,7 +957,8 @@ const OnboardingPage = () => {
         setLoading(true);
         setError(null);
 
-        const questionsData = await api.getQuestions();
+        // Fetch questions
+        const questionsData = await questionnaireApi.getQuestions();
         setQuestions(questionsData);
 
         // Get current substep from onboarding status
@@ -1093,8 +1094,8 @@ const OnboardingPage = () => {
       return;
     }
 
-    setSubmitting(true);
-    setError(null);
+    // Submit to API
+    await questionnaireApi.submitAnswers(orgId, answersArray);
 
     try {
       const answersArray = Object.entries(answers)
