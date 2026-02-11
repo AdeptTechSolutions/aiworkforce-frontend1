@@ -1145,7 +1145,7 @@ export const B2BSearchProvider = ({ children }) => {
           source: searchMetadata.source || (searchType === "advance" ? "companies_house" : "rocketreach"),
           query: searchMetadata.query || activeFilters.map(f => `${f.type}:${f.value}`).join(", "),
         },
-        include_people: true,
+        include_people: false,
         people_limit: 10,
       };
 
