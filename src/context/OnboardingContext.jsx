@@ -1,42 +1,79 @@
 // src/context/OnboardingContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { onboardingService, STEP_ROUTES, ONBOARDING_SUBSTEPS } from '../services/onboardingService';
 import { useAuth } from './AuthContext';
 
 const OnboardingContext = createContext();
 
 export const OnboardingProvider = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   
   const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [initialized, setInitialized] = useState(false);
+  
+  // Use ref to prevent multiple simultaneous fetches
+  const fetchingRef = useRef(false);
 
   // Fetch onboarding status
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (force = false) => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current && !force) {
+      console.log('[OnboardingContext] Already fetching, skipping...');
+      return;
+    }
+
     if (!isAuthenticated) {
       setStatus(null);
       setLoading(false);
+      setInitialized(true);
+      return;
+    }
+
+    // Check if token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setStatus(null);
+      setLoading(false);
+      setInitialized(true);
       return;
     }
 
     try {
+      fetchingRef.current = true;
       setLoading(true);
       setError(null);
+      
+      console.log('[OnboardingContext] Fetching status...');
       const data = await onboardingService.getStatus();
+      console.log('[OnboardingContext] Status received:', data);
+      
       setStatus(data);
+      setInitialized(true);
     } catch (err) {
-      console.error('Failed to fetch onboarding status:', err);
+      console.error('[OnboardingContext] Failed to fetch onboarding status:', err);
       setError(err.message);
+      // Still mark as initialized even on error to prevent infinite loading
+      setInitialized(true);
+      // Set a default status to prevent blocking
+      setStatus(null);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [isAuthenticated]);
 
-  // Fetch status when auth changes
+  // Fetch status when auth changes - only once
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    if (isAuthenticated && !initialized && !fetchingRef.current) {
+      fetchStatus();
+    } else if (!isAuthenticated) {
+      setStatus(null);
+      setInitialized(false);
+      setError(null);
+    }
+  }, [isAuthenticated, initialized, fetchStatus]);
 
   // Get redirect URL based on current status
   const getRedirectUrl = useCallback(async () => {
@@ -47,15 +84,13 @@ export const OnboardingProvider = ({ children }) => {
         return '/dashboard';
       }
       
-      // Use redirect_to from API if available
       if (redirect.redirect_to) {
         return redirect.redirect_to;
       }
       
-      // Fallback: map current_step to route
       return STEP_ROUTES[redirect.current_step] || '/choose-plan';
     } catch (err) {
-      console.error('Failed to get redirect:', err);
+      console.error('[OnboardingContext] Failed to get redirect:', err);
       // Fallback to status-based redirect
       if (status?.is_onboarding_completed) {
         return '/dashboard';
@@ -67,10 +102,12 @@ export const OnboardingProvider = ({ children }) => {
   // Complete a step
   const completeStep = useCallback(async (stepName, metadata = {}) => {
     try {
+      console.log('[OnboardingContext] Completing step:', stepName);
       const result = await onboardingService.completeStep(stepName, metadata);
+      console.log('[OnboardingContext] Step completed:', result);
       
       // Refresh status after completing a step
-      await fetchStatus();
+      await fetchStatus(true);
       
       return {
         success: true,
@@ -79,7 +116,7 @@ export const OnboardingProvider = ({ children }) => {
         message: result.message,
       };
     } catch (err) {
-      console.error(`Failed to complete step ${stepName}:`, err);
+      console.error(`[OnboardingContext] Failed to complete step ${stepName}:`, err);
       return {
         success: false,
         error: err.message,
@@ -90,10 +127,11 @@ export const OnboardingProvider = ({ children }) => {
   // Skip a step
   const skipStep = useCallback(async (stepName) => {
     try {
+      console.log('[OnboardingContext] Skipping step:', stepName);
       const result = await onboardingService.skipStep(stepName);
       
       // Refresh status after skipping
-      await fetchStatus();
+      await fetchStatus(true);
       
       return {
         success: true,
@@ -101,7 +139,7 @@ export const OnboardingProvider = ({ children }) => {
         isCompleted: result.is_onboarding_completed,
       };
     } catch (err) {
-      console.error(`Failed to skip step ${stepName}:`, err);
+      console.error(`[OnboardingContext] Failed to skip step ${stepName}:`, err);
       return {
         success: false,
         error: err.message,
@@ -113,10 +151,10 @@ export const OnboardingProvider = ({ children }) => {
   const skipAllIntegrations = useCallback(async () => {
     try {
       await onboardingService.skipAllIntegrations();
-      await fetchStatus();
+      await fetchStatus(true);
       return { success: true };
     } catch (err) {
-      console.error('Failed to skip integrations:', err);
+      console.error('[OnboardingContext] Failed to skip integrations:', err);
       return { success: false, error: err.message };
     }
   }, [fetchStatus]);
@@ -147,46 +185,28 @@ export const OnboardingProvider = ({ children }) => {
     return step?.status ?? 'pending';
   }, [steps]);
 
-  // Check if user can access a route
-  const canAccessRoute = useCallback((route) => {
-    if (!status) return false;
-    if (status.is_onboarding_completed) return true;
-
-    // Map route to required steps
-    const routeStepMap = {
-      '/choose-plan': true, // Always accessible after signup
-      '/cart': true, // Always accessible if on payment step
-      '/payment/success': true, // Stripe redirect
-      '/payment/cancel': true, // Stripe redirect
-      '/integration-hub': isStepCompleted('payment'),
-      '/onboarding': isStepCompleted('payment'), // Can access after payment
-      '/welcome': status.is_onboarding_completed,
-      '/dashboard': status.is_onboarding_completed,
-    };
-
-    return routeStepMap[route] ?? false;
-  }, [status, isStepCompleted]);
-
-  // Get the current onboarding substep (for OnboardingPage)
+  // Get current onboarding substep (memoized to prevent re-renders)
   const getCurrentOnboardingSubstep = useCallback(() => {
-    return onboardingService.getCurrentOnboardingSubstep(status);
-  }, [status]);
-
-  // Complete onboarding substep
-  const completeOnboardingSubstep = useCallback(async (substepIndex) => {
-    const stepName = ONBOARDING_SUBSTEPS[substepIndex];
-    if (!stepName) {
-      console.error('Invalid substep index:', substepIndex);
-      return { success: false, error: 'Invalid substep' };
+    if (!status || !status.steps) return 0;
+    
+    const onboardingSteps = ['onboarding_1', 'onboarding_2', 'onboarding_3', 'knowledge_base'];
+    
+    for (let i = 0; i < onboardingSteps.length; i++) {
+      const step = status.steps.find(s => s.step_name === onboardingSteps[i]);
+      if (step && (step.status === 'pending' || step.is_current)) {
+        return i;
+      }
     }
-    return await completeStep(stepName);
-  }, [completeStep]);
+    
+    return 0;
+  }, [status]);
 
   const value = {
     // State
     status,
     loading,
     error,
+    initialized,
     isOnboardingCompleted,
     currentStep,
     steps,
@@ -202,9 +222,7 @@ export const OnboardingProvider = ({ children }) => {
     isStepCompleted,
     isCurrentStep,
     getStepStatus,
-    canAccessRoute,
     getCurrentOnboardingSubstep,
-    completeOnboardingSubstep,
   };
 
   return (

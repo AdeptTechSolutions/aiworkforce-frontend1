@@ -1,11 +1,11 @@
 // src/pages/auth/OnboardingPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useOnboarding } from "../../context/OnboardingContext";
 import { ONBOARDING_SUBSTEPS } from "../../services/onboardingService";
 import Header from "../../components/layout/Header";
-import { X, Upload, Trash2, Send, Check, Loader2 } from "lucide-react";
+import { X, Upload, Trash2, Check, Loader2 } from "lucide-react";
 import step1Image from "../../assets/step-1.png";
 import step2Image from "../../assets/step-2.png";
 import step3Image from "../../assets/step-3.png";
@@ -13,7 +13,7 @@ import thankYouImage from "../../assets/step-4.png";
 import { knowledgeBaseService } from "../../services/KnowledgeBaseService";
 import api from "../../services/api.js";
 
-// Step configuration - maps question_keys to steps
+// Step configuration
 const STEP_CONFIG = [
   {
     id: "pond-fish-catch",
@@ -61,33 +61,17 @@ const questionnaireApi = {
 
   getAnswers: async (organizationId) => {
     const response = await api.get(
-      `/platform/questionnaire/organizations/${organizationId}/answers`,
+      `/platform/questionnaire/organizations/${organizationId}/answers`
     );
     return response.data;
   },
 
   submitAnswers: async (organizationId, answers) => {
-    console.log("Submitting answers:", {
-      organizationId,
-      answers,
-      url: `/platform/questionnaire/organizations/${organizationId}/answers`,
-    });
-
-    try {
-      const response = await api.post(
-        `/platform/questionnaire/organizations/${organizationId}/answers`,
-        { answers },
-      );
-
-      console.log("API Response:", response.status, response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Submit failed:", error.response?.data);
-      const data = error.response?.data;
-      throw new Error(
-        data?.detail || data?.message || "Failed to submit answers",
-      );
-    }
+    const response = await api.post(
+      `/platform/questionnaire/organizations/${organizationId}/answers`,
+      { answers }
+    );
+    return response.data;
   },
 };
 
@@ -97,7 +81,13 @@ const ProgressIndicator = ({ currentStep, steps }) => (
     {steps.map((step, index) => (
       <React.Fragment key={step.id}>
         <button
-          className={`text-sm font-medium transition-colors ${index === currentStep ? "text-[#4F46E5]" : index < currentStep ? "text-[#4F46E5]" : "text-gray-400"}`}
+          className={`text-sm font-medium transition-colors ${
+            index === currentStep
+              ? "text-[#4F46E5]"
+              : index < currentStep
+                ? "text-[#4F46E5]"
+                : "text-gray-400"
+          }`}
         >
           {step.title}
         </button>
@@ -135,87 +125,6 @@ const FormField = ({ question, value, onChange }) => (
     />
   </div>
 );
-
-// Objection Card Component
-const ObjectionCard = ({
-  index,
-  questions,
-  data,
-  onChange,
-  onRemove,
-  canRemove,
-}) => {
-  const objectionQ = questions.find(
-    (q) =>
-      q.question_key === "objection" ||
-      q.question_key === "objections" ||
-      q.question_key?.toLowerCase()?.includes("objection"),
-  );
-  const handleQ = questions.find(
-    (q) =>
-      q.question_key === "handle" ||
-      q.question_key === "handle_objection" ||
-      q.question_key?.toLowerCase()?.includes("handle"),
-  );
-
-  return (
-    <div className="border border-gray-200 rounded-xl p-5 mb-4 bg-white">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-sm font-medium">
-          {index + 1}
-        </div>
-        {canRemove && (
-          <button
-            onClick={() => onRemove(index)}
-            className="ml-auto text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-base font-medium text-gray-900 mb-1">
-          {objectionQ?.question_text ||
-            "What objections do you frequently hear?"}{" "}
-          <span className="text-red-500">*</span>
-        </label>
-        <p className="text-sm text-gray-500 mb-2">
-          {objectionQ?.helper_text || "(cost, timing, switching vendors, etc.)"}
-        </p>
-        <input
-          type="text"
-          value={data.objection || ""}
-          onChange={(e) =>
-            onChange(index, "objection", e.target.value, objectionQ?.id)
-          }
-          placeholder={objectionQ?.placeholder || "Enter here..."}
-          className="w-full h-12 px-4 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
-        />
-      </div>
-
-      <div>
-        <label className="block text-base font-medium text-gray-900 mb-1">
-          {handleQ?.question_text ||
-            "How do you usually handle these objections?"}{" "}
-          <span className="text-red-500">*</span>
-        </label>
-        <p className="text-sm text-gray-500 mb-2">
-          {handleQ?.helper_text || "Give examples of how you overcome doubts."}
-        </p>
-        <input
-          type="text"
-          value={data.handle || ""}
-          onChange={(e) =>
-            onChange(index, "handle", e.target.value, handleQ?.id)
-          }
-          placeholder={handleQ?.placeholder || "Enter here..."}
-          className="w-full h-12 px-4 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
-        />
-      </div>
-    </div>
-  );
-};
 
 // Add File Modal
 const AddFileModal = ({ isOpen, onClose, onFileUploaded }) => {
@@ -317,7 +226,9 @@ const AddFileModal = ({ isOpen, onClose, onFileUploaded }) => {
             setDragOver(true);
           }}
           onDragLeave={() => setDragOver(false)}
-          className={`border-2 border-dashed rounded-xl p-8 text-center mb-4 transition-colors ${dragOver ? "border-[#4F46E5] bg-[#F8F9FC]" : "border-gray-300"}`}
+          className={`border-2 border-dashed rounded-xl p-8 text-center mb-4 transition-colors ${
+            dragOver ? "border-[#4F46E5] bg-[#F8F9FC]" : "border-gray-300"
+          }`}
         >
           <div className="w-12 h-12 bg-[#E8EAFF] rounded-lg flex items-center justify-center mx-auto mb-3">
             <Upload className="w-6 h-6 text-[#4F46E5]" />
@@ -376,7 +287,11 @@ const AddFileModal = ({ isOpen, onClose, onFileUploaded }) => {
         <button
           onClick={handleUpload}
           disabled={!selectedFile || isUploading}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedFile && !isUploading ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            selectedFile && !isUploading
+              ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          }`}
         >
           {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
           {isUploading ? "Uploading..." : "Add File"}
@@ -397,7 +312,7 @@ const AddURLModal = ({ isOpen, onClose, onUrlAdded }) => {
   const validateUrl = (urlString) => {
     try {
       new URL(
-        urlString.startsWith("http") ? urlString : `https://${urlString}`,
+        urlString.startsWith("http") ? urlString : `https://${urlString}`
       );
       return true;
     } catch {
@@ -494,7 +409,11 @@ const AddURLModal = ({ isOpen, onClose, onUrlAdded }) => {
           <button
             onClick={handleSubmit}
             disabled={!url.trim() || isSubmitting}
-            className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 ${url.trim() && !isSubmitting ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+            className={`flex-1 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 ${
+              url.trim() && !isSubmitting
+                ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSubmitting ? "Adding..." : "Add URL"}
@@ -583,8 +502,8 @@ const DeleteConfirmModal = ({
   );
 };
 
-// Knowledge Files Step Component
-const KnowledgeFilesStep = () => {
+// Knowledge Files Step Component - Separate component to prevent re-renders
+const KnowledgeFilesStep = React.memo(() => {
   const [files, setFiles] = useState([]);
   const [urls, setUrls] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -663,12 +582,6 @@ const KnowledgeFilesStep = () => {
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const handleSelectItem = (itemId, selected) => {
-    setSelectedItems((prev) =>
-      selected ? [...prev, itemId] : prev.filter((id) => id !== itemId),
-    );
   };
 
   const allItems = [
@@ -794,7 +707,13 @@ const KnowledgeFilesStep = () => {
                 <input
                   type="checkbox"
                   checked={selectedItems.includes(item.id)}
-                  onChange={(e) => handleSelectItem(item.id, e.target.checked)}
+                  onChange={(e) =>
+                    setSelectedItems((prev) =>
+                      e.target.checked
+                        ? [...prev, item.id]
+                        : prev.filter((id) => id !== item.id)
+                    )
+                  }
                   className="w-4 h-4 rounded border-gray-300 text-[#4F46E5]"
                 />
                 <span className="text-sm font-medium text-gray-900 truncate">
@@ -803,7 +722,11 @@ const KnowledgeFilesStep = () => {
               </div>
               <div className="col-span-2 text-sm text-gray-600 flex items-center">
                 <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium ${item.itemType === "file" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}
+                  className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    item.itemType === "file"
+                      ? "bg-blue-50 text-blue-600"
+                      : "bg-purple-50 text-purple-600"
+                  }`}
                 >
                   {item.itemType === "file" ? "File" : "URL"}
                 </span>
@@ -861,7 +784,7 @@ const KnowledgeFilesStep = () => {
       />
     </div>
   );
-};
+});
 
 // Thank You Screen Component
 const ThankYouScreen = ({ onStart }) => (
@@ -916,8 +839,7 @@ const ThankYouScreen = ({ onStart }) => (
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { completeStep, getCurrentOnboardingSubstep, fetchStatus } =
-    useOnboarding();
+  const { completeStep, fetchStatus, status: onboardingStatus } = useOnboarding();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showThankYou, setShowThankYou] = useState(false);
@@ -927,11 +849,9 @@ const OnboardingPage = () => {
 
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
-  const [objections, setObjections] = useState([
-    { objection: "", handle: "", objectionId: null, handleId: null },
-  ]);
-  const [knowledgeFiles, setKnowledgeFiles] = useState([]);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  
+  // Use ref to track if initial data has been loaded
+  const initialLoadRef = useRef(false);
 
   const getOrganizationId = () => {
     if (user?.organization_id) return user.organization_id;
@@ -951,7 +871,26 @@ const OnboardingPage = () => {
     return null;
   };
 
+  // Calculate initial step from onboarding status - only once
+  const getInitialStep = () => {
+    if (!onboardingStatus || !onboardingStatus.steps) return 0;
+    
+    const onboardingSteps = ['onboarding_1', 'onboarding_2', 'onboarding_3', 'knowledge_base'];
+    
+    for (let i = 0; i < onboardingSteps.length; i++) {
+      const step = onboardingStatus.steps.find(s => s.step_name === onboardingSteps[i]);
+      if (step && (step.status === 'pending' || step.is_current)) {
+        return i;
+      }
+    }
+    
+    return 0;
+  };
+
+  // Load initial data only once
   useEffect(() => {
+    if (initialLoadRef.current) return;
+    
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -961,10 +900,11 @@ const OnboardingPage = () => {
         const questionsData = await questionnaireApi.getQuestions();
         setQuestions(questionsData);
 
-        // Get current substep from onboarding status
-        const initialStep = getCurrentOnboardingSubstep();
+        // Set initial step based on onboarding status
+        const initialStep = getInitialStep();
         setCurrentStep(initialStep);
 
+        // Fetch existing answers
         const orgId = getOrganizationId();
         if (orgId) {
           try {
@@ -975,34 +915,13 @@ const OnboardingPage = () => {
                 answersMap[a.question_id] = a.answer_value;
               });
               setAnswers(answersMap);
-
-              const objectionAnswers = answersData.filter(
-                (a) =>
-                  a.question_key === "objection" || a.question_key === "handle",
-              );
-              if (objectionAnswers.length > 0) {
-                const objQ = questionsData.find(
-                  (q) => q.question_key === "objection",
-                );
-                const handleQ = questionsData.find(
-                  (q) => q.question_key === "handle",
-                );
-                if (objQ && handleQ) {
-                  setObjections([
-                    {
-                      objection: answersMap[objQ.id] || "",
-                      handle: answersMap[handleQ.id] || "",
-                      objectionId: objQ.id,
-                      handleId: handleQ.id,
-                    },
-                  ]);
-                }
-              }
             }
           } catch (e) {
             console.log("No existing answers found, starting fresh");
           }
         }
+        
+        initialLoadRef.current = true;
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load questions. Please try again.");
@@ -1012,7 +931,7 @@ const OnboardingPage = () => {
     };
 
     fetchData();
-  }, [getCurrentOnboardingSubstep]);
+  }, []); // Empty dependency array - only run once
 
   const getStepQuestions = (stepIndex) => {
     const stepConfig = STEP_CONFIG[stepIndex];
@@ -1027,39 +946,6 @@ const OnboardingPage = () => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const handleObjectionChange = (index, field, value, questionId) => {
-    setObjections((prev) => {
-      const newObjections = [...prev];
-      newObjections[index] = {
-        ...newObjections[index],
-        [field]: value,
-        [`${field}Id`]: questionId,
-      };
-      return newObjections;
-    });
-    if (questionId) {
-      setAnswers((prev) => ({ ...prev, [questionId]: value }));
-    }
-  };
-
-  const handleAddObjection = () => {
-    const objQ = questions.find((q) => q.question_key === "objection");
-    const handleQ = questions.find((q) => q.question_key === "handle");
-    setObjections((prev) => [
-      ...prev,
-      {
-        objection: "",
-        handle: "",
-        objectionId: objQ?.id,
-        handleId: handleQ?.id,
-      },
-    ]);
-  };
-
-  const handleRemoveObjection = (index) => {
-    setObjections((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const isStepValid = () => {
     const stepConfig = STEP_CONFIG[currentStep];
     if (stepConfig.isKnowledge) return true;
@@ -1068,7 +954,6 @@ const OnboardingPage = () => {
     return stepQuestions.every((q) => !q.is_required || answers[q.id]?.trim());
   };
 
-  // Updated: Mark step as complete when moving to next
   const handleNext = async () => {
     if (currentStep < STEP_CONFIG.length - 1) {
       const stepName = ONBOARDING_SUBSTEPS[currentStep];
@@ -1086,57 +971,54 @@ const OnboardingPage = () => {
     }
   };
 
-  // Replace the handleSubmit function in OnboardingPage.jsx with this:
-
-const handleSubmit = async () => {
-  const orgId = getOrganizationId();
-  if (!orgId) {
-    setError("Organization ID not found. Please log in again.");
-    return;
-  }
-
-  setSubmitting(true);
-  setError(null);
-
-  try {
-    // Create answersArray FIRST
-    const answersArray = Object.entries(answers)
-      .filter(([_, value]) => value && value.trim())
-      .map(([questionId, value]) => ({
-        question_id: questionId,
-        answer_value: value.trim(),
-      }));
-
-    const requiredQuestions = questions.filter((q) => q.is_required);
-    const missingRequired = requiredQuestions.filter(
-      (q) => !answers[q.id]?.trim(),
-    );
-
-    if (missingRequired.length > 0) {
-      setError("Please answer all required questions.");
-      setSubmitting(false);
+  const handleSubmit = async () => {
+    const orgId = getOrganizationId();
+    if (!orgId) {
+      setError("Organization ID not found. Please log in again.");
       return;
     }
 
-    // Submit to API - NOW answersArray is defined
-    await questionnaireApi.submitAnswers(orgId, answersArray);
+    setSubmitting(true);
+    setError(null);
 
-    // Mark knowledge_base step as complete
-    await completeStep("knowledge_base", {
-      completed_at: new Date().toISOString(),
-    });
+    try {
+      const answersArray = Object.entries(answers)
+        .filter(([_, value]) => value && value.trim())
+        .map(([questionId, value]) => ({
+          question_id: questionId,
+          answer_value: value.trim(),
+        }));
 
-    // Refresh onboarding status
-    await fetchStatus();
+      const requiredQuestions = questions.filter((q) => q.is_required);
+      const missingRequired = requiredQuestions.filter(
+        (q) => !answers[q.id]?.trim()
+      );
 
-    setShowThankYou(true);
-  } catch (err) {
-    console.error("Error submitting answers:", err);
-    setError(err.message || "Failed to submit answers. Please try again.");
-  } finally {
-    setSubmitting(false);
-  }
-};
+      if (missingRequired.length > 0) {
+        setError("Please answer all required questions.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Submit answers
+      await questionnaireApi.submitAnswers(orgId, answersArray);
+
+      // Mark knowledge_base step as complete
+      await completeStep("knowledge_base", {
+        completed_at: new Date().toISOString(),
+      });
+
+      // Refresh onboarding status
+      await fetchStatus(true);
+
+      setShowThankYou(true);
+    } catch (err) {
+      console.error("Error submitting answers:", err);
+      setError(err.message || "Failed to submit answers. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleBack = () => {
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
@@ -1174,7 +1056,11 @@ const handleSubmit = async () => {
         className={`flex min-h-[calc(100vh-73px)] ${isKnowledgeStep ? "" : "p-5"}`}
       >
         <div
-          className={`${isKnowledgeStep ? "w-full px-8 lg:px-16 py-8" : "w-full lg:w-[50%] px-6 lg:px-12 py-8"} overflow-auto`}
+          className={`${
+            isKnowledgeStep
+              ? "w-full px-8 lg:px-16 py-8"
+              : "w-full lg:w-[50%] px-6 lg:px-12 py-8"
+          } overflow-auto`}
         >
           {!isKnowledgeStep && (
             <h1 className="text-2xl lg:text-3xl font-semibold text-gray-900 mb-6">
@@ -1205,32 +1091,7 @@ const handleSubmit = async () => {
               </div>
             )}
 
-            {isKnowledgeStep && (
-              <KnowledgeFilesStep
-                files={knowledgeFiles}
-                onAddFile={(f) =>
-                  setKnowledgeFiles((prev) => [
-                    ...prev,
-                    { id: Date.now(), ...f },
-                  ])
-                }
-                onAddURL={(u) =>
-                  setKnowledgeFiles((prev) => [
-                    ...prev,
-                    { id: Date.now(), ...u },
-                  ])
-                }
-                onDeleteFile={(id) =>
-                  setKnowledgeFiles((prev) => prev.filter((f) => f.id !== id))
-                }
-                onSelectFile={(id, selected) =>
-                  setSelectedFiles((prev) =>
-                    selected ? [...prev, id] : prev.filter((fid) => fid !== id),
-                  )
-                }
-                selectedFiles={selectedFiles}
-              />
-            )}
+            {isKnowledgeStep && <KnowledgeFilesStep />}
           </div>
 
           <div className="flex items-center gap-4 mt-8">
@@ -1256,7 +1117,11 @@ const handleSubmit = async () => {
               <button
                 onClick={handleNext}
                 disabled={!isStepValid()}
-                className={`px-8 py-3 font-medium rounded-full transition-colors ${isStepValid() ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                className={`px-8 py-3 font-medium rounded-full transition-colors ${
+                  isStepValid()
+                    ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
               >
                 Next
               </button>
