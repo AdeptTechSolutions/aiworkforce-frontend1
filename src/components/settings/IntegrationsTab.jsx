@@ -177,117 +177,23 @@ const IntegrationsTab = () => {
   const fetchIntegrationStatuses = async () => {
     setIsLoading(true);
 
-    const statuses = {};
-    const details = {};
-
     try {
-      // Fetch Gmail status
-      try {
-        const gmail = await integrationService.getGmailStatus();
-        statuses.gmail = gmail?.connected ? 'connected' : 'not_connected';
-        if (gmail?.connected) {
-          details.gmail = { email: gmail.email, connectedAt: gmail.connected_at };
+      const response = await integrationService.getIntegrations();
+      if (response && typeof response === 'object') {
+        const statuses = {};
+        for (const [key, value] of Object.entries(response)) {
+          statuses[key] = value ? 'connected' : 'not_connected';
         }
-      } catch (e) {
-        statuses.gmail = 'not_connected';
+        // Set default statuses for phone integrations
+        statuses.twilio = statuses.twilio || 'not_connected';
+        statuses.vonage = statuses.vonage || 'not_connected';
+
+        setIntegrations(statuses);
       }
-
-      // Fetch Outlook status
-      try {
-        const outlook = await integrationService.getOutlookStatus();
-        statuses.outlook = outlook?.connected ? 'connected' : 'not_connected';
-        if (outlook?.connected) {
-          details.outlook = { email: outlook.email, connectedAt: outlook.connected_at };
-        }
-      } catch (e) {
-        statuses.outlook = 'not_connected';
-      }
-
-      // Fetch CRM statuses
-      try {
-        const hubspot = await integrationService.getHubSpotIntegration();
-        statuses.hubspot = hubspot ? 'connected' : 'not_connected';
-        if (hubspot) details.hubspot = hubspot;
-      } catch (e) {
-        statuses.hubspot = 'not_connected';
-      }
-
-      try {
-        const pipedrive = await integrationService.getPipedriveIntegration();
-        statuses.pipedrive = pipedrive ? 'connected' : 'not_connected';
-        if (pipedrive) details.pipedrive = pipedrive;
-      } catch (e) {
-        statuses.pipedrive = 'not_connected';
-      }
-
-      try {
-        const salesforce = await integrationService.getSalesforceIntegration();
-        statuses.salesforce = salesforce ? 'connected' : 'not_connected';
-        if (salesforce) details.salesforce = salesforce;
-      } catch (e) {
-        statuses.salesforce = 'not_connected';
-      }
-
-      try {
-        const zoho = await integrationService.getZohoIntegration();
-        statuses.zoho = zoho ? 'connected' : 'not_connected';
-        if (zoho) details.zoho = zoho;
-      } catch (e) {
-        statuses.zoho = 'not_connected';
-      }
-
-      try {
-        const odoo = await integrationService.getOdooIntegration();
-        statuses.odoo = odoo ? 'connected' : 'not_connected';
-        if (odoo) details.odoo = odoo;
-      } catch (e) {
-        statuses.odoo = 'not_connected';
-      }
-
-      // Fetch Social statuses
-      try {
-        const linkedin = await integrationService.getLinkedInIntegrations();
-        statuses.linkedin = linkedin?.length > 0 ? 'connected' : 'not_connected';
-        if (linkedin?.length > 0) details.linkedin = linkedin[0];
-      } catch (e) {
-        statuses.linkedin = 'not_connected';
-      }
-
-      try {
-        const facebook = await integrationService.getFacebookIntegrations();
-        statuses.facebook = facebook?.length > 0 ? 'connected' : 'not_connected';
-        if (facebook?.length > 0) details.facebook = facebook[0];
-      } catch (e) {
-        statuses.facebook = 'not_connected';
-      }
-
-      // Fetch Messaging statuses
-      try {
-        const telegram = await integrationService.getTelegramSessions();
-        statuses.telegram = telegram?.length > 0 ? 'connected' : 'not_connected';
-        if (telegram?.length > 0) details.telegram = telegram[0];
-      } catch (e) {
-        statuses.telegram = 'not_connected';
-      }
-
-      try {
-        const whatsapp = await integrationService.getWhatsAppSessions();
-        statuses.whatsapp = whatsapp?.sessions?.length > 0 ? 'connected' : 'not_connected';
-        if (whatsapp?.sessions?.length > 0) details.whatsapp = whatsapp.sessions[0];
-      } catch (e) {
-        statuses.whatsapp = 'not_connected';
-      }
-
-      // Set default statuses for phone integrations
-      statuses.twilio = statuses.twilio || 'not_connected';
-      statuses.vonage = statuses.vonage || 'not_connected';
-
     } catch (error) {
       console.error('Error fetching integration statuses:', error);
     }
 
-    setIntegrations(statuses);
-    setIntegrationDetails(details);
     setIsLoading(false);
   };
 

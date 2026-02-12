@@ -1,6 +1,6 @@
 // pages/OrganicLeadBuilder.jsx
-import { useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import api from "../../services/api";
 import SetAccountModal from "../../components/organic/SetAccountModal";
 import RemoveAccountModal from "../../components/organic/RemoveAccountModal";
 import BuildProfileModal from "../../components/organic/BuildProfileModal";
@@ -11,16 +11,146 @@ import linkedin from "../../assets/icons/LinkedIn.png";
 
 // Sample leads data for completed campaigns
 const SAMPLE_LEADS = [
-  { id: 1, name: "Beatriz Strickland", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "beatriz@helicopter.com"], isEnriched: true },
-  { id: 2, name: "Sylvester Matthews", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "sylvester@helicopter.com"], isEnriched: true },
-  { id: 3, name: "Louella Mullins", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "louella@helicopter.com"], isEnriched: true },
-  { id: 4, name: "Michael Burke", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "michael@helicopter.com"], isEnriched: true },
-  { id: 5, name: "Donna Prince", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "donna@helicopter.com"], isEnriched: true },
-  { id: 6, name: "Thomas Burke", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "thomas@helicopter.com"], isEnriched: true },
-  { id: 7, name: "Hank Terrell", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "hank@helicopter.com"], isEnriched: true },
-  { id: 8, name: "Shirley Burke", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "shirley@helicopter.com"], isEnriched: true },
-  { id: 9, name: "Maribel Poole", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "maribel@helicopter.com"], isEnriched: true },
-  { id: 10, name: "Will Black", title: "Accountant", company: "CHC Helicopter", location: "Greater New York City Area", industry: "Marketing & Advertising", avatar: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=100&h=100&fit=crop&crop=face", website: "chchelicopter.com", phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"], emails: ["radio@helicopter.com", "will@helicopter.com"], isEnriched: true },
+  {
+    id: 1,
+    name: "Beatriz Strickland",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "beatriz@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 2,
+    name: "Sylvester Matthews",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "sylvester@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 3,
+    name: "Louella Mullins",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "louella@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 4,
+    name: "Michael Burke",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "michael@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 5,
+    name: "Donna Prince",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "donna@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 6,
+    name: "Thomas Burke",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "thomas@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 7,
+    name: "Hank Terrell",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "hank@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 8,
+    name: "Shirley Burke",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "shirley@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 9,
+    name: "Maribel Poole",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "maribel@helicopter.com"],
+    isEnriched: true,
+  },
+  {
+    id: 10,
+    name: "Will Black",
+    title: "Accountant",
+    company: "CHC Helicopter",
+    location: "Greater New York City Area",
+    industry: "Marketing & Advertising",
+    avatar:
+      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=100&h=100&fit=crop&crop=face",
+    website: "chchelicopter.com",
+    phones: ["+44 - 123 34 123", "+44 - 456 78 901", "+44 - 789 01 234"],
+    emails: ["radio@helicopter.com", "will@helicopter.com"],
+    isEnriched: true,
+  },
 ];
 
 // Sample data for testing with existing campaigns
@@ -99,38 +229,46 @@ const SAMPLE_CAMPAIGNS = {
   ],
 };
 
-
 // Helper function to decode JWT token
 const decodeJWT = (token) => {
-  console.log('  → Decoding JWT...');
+  console.log("  → Decoding JWT...");
   try {
-    const parts = token.split('.');
-    console.log('  → JWT has', parts.length, 'parts (expected: 3)');
+    const parts = token.split(".");
+    console.log("  → JWT has", parts.length, "parts (expected: 3)");
 
     if (parts.length !== 3) {
-      console.error('  ❌ Invalid JWT format: expected 3 parts, got', parts.length);
+      console.error(
+        "  ❌ Invalid JWT format: expected 3 parts, got",
+        parts.length,
+      );
       return null;
     }
 
     const base64Url = parts[1];
-    console.log('  → Base64Url payload (first 50 chars):', base64Url.substring(0, 50) + '...');
-
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+    console.log(
+      "  → Base64Url payload (first 50 chars):",
+      base64Url.substring(0, 50) + "...",
     );
 
-    console.log('  → Decoded JSON string (first 100 chars):', jsonPayload.substring(0, 100) + '...');
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+
+    console.log(
+      "  → Decoded JSON string (first 100 chars):",
+      jsonPayload.substring(0, 100) + "...",
+    );
 
     const parsed = JSON.parse(jsonPayload);
-    console.log('  ✅ Successfully decoded JWT');
+    console.log("  ✅ Successfully decoded JWT");
     return parsed;
   } catch (error) {
-    console.error('  ❌ Error decoding JWT:', error.message);
-    console.error('  Error details:', error);
+    console.error("  ❌ Error decoding JWT:", error.message);
+    console.error("  Error details:", error);
     return null;
   }
 };
@@ -156,7 +294,8 @@ const OrganicLeadBuilder = () => {
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Campaign Modal States
-  const [showLinkedInNotConnected, setShowLinkedInNotConnected] = useState(false);
+  const [showLinkedInNotConnected, setShowLinkedInNotConnected] =
+    useState(false);
   const [showCampaignInProgress, setShowCampaignInProgress] = useState(false);
   const [showCannotRunModal, setShowCannotRunModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -167,70 +306,89 @@ const OrganicLeadBuilder = () => {
   const [showWorkflowBuilder, setShowWorkflowBuilder] = useState(false);
   const [workflowCampaign, setWorkflowCampaign] = useState(null);
 
+  // Check LinkedIn connection status on page load
+  useEffect(() => {
+    const checkConnectionStatus = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const decodedToken = decodeJWT(token);
+        if (!decodedToken || !decodedToken.user_id) return;
+
+        const userId = decodedToken.user_id;
+        const response = await api.get(
+          `/linkedin_connect/connection-status/${userId}`,
+        );
+
+        if (response.data && response.data.connected) {
+          setIsConnected(true);
+          setConnectedAccount({
+            name: response.data.name || "LinkedIn User",
+            avatar: response.data.avatar || null,
+            connectionsSent: response.data.connectionsSent || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error checking LinkedIn connection status:", error);
+      }
+    };
+
+    checkConnectionStatus();
+  }, []);
+
   // Account Handlers
   const handleConnectAccount = async () => {
-    console.log('=== LinkedIn Connect Account Process Started ===');
+    console.log("=== LinkedIn Connect Account Process Started ===");
 
     try {
       // Get token from localStorage
-      console.log('Step 1: Retrieving token from localStorage...');
-      const token = localStorage.getItem('token');
+      console.log("Step 1: Retrieving token from localStorage...");
+      const token = localStorage.getItem("token");
 
       if (!token) {
-        console.error('❌ No token found in localStorage');
-        alert('Authentication token not found. Please login again.');
+        console.error("❌ No token found in localStorage");
+        alert("Authentication token not found. Please login again.");
         return;
       }
-      console.log('✅ Token retrieved successfully');
-      console.log('Token (first 50 chars):', token.substring(0, 50) + '...');
+      console.log("✅ Token retrieved successfully");
+      console.log("Token (first 50 chars):", token.substring(0, 50) + "...");
 
       // Decode JWT to extract user_id
-      console.log('\nStep 2: Decoding JWT token...');
+      console.log("\nStep 2: Decoding JWT token...");
       const decodedToken = decodeJWT(token);
-      console.log('Decoded token payload:', decodedToken);
+      console.log("Decoded token payload:", decodedToken);
 
       if (!decodedToken || !decodedToken.user_id) {
-        console.error('❌ Invalid token or user_id not found in decoded token');
-        console.log('Decoded token:', decodedToken);
-        alert('Invalid authentication token. Please login again.');
+        console.error("❌ Invalid token or user_id not found in decoded token");
+        console.log("Decoded token:", decodedToken);
+        alert("Invalid authentication token. Please login again.");
         return;
       }
 
       const userId = decodedToken.user_id;
-      console.log('✅ User ID extracted:', userId);
+      console.log("✅ User ID extracted:", userId);
 
-      // Get the base URL from environment variable
-      const linkedinBaseUrl = import.meta.env.VITE_API_ORGANIC_LEAD_BUILDER_LINKEDIN_URL;
-      console.log('\nStep 3: Environment configuration');
-      console.log('LinkedIn Base URL:', linkedinBaseUrl);
+      // Make POST request to the LinkedIn browser stream endpoint using base URL
+      console.log("\nStep 3: Making POST request via api.post...");
+      console.log("Request body:", { "user-id": userId });
 
-      const fullUrl = `${linkedinBaseUrl}/linkedin/browser-stream/start`;
-      console.log('Full API endpoint:', fullUrl);
-      console.log('Headers to send:', { 'x-user-id': userId });
-
-      // Make POST request to the LinkedIn browser stream endpoint
-      console.log('\nStep 4: Making POST request...');
-      const response = await axios.post(
-        fullUrl,
-        {},
-        {
-          headers: {
-            'x-user-id': userId,
-          },
-        }
+      const response = await api.post(
+        "/linkedin_connect/browser-stream/start",
+        { "user-id": userId },
       );
 
-      console.log('✅ Response received');
-      console.log('Response status:', response.status);
-      console.log('Response data:', response.data);
+      console.log("✅ Response received");
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
 
       // Check if the response is successful
       if (response.data && response.data.success && response.data.streamUrl) {
-        console.log('\nStep 5: Opening popup window...');
-        console.log('Stream URL:', response.data.streamUrl);
-        console.log('Stream Token:', response.data.streamToken);
-        console.log('WebSocket URL:', response.data.wsUrl);
-        console.log('Expires in seconds:', response.data.expiresInSeconds);
+        console.log("\nStep 5: Opening popup window...");
+        console.log("Stream URL:", response.data.streamUrl);
+        console.log("Stream Token:", response.data.streamToken);
+        console.log("WebSocket URL:", response.data.wsUrl);
+        console.log("Expires in seconds:", response.data.expiresInSeconds);
 
         // Open popup window with the streamUrl
         const popupWidth = 1200;
@@ -240,18 +398,18 @@ const OrganicLeadBuilder = () => {
 
         const popup = window.open(
           response.data.streamUrl,
-          'LinkedInBrowserStream',
-          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`
+          "LinkedInBrowserStream",
+          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=yes,scrollbars=yes`,
         );
 
         if (popup) {
-          console.log('✅ Popup window opened successfully');
-          console.log('👀 Monitoring popup window for closure...');
+          console.log("✅ Popup window opened successfully");
+          console.log("👀 Monitoring popup window for closure...");
 
           // Monitor popup window closure
           const checkPopupClosed = setInterval(() => {
             if (popup.closed) {
-              console.log('🔄 Popup window closed - Refreshing page...');
+              console.log("🔄 Popup window closed - Refreshing page...");
               clearInterval(checkPopupClosed);
 
               // Refresh the current page
@@ -262,27 +420,31 @@ const OrganicLeadBuilder = () => {
           // Optional: Clean up interval after 1 hour (in case user keeps window open for long time)
           setTimeout(() => {
             clearInterval(checkPopupClosed);
-            console.log('⏱️ Stopped monitoring popup window (timeout after 1 hour)');
+            console.log(
+              "⏱️ Stopped monitoring popup window (timeout after 1 hour)",
+            );
           }, 3600000); // 1 hour
         } else {
-          console.warn('⚠️ Popup may have been blocked by browser');
+          console.warn("⚠️ Popup may have been blocked by browser");
         }
 
-        console.log('=== LinkedIn Connect Account Process Completed Successfully ===\n');
+        console.log(
+          "=== LinkedIn Connect Account Process Completed Successfully ===\n",
+        );
       } else {
-        console.error('❌ Invalid response format');
+        console.error("❌ Invalid response format");
         console.log('Expected: { success: true, streamUrl: "..." }');
-        console.log('Received:', response.data);
-        alert('Failed to start LinkedIn browser stream. Invalid response.');
+        console.log("Received:", response.data);
+        alert("Failed to start LinkedIn browser stream. Invalid response.");
       }
     } catch (error) {
-      console.error('\n❌ Error connecting LinkedIn account');
-      console.error('Error type:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      console.error('Full error object:', error);
-      alert('Failed to connect LinkedIn account. Please try again.');
+      console.error("\n❌ Error connecting LinkedIn account");
+      console.error("Error type:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      console.error("Full error object:", error);
+      alert("Failed to connect LinkedIn account. Please try again.");
     }
   };
 
@@ -314,7 +476,9 @@ const OrganicLeadBuilder = () => {
       return;
     }
 
-    const hasRunningCampaign = campaigns.inProgress.some(c => c.status === "running");
+    const hasRunningCampaign = campaigns.inProgress.some(
+      (c) => c.status === "running",
+    );
     if (hasRunningCampaign) {
       setShowCannotRunModal(true);
     } else {
@@ -326,7 +490,11 @@ const OrganicLeadBuilder = () => {
     const newCampaign = {
       id: Date.now(),
       name: "New Campaign",
-      date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+      date: new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
       progress: 0,
       status: "running",
       prospectsFound: 0,
@@ -334,7 +502,7 @@ const OrganicLeadBuilder = () => {
       filters: campaignData.filters,
       settings: campaignData.settings,
     };
-    setCampaigns(prev => ({
+    setCampaigns((prev) => ({
       ...prev,
       inProgress: [...prev.inProgress, newCampaign],
     }));
@@ -350,25 +518,27 @@ const OrganicLeadBuilder = () => {
   };
 
   const handlePauseCampaign = (campaignId) => {
-    setCampaigns(prev => ({
+    setCampaigns((prev) => ({
       ...prev,
-      inProgress: prev.inProgress.map(c =>
-        c.id === campaignId ? { ...c, status: c.status === "paused" ? "running" : "paused" } : c
+      inProgress: prev.inProgress.map((c) =>
+        c.id === campaignId
+          ? { ...c, status: c.status === "paused" ? "running" : "paused" }
+          : c,
       ),
     }));
     setOpenMenuId(null);
   };
 
   const handleResumeCampaign = (campaignId) => {
-    setSelectedCampaign(campaigns.inProgress.find(c => c.id === campaignId));
+    setSelectedCampaign(campaigns.inProgress.find((c) => c.id === campaignId));
     setShowResumingModal(true);
     setOpenMenuId(null);
 
     setTimeout(() => {
-      setCampaigns(prev => ({
+      setCampaigns((prev) => ({
         ...prev,
-        inProgress: prev.inProgress.map(c =>
-          c.id === campaignId ? { ...c, status: "running" } : c
+        inProgress: prev.inProgress.map((c) =>
+          c.id === campaignId ? { ...c, status: "running" } : c,
         ),
       }));
       setShowResumingModal(false);
@@ -386,10 +556,10 @@ const OrganicLeadBuilder = () => {
     setShowDeletingModal(true);
 
     setTimeout(() => {
-      setCampaigns(prev => ({
+      setCampaigns((prev) => ({
         ...prev,
-        inProgress: prev.inProgress.filter(c => c.id !== selectedCampaign.id),
-        completed: prev.completed.filter(c => c.id !== selectedCampaign.id),
+        inProgress: prev.inProgress.filter((c) => c.id !== selectedCampaign.id),
+        completed: prev.completed.filter((c) => c.id !== selectedCampaign.id),
       }));
       setShowDeletingModal(false);
       setSelectedCampaign(null);
@@ -424,12 +594,20 @@ const OrganicLeadBuilder = () => {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div
-              className={`flex items-center gap-2 ${!isCompleted ? 'cursor-pointer' : ''}`}
+              className={`flex items-center gap-2 ${!isCompleted ? "cursor-pointer" : ""}`}
               onClick={() => !isCompleted && handleCampaignClick(campaign)}
             >
               {!isCompleted && (
-                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
               <span className="font-medium text-[#1a1a1a]">
@@ -440,13 +618,15 @@ const OrganicLeadBuilder = () => {
             <div className="mt-3 w-full max-w-[500px]">
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-300 ${isCompleted ? "bg-[#3C49F7]" : "bg-[#3C49F7]"
-                    }`}
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    isCompleted ? "bg-[#3C49F7]" : "bg-[#3C49F7]"
+                  }`}
                   style={{ width: `${campaign.progress}%` }}
                 />
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                {campaign.progress}% – {isPaused ? "Pause" : isCompleted ? "Done" : "In Progress"}
+                {campaign.progress}% –{" "}
+                {isPaused ? "Pause" : isCompleted ? "Done" : "In Progress"}
               </p>
             </div>
           </div>
@@ -471,10 +651,16 @@ const OrganicLeadBuilder = () => {
 
             <div className="relative">
               <button
-                onClick={() => setOpenMenuId(openMenuId === campaign.id ? null : campaign.id)}
+                onClick={() =>
+                  setOpenMenuId(openMenuId === campaign.id ? null : campaign.id)
+                }
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
-                <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-5 h-5 text-gray-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                 </svg>
               </button>
@@ -483,7 +669,11 @@ const OrganicLeadBuilder = () => {
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[160px]">
                   {!isCompleted && (
                     <button
-                      onClick={() => isPaused ? handleResumeCampaign(campaign.id) : handlePauseCampaign(campaign.id)}
+                      onClick={() =>
+                        isPaused
+                          ? handleResumeCampaign(campaign.id)
+                          : handlePauseCampaign(campaign.id)
+                      }
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
                       {isPaused ? "Resume Campaign" : "Pause Campaign"}
@@ -509,8 +699,8 @@ const OrganicLeadBuilder = () => {
     const totalResults = leadsViewCampaign.prospectsFound || 498;
 
     const handleSelectLead = (id) => {
-      setSelectedLeads(prev =>
-        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      setSelectedLeads((prev) =>
+        prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
       );
     };
 
@@ -529,8 +719,18 @@ const OrganicLeadBuilder = () => {
           onClick={handleBackFromLeads}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           <span className="text-sm font-medium">Back</span>
         </button>
@@ -542,7 +742,9 @@ const OrganicLeadBuilder = () => {
               {leadsViewCampaign.name || "New Campaign"}
             </h1>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-gray-500 text-sm">{leadsViewCampaign.date}</span>
+              <span className="text-gray-500 text-sm">
+                {leadsViewCampaign.date}
+              </span>
               <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium">
                 Campaign Ended – 100% Done
               </span>
@@ -551,15 +753,21 @@ const OrganicLeadBuilder = () => {
 
           <div className="text-right">
             <p className="text-gray-500 text-sm">Leads generated</p>
-            <p className="text-[48px] font-semibold text-[#1a1a1a] leading-none">{totalResults}</p>
+            <p className="text-[48px] font-semibold text-[#1a1a1a] leading-none">
+              {totalResults}
+            </p>
           </div>
         </div>
 
         {/* Results Count & Actions */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-600">1 - 10 of about {totalResults} results.</p>
+          <p className="text-sm text-gray-600">
+            1 - 10 of about {totalResults} results.
+          </p>
           <div className="flex items-center gap-3">
-            <button className="text-[#3C49F7] text-sm font-medium hover:underline">Export Leads</button>
+            <button className="text-[#3C49F7] text-sm font-medium hover:underline">
+              Export Leads
+            </button>
             <button
               onClick={() => handleStartWorkflow()}
               className="bg-[#3C49F7] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2a35d4]"
@@ -576,7 +784,7 @@ const OrganicLeadBuilder = () => {
             className="appearance-none w-[18px] h-[18px] rounded-[6px] border border-gray-300 bg-white hover:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer checked:bg-blue-600 checked:border-blue-600 checked:after:content-[''] checked:after:block checked:after:w-[6px] checked:after:h-[10px] checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white checked:after:rotate-45 checked:after:translate-x-[5px] checked:after:translate-y-[1px]"
             onChange={(e) => {
               if (e.target.checked) {
-                setSelectedLeads(SAMPLE_LEADS.map(l => l.id));
+                setSelectedLeads(SAMPLE_LEADS.map((l) => l.id));
               } else {
                 setSelectedLeads([]);
               }
@@ -585,13 +793,15 @@ const OrganicLeadBuilder = () => {
           />
           <span className="text-sm text-gray-700">Select All</span>
           {selectedLeads.length > 0 && (
-            <span className="text-sm text-gray-500">({selectedLeads.length} selected)</span>
+            <span className="text-sm text-gray-500">
+              ({selectedLeads.length} selected)
+            </span>
           )}
         </div>
 
         {/* Leads List - Using ProfileCard Component */}
         <div className="space-y-2 overflow-hidden">
-          {SAMPLE_LEADS.map(lead => (
+          {SAMPLE_LEADS.map((lead) => (
             <ProfileCard
               key={lead.id}
               profile={lead}
@@ -614,16 +824,41 @@ const OrganicLeadBuilder = () => {
           </div>
           <div className="flex items-center gap-1">
             <button className="p-2 rounded hover:bg-gray-100">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(page => (
-              <button key={page} className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}>{page}</button>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((page) => (
+              <button
+                key={page}
+                className={`w-8 h-8 rounded text-sm font-medium ${page === 1 ? "bg-[#1a1a1a] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              >
+                {page}
+              </button>
             ))}
             <button className="p-2 rounded hover:bg-gray-100">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -637,7 +872,11 @@ const OrganicLeadBuilder = () => {
               setShowWorkflowBuilder(false);
               setWorkflowCampaign(null);
             }}
-            campaignName={workflowCampaign?.name || leadsViewCampaign?.name || "New Campaign"}
+            campaignName={
+              workflowCampaign?.name ||
+              leadsViewCampaign?.name ||
+              "New Campaign"
+            }
             entrySource="organic"
           />
         )}
@@ -655,13 +894,18 @@ const OrganicLeadBuilder = () => {
               <h1 className="text-[28px] font-normal text-[#1a1a1a] font-['DM_Sans']">
                 Great! We have connected your LinkedIn account
               </h1>
-              <button className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+              <button className="text-gray-400 hover:text-gray-600 text-2xl">
+                ×
+              </button>
             </div>
 
             <div className="flex items-center justify-between py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <img
-                  src={connectedAccount?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"}
+                  src={
+                    connectedAccount?.avatar ||
+                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
+                  }
                   alt="Profile"
                   className="w-12 h-12 rounded-full object-cover"
                 />
@@ -676,18 +920,46 @@ const OrganicLeadBuilder = () => {
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-500">
                   Connection Requests Sent{" "}
-                  <span className="font-semibold text-[#1a1a1a]">{connectedAccount?.connectionsSent || 123}</span>
+                  <span className="font-semibold text-[#1a1a1a]">
+                    {connectedAccount?.connectionsSent || 123}
+                  </span>
                 </span>
                 <span className="text-gray-300">|</span>
-                <button onClick={handleEditAccount} className="flex items-center gap-1 text-sm text-[#1a1a1a] hover:text-[#3C49F7]">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <button
+                  onClick={handleEditAccount}
+                  className="flex items-center gap-1 text-sm text-[#1a1a1a] hover:text-[#3C49F7]"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
                   </svg>
                   Edit
                 </button>
-                <button onClick={handleDeleteAccount} className="flex items-center gap-1 text-sm text-[#1a1a1a] hover:text-red-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <button
+                  onClick={handleDeleteAccount}
+                  className="flex items-center gap-1 text-sm text-[#1a1a1a] hover:text-red-500"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                   Delete
                 </button>
@@ -700,7 +972,9 @@ const OrganicLeadBuilder = () => {
               <h1 className="text-[32px] font-light text-[#1a1a1a] font-['DM_Sans'] italic">
                 To start generate leads,
               </h1>
-              <p className="text-lg font-semibold text-[#1a1a1a]">We need you to:</p>
+              <p className="text-lg font-semibold text-[#1a1a1a]">
+                We need you to:
+              </p>
             </div>
 
             <div className="bg-[#F2F2FF] rounded-lg p-5 flex items-center justify-between">
@@ -709,8 +983,12 @@ const OrganicLeadBuilder = () => {
                   <img src={linkedin} alt="" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[#1a1a1a]">Connect your Linkedin Profile</h3>
-                  <p className="text-sm text-gray-500">Connect your Linkedin account to enhance your reach.</p>
+                  <h3 className="font-semibold text-[#1a1a1a]">
+                    Connect your Linkedin Profile
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Connect your Linkedin account to enhance your reach.
+                  </p>
                 </div>
               </div>
               <button
@@ -726,7 +1004,8 @@ const OrganicLeadBuilder = () => {
 
       {/* Campaigns Section - Always show */}
       <div className="bg-white rounded-2xl p-6">
-        {campaigns.inProgress.length === 0 && campaigns.completed.length === 0 ? (
+        {campaigns.inProgress.length === 0 &&
+        campaigns.completed.length === 0 ? (
           <div>
             <h2 className="text-[28px] font-normal text-[#1a1a1a] mb-4">
               {isConnected ? "Start Organic Lead Search" : "Start a campaign"}
@@ -754,8 +1033,18 @@ const OrganicLeadBuilder = () => {
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
                 Note: One campaign can run at a time
               </div>
@@ -765,19 +1054,21 @@ const OrganicLeadBuilder = () => {
             <div className="flex gap-2 mb-6">
               <button
                 onClick={() => setActiveTab("inProgress")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "inProgress"
-                  ? "bg-[#1a1a1a] text-white"
-                  : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeTab === "inProgress"
+                    ? "bg-[#1a1a1a] text-white"
+                    : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
+                }`}
               >
                 In Progress ({campaigns.inProgress.length})
               </button>
               <button
                 onClick={() => setActiveTab("completed")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === "completed"
-                  ? "bg-[#1a1a1a] text-white"
-                  : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeTab === "completed"
+                    ? "bg-[#1a1a1a] text-white"
+                    : "bg-white text-[#1a1a1a] border border-gray-200 hover:bg-gray-50"
+                }`}
               >
                 Completed ({campaigns.completed.length})
               </button>
@@ -785,20 +1076,26 @@ const OrganicLeadBuilder = () => {
 
             {/* Campaign List */}
             <div>
-              {activeTab === "inProgress" && (
-                campaigns.inProgress.length > 0 ? (
-                  campaigns.inProgress.map(campaign => renderCampaignCard(campaign, false))
+              {activeTab === "inProgress" &&
+                (campaigns.inProgress.length > 0 ? (
+                  campaigns.inProgress.map((campaign) =>
+                    renderCampaignCard(campaign, false),
+                  )
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No campaigns in progress</p>
-                )
-              )}
-              {activeTab === "completed" && (
-                campaigns.completed.length > 0 ? (
-                  campaigns.completed.map(campaign => renderCampaignCard(campaign, true))
+                  <p className="text-gray-500 text-center py-8">
+                    No campaigns in progress
+                  </p>
+                ))}
+              {activeTab === "completed" &&
+                (campaigns.completed.length > 0 ? (
+                  campaigns.completed.map((campaign) =>
+                    renderCampaignCard(campaign, true),
+                  )
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No completed campaigns</p>
-                )
-              )}
+                  <p className="text-gray-500 text-center py-8">
+                    No completed campaigns
+                  </p>
+                ))}
             </div>
           </>
         )}
@@ -857,4 +1154,4 @@ const OrganicLeadBuilder = () => {
   );
 };
 
-export default OrganicLeadBuilder; 
+export default OrganicLeadBuilder;

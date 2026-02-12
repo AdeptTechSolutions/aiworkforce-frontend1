@@ -291,27 +291,14 @@ const IntegrationHubContent = () => {
         try {
             const statuses = await integrationService.getIntegrations();
             if (statuses && typeof statuses === 'object') {
-                setIntegrations(prev => ({ ...prev, ...statuses }));
+                const mapped = {};
+                for (const [key, value] of Object.entries(statuses)) {
+                    mapped[key] = value ? 'connected' : 'not_connected';
+                }
+                setIntegrations(prev => ({ ...prev, ...mapped }));
             }
         } catch (error) {
             console.log('Could not fetch integration statuses:', error);
-        }
-
-        // Check messaging integrations
-        try {
-            const [telegramSessions, whatsappSessions] = await Promise.allSettled([
-                integrationService.getTelegramSessions(),
-                integrationService.getWhatsAppSessions()
-            ]);
-
-            if (telegramSessions.status === 'fulfilled' && telegramSessions.value?.length > 0) {
-                setIntegrations(prev => ({ ...prev, telegram: 'connected' }));
-            }
-            if (whatsappSessions.status === 'fulfilled' && whatsappSessions.value?.sessions?.length > 0) {
-                setIntegrations(prev => ({ ...prev, whatsapp: 'connected' }));
-            }
-        } catch (error) {
-            console.log('Could not fetch messaging statuses:', error);
         }
     };
 
