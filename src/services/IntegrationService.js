@@ -18,17 +18,47 @@ const getPopupPosition = () => {
 let activePopup = null;
 let popupCheckInterval = null;
 
+// Helper to check if an integration is connected using the correct endpoint
+const checkIntegrationConnected = async (integrationKey) => {
+  switch (integrationKey) {
+    case "hubspot":
+    case "pipedrive":
+    case "salesforce":
+    case "zoho": {
+      const result = await integrationService[
+        `get${integrationKey.charAt(0).toUpperCase() + integrationKey.slice(1)}Integration`
+      ]();
+      return !!result;
+    }
+    case "linkedin": {
+      const result = await integrationService.getLinkedInIntegrations();
+      return result?.length > 0;
+    }
+    case "facebook": {
+      const result = await integrationService.getFacebookIntegrations();
+      return result?.length > 0;
+    }
+    default: {
+      const result = await integrationService.getIntegrationStatus(integrationKey);
+      return result?.connected || false;
+    }
+  }
+};
+
 export const integrationService = {
   // ============================================
   // GENERAL INTEGRATION METHODS
   // ============================================
 
   // Get all integration statuses
-  // Note: No single endpoint exists for all integrations - use individual status methods
   getIntegrations: async () => {
-    // Return empty object - each integration should be fetched individually
-    // via getGmailStatus, getOutlookStatus, etc.
-    return {};
+    try {
+      const response = await api.get("/platform/integrations/all");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching integration statuses:", error);
+      return {};
+    }
   },
 
   // Check specific integration status
@@ -48,6 +78,14 @@ export const integrationService = {
   connectOAuth: (integrationKey, integrationName) => {
     return new Promise(async (resolve, reject) => {
       try {
+        // Snapshot initial connection state (used to guard auto-close only)
+        let wasConnected = false;
+        try {
+          wasConnected = await checkIntegrationConnected(integrationKey);
+        } catch (e) {
+          // Not connected
+        }
+
         // Step 1: Get OAuth URL from backend (backend stores session)
         const response = await api.get(
           `/platform/integrations/${integrationKey}/auth-url`,
@@ -80,6 +118,8 @@ export const integrationService = {
 
         activePopup.focus();
 
+        let pollCount = 0;
+
         // Poll for popup close
         popupCheckInterval = setInterval(async () => {
           if (activePopup && activePopup.closed) {
@@ -89,9 +129,8 @@ export const integrationService = {
 
             // Verify connection status with backend
             try {
-              const status =
-                await integrationService.getIntegrationStatus(integrationKey);
-              if (status.connected) {
+              const connected = await checkIntegrationConnected(integrationKey);
+              if (connected) {
                 resolve({ success: true, integration: integrationKey });
               } else {
                 resolve({
@@ -101,7 +140,26 @@ export const integrationService = {
                 });
               }
             } catch {
-              resolve({ success: true, integration: integrationKey });
+              resolve({
+                success: false,
+                integration: integrationKey,
+                error: "Failed to verify connection",
+              });
+            }
+          }
+
+          // Auto-close popup when OAuth completes (only if not already connected)
+          pollCount++;
+          if (!wasConnected && pollCount >= 10 && pollCount % 4 === 0) {
+            try {
+              const connected = await checkIntegrationConnected(integrationKey);
+              if (connected) {
+                if (activePopup && !activePopup.closed) {
+                  activePopup.close();
+                }
+              }
+            } catch (e) {
+              // Not connected yet, continue polling
             }
           }
         }, 500);
@@ -115,6 +173,14 @@ export const integrationService = {
   connectOAuthV1: (integrationKey, integrationName, authEndpoint) => {
     return new Promise(async (resolve, reject) => {
       try {
+        // Snapshot initial connection state (used to guard auto-close only)
+        let wasConnected = false;
+        try {
+          wasConnected = await checkIntegrationConnected(integrationKey);
+        } catch (e) {
+          // Not connected
+        }
+
         // Step 1: Get OAuth URL from backend via POST
         console.log(
           `🔗 Connecting ${integrationName} via POST /platform${authEndpoint}`,
@@ -153,6 +219,8 @@ export const integrationService = {
 
         activePopup.focus();
 
+        let pollCount = 0;
+
         // Poll for popup close
         popupCheckInterval = setInterval(async () => {
           if (activePopup && activePopup.closed) {
@@ -163,9 +231,37 @@ export const integrationService = {
             // Verify connection status with backend
             try {
               await new Promise((r) => setTimeout(r, 1000)); // Wait for callback to process
-              resolve({ success: true, integration: integrationKey });
+              const connected = await checkIntegrationConnected(integrationKey);
+              if (connected) {
+                resolve({ success: true, integration: integrationKey });
+              } else {
+                resolve({
+                  success: false,
+                  integration: integrationKey,
+                  error: "Connection not completed",
+                });
+              }
             } catch {
-              resolve({ success: true, integration: integrationKey });
+              resolve({
+                success: false,
+                integration: integrationKey,
+                error: "Failed to verify connection",
+              });
+            }
+          }
+
+          // Auto-close popup when OAuth completes (only if not already connected)
+          pollCount++;
+          if (!wasConnected && pollCount >= 10 && pollCount % 4 === 0) {
+            try {
+              const connected = await checkIntegrationConnected(integrationKey);
+              if (connected) {
+                if (activePopup && !activePopup.closed) {
+                  activePopup.close();
+                }
+              }
+            } catch (e) {
+              // Not connected yet, continue polling
             }
           }
         }, 500);
@@ -215,8 +311,17 @@ export const integrationService = {
   },
 
   connectGmail: () => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
+        // Snapshot status before opening popup to detect real changes
+        let initialStatusJSON = null;
+        try {
+          const initialStatus = await integrationService.getGmailStatus();
+          initialStatusJSON = JSON.stringify(initialStatus);
+        } catch (e) {
+          // Not connected yet
+        }
+
         const { left, top } = getPopupPosition();
 
         // Close any existing popup
@@ -248,7 +353,9 @@ export const integrationService = {
 
         activePopup.focus();
 
-        // Poll for popup close
+        let pollCount = 0;
+
+        // Poll for popup close and auto-close when OAuth completes
         popupCheckInterval = setInterval(async () => {
           if (activePopup && activePopup.closed) {
             clearInterval(popupCheckInterval);
@@ -273,6 +380,28 @@ export const integrationService = {
                 integration: "gmail",
                 error: "Failed to verify connection",
               });
+            }
+            return;
+          }
+
+          // Auto-close popup when OAuth callback completes
+          // After 5 seconds, poll status API every 2 seconds
+          // Only close if status actually changed (prevents premature close
+          // when account was already connected from a previous session)
+          pollCount++;
+          if (pollCount >= 10 && pollCount % 4 === 0) {
+            try {
+              const status = await integrationService.getGmailStatus();
+              if (status && status.connected) {
+                const currentJSON = JSON.stringify(status);
+                if (!initialStatusJSON || currentJSON !== initialStatusJSON) {
+                  if (activePopup && !activePopup.closed) {
+                    activePopup.close();
+                  }
+                }
+              }
+            } catch (e) {
+              // Not connected yet, continue polling
             }
           }
         }, 500);
@@ -321,8 +450,17 @@ export const integrationService = {
   },
 
   connectOutlook: () => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
+        // Snapshot status before opening popup to detect real changes
+        let initialStatusJSON = null;
+        try {
+          const initialStatus = await integrationService.getOutlookStatus();
+          initialStatusJSON = JSON.stringify(initialStatus);
+        } catch (e) {
+          // Not connected yet
+        }
+
         const { left, top } = getPopupPosition();
 
         // Close any existing popup
@@ -354,7 +492,9 @@ export const integrationService = {
 
         activePopup.focus();
 
-        // Poll for popup close
+        let pollCount = 0;
+
+        // Poll for popup close and auto-close when OAuth completes
         popupCheckInterval = setInterval(async () => {
           if (activePopup && activePopup.closed) {
             clearInterval(popupCheckInterval);
@@ -383,6 +523,28 @@ export const integrationService = {
                 integration: "outlook",
                 error: "Failed to verify connection",
               });
+            }
+            return;
+          }
+
+          // Auto-close popup when OAuth callback completes
+          // After 5 seconds, poll status API every 2 seconds
+          // Only close if status actually changed (prevents premature close
+          // when account was already connected from a previous session)
+          pollCount++;
+          if (pollCount >= 10 && pollCount % 4 === 0) {
+            try {
+              const status = await integrationService.getOutlookStatus();
+              if (status && status.connected) {
+                const currentJSON = JSON.stringify(status);
+                if (!initialStatusJSON || currentJSON !== initialStatusJSON) {
+                  if (activePopup && !activePopup.closed) {
+                    activePopup.close();
+                  }
+                }
+              }
+            } catch (e) {
+              // Not connected yet, continue polling
             }
           }
         }, 500);
@@ -795,6 +957,9 @@ export const integrationService = {
       return response.data;
     } catch (error) {
       console.error("Error requesting Telegram login:", error);
+      if (error.response?.status === 400) {
+        throw new Error("This number is already in use. Try a different number.");
+      }
       throw error;
     }
   },
@@ -890,6 +1055,9 @@ export const integrationService = {
       return response.data;
     } catch (error) {
       console.error("Error creating WhatsApp session:", error);
+      if (error.response?.status === 400) {
+        throw new Error("This number is already in use. Try a different number.");
+      }
       throw error;
     }
   },

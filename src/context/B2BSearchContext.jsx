@@ -198,7 +198,9 @@ export const B2BSearchProvider = ({ children }) => {
       body.company_type = tempArrays.company_type;
     }
     if (tempArrays.sic_codes.length > 0) {
-      body.sic_codes = tempArrays.sic_codes;
+      body.sic_codes = tempArrays.sic_codes.map(
+        (code) => String(code).split(/\s*[-–—]\s*/)[0].trim()
+      );
     }
     if (tempArrays.company_name_includes.length > 0) {
       // If multiple company names, join them or send as array based on API requirements
@@ -224,7 +226,8 @@ export const B2BSearchProvider = ({ children }) => {
       if (searchType === "advance") {
         // Use advanced search endpoint (POST request)
         const body = transformAdvancedFiltersToQuery(activeFilters);
-        body.start_index = "1"; // Pagination start index
+        body.start_index = String((currentPage - 1) * itemsPerPage);
+        body.size = String(itemsPerPage);
 
         console.log(
           "Advanced search request body:",
@@ -232,7 +235,7 @@ export const B2BSearchProvider = ({ children }) => {
         );
 
         response = await api.post(
-          "/b2b/v1/companies-house/advanced-search",
+          `/b2b/v1/companies-house/advanced-search?exclude_existing=${excludeInProject}`,
           body,
         );
 
@@ -283,10 +286,10 @@ export const B2BSearchProvider = ({ children }) => {
         // Use basic search endpoint (RocketReach)
         const query = transformFiltersToQuery(activeFilters);
 
-        response = await api.post("/b2b/v1/rocketreach/company-search", {
+        response = await api.post(`/b2b/v1/rocketreach/company-search?exclude_existing=${excludeInProject}`, {
           query,
           order_by: "popularity",
-          start: 1,
+          start: (currentPage - 1) * itemsPerPage + 1,
           size: itemsPerPage,
         });
 
@@ -327,8 +330,10 @@ export const B2BSearchProvider = ({ children }) => {
     }
   }, [
     activeFilters,
+    currentPage,
     itemsPerPage,
     searchType,
+    excludeInProject,
     transformFiltersToQuery,
     transformAdvancedFiltersToQuery,
   ]);

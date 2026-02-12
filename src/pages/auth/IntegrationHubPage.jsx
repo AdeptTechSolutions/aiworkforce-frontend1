@@ -136,7 +136,6 @@ const IntegrationHubPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [odooExistingData, setOdooExistingData] = useState(null);
 
-  // Fetch integration statuses on mount
   useEffect(() => {
     fetchIntegrationStatuses();
   }, []);
@@ -145,91 +144,14 @@ const IntegrationHubPage = () => {
     try {
       const statuses = await integrationService.getIntegrations();
       if (statuses && typeof statuses === 'object') {
-        setIntegrations(prev => ({ ...prev, ...statuses }));
+        const mapped = {};
+        for (const [key, value] of Object.entries(statuses)) {
+          mapped[key] = value ? 'connected' : 'not_connected';
+        }
+        setIntegrations(prev => ({ ...prev, ...mapped }));
       }
     } catch (error) {
       console.log('Could not fetch integration statuses:', error);
-    }
-
-    // Also check specific integration statuses
-    try {
-      const [gmailStatus, outlookStatus] = await Promise.allSettled([
-        integrationService.getGmailStatus(),
-        integrationService.getOutlookStatus()
-      ]);
-
-      if (gmailStatus.status === 'fulfilled' && gmailStatus.value?.connected) {
-        setIntegrations(prev => ({ ...prev, gmail: 'connected' }));
-      }
-      if (outlookStatus.status === 'fulfilled' && outlookStatus.value?.connected) {
-        setIntegrations(prev => ({ ...prev, outlook: 'connected' }));
-      }
-    } catch (error) {
-      console.log('Could not fetch email statuses:', error);
-    }
-
-    // Check CRM integrations
-    try {
-      const [hubspot, pipedrive, salesforce, zohoData, odooData] = await Promise.allSettled([
-        integrationService.getHubSpotIntegration(),
-        integrationService.getPipedriveIntegration(),
-        integrationService.getSalesforceIntegration(),
-        integrationService.getZohoIntegration(),
-        integrationService.getOdooIntegration()
-      ]);
-
-      if (hubspot.status === 'fulfilled' && hubspot.value) {
-        setIntegrations(prev => ({ ...prev, hubspot: 'connected' }));
-      }
-      if (pipedrive.status === 'fulfilled' && pipedrive.value) {
-        setIntegrations(prev => ({ ...prev, pipedrive: 'connected' }));
-      }
-      if (salesforce.status === 'fulfilled' && salesforce.value) {
-        setIntegrations(prev => ({ ...prev, salesforce: 'connected' }));
-      }
-      if (zohoData.status === 'fulfilled' && zohoData.value) {
-        setIntegrations(prev => ({ ...prev, zoho: 'connected' }));
-      }
-      if (odooData.status === 'fulfilled' && odooData.value) {
-        setIntegrations(prev => ({ ...prev, odoo: 'connected' }));
-        setOdooExistingData(odooData.value);
-      }
-    } catch (error) {
-      console.log('Could not fetch CRM statuses:', error);
-    }
-
-    // Check social integrations
-    try {
-      const [linkedinData, facebookData] = await Promise.allSettled([
-        integrationService.getLinkedInIntegrations(),
-        integrationService.getFacebookIntegrations()
-      ]);
-
-      if (linkedinData.status === 'fulfilled' && linkedinData.value?.length > 0) {
-        setIntegrations(prev => ({ ...prev, linkedin: 'connected' }));
-      }
-      if (facebookData.status === 'fulfilled' && facebookData.value?.length > 0) {
-        setIntegrations(prev => ({ ...prev, facebook: 'connected' }));
-      }
-    } catch (error) {
-      console.log('Could not fetch social statuses:', error);
-    }
-
-    // Check messaging integrations
-    try {
-      const [telegramSessions, whatsappSessions] = await Promise.allSettled([
-        integrationService.getTelegramSessions(),
-        integrationService.getWhatsAppSessions()
-      ]);
-
-      if (telegramSessions.status === 'fulfilled' && telegramSessions.value?.length > 0) {
-        setIntegrations(prev => ({ ...prev, telegram: 'connected' }));
-      }
-      if (whatsappSessions.status === 'fulfilled' && whatsappSessions.value?.sessions?.length > 0) {
-        setIntegrations(prev => ({ ...prev, whatsapp: 'connected' }));
-      }
-    } catch (error) {
-      console.log('Could not fetch messaging statuses:', error);
     }
   };
 
