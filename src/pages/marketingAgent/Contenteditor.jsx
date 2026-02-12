@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -86,6 +86,7 @@ import {
   Sparkles,
   ChevronDown,
   Plus,
+  Clock,
 } from "lucide-react";
 // Mock data removed - using real API data only
 
@@ -356,6 +357,22 @@ const ContentEditor = ({
   const [customInstructions, setCustomInstructions] = useState("");
   const [contentScore, setContentScore] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [messageIndex, setMessageIndex] = useState(0);
+  const pollingRef = useRef(null);
+  const timerRef = useRef(null);
+  const messageRef = useRef(null);
+
+  const friendlyMessages = [
+    "Crafting your article...",
+    "Hang tight, writing magic in progress...",
+    "Almost there, putting finishing touches...",
+    "Researching the best content for you...",
+    "Polishing your SEO-optimized article...",
+    "Just a moment, great things take time...",
+    "Your article is brewing...",
+    "Sit back, our AI is hard at work...",
+  ];
   const [, forceUpdate] = useState({});
 
   // Extract data from optimizationGuide
@@ -462,6 +479,77 @@ const ContentEditor = ({
     }));
   };
 
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (messageRef.current) {
+      clearInterval(messageRef.current);
+      messageRef.current = null;
+    }
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, []);
+
+  const pollGenerationStatus = (pollPostId) => {
+    // Start elapsed time counter (ticks every second)
+    setElapsedTime(0);
+    setMessageIndex(0);
+    timerRef.current = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
+
+    // Rotate friendly messages every 5 seconds
+    messageRef.current = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % friendlyMessages.length);
+    }, 5000);
+
+    // Poll every 15 seconds
+    pollingRef.current = setInterval(async () => {
+      try {
+        const statusResponse = await api.get(`/seo/generation-status/${pollPostId}`);
+        console.log("Poll status response:", statusResponse.data);
+
+        const { status } = statusResponse.data;
+
+        if (status === "completed") {
+          stopPolling();
+          if (editor && statusResponse.data.article) {
+            const htmlContent = markdownToHtml(statusResponse.data.article);
+            editor.commands.setContent(htmlContent);
+          }
+          setIsGenerated(true);
+          setIsGenerating(false);
+          setElapsedTime(0);
+          setMessageIndex(0);
+          setActiveMainTab("Terms");
+          setActiveSubTab("Keywords");
+        } else if (status === "failed") {
+          stopPolling();
+          console.error("Article generation failed:", statusResponse.data.error);
+          setIsGenerating(false);
+          setElapsedTime(0);
+          setMessageIndex(0);
+        }
+        // If status is "generating", keep polling
+      } catch (err) {
+        console.error("Error polling generation status:", err);
+        stopPolling();
+        setIsGenerating(false);
+        setElapsedTime(0);
+        setMessageIndex(0);
+      }
+    }, 15000);
+  };
+
   const handleGenerateArticle = async () => {
     if (!postId) {
       console.error("No post ID available");
@@ -469,62 +557,82 @@ const ContentEditor = ({
     }
 
     setIsGenerating(true);
+    setElapsedTime(0);
 
     try {
-      // Build template from headings
-      const headingsSections = headings.length > 0
-        ? headings.map((h, i) => `${i + 1}) ${h}`).join(", ")
-        : "";
+      const wordCount = optimizationGuide?.target_word_count || 2000;
 
-      const template = `Write a comprehensive SEO-optimized article about ${targetKeyword || "the topic"}. ${headingsSections ? `Include sections: ${headingsSections}.` : ""} Target ${optimizationGuide?.target_word_count || 2000} words.`;
+      // Build placeholder data
+      const titleTerms = targetKeyword || "the topic";
 
-      // Build custom instructions from topics, entities, and questions
-      const topicsList = topics.length > 0
-        ? `Use the important topics: ${topics.map(t => t.word).join(", ")}.`
-        : "";
+      const h1Terms = tfIdfKeywords.length > 0
+        ? tfIdfKeywords.slice(0, 8).map((kw) => kw.word).join(", ")
+        : titleTerms;
 
-      const entitiesList = keyEntities.length > 0
-        ? `Mention key entities: ${keyEntities.join(", ")}.`
-        : "";
+      const h2TermsList = [
+        ...headings,
+        ...questionsToAnswer,
+      ].filter(Boolean);
+      const h2Terms = h2TermsList.length > 0
+        ? h2TermsList.join(", ")
+        : titleTerms;
 
-      const questionsList = questionsToAnswer.length > 0
-        ? `Answer these questions: ${questionsToAnswer.join(" ")}`
-        : "";
+      const termsList = [
+        ...topics.map((t) => t.word),
+        ...keyEntities,
+      ].filter(Boolean);
+      const terms = termsList.length > 0
+        ? termsList.join(", ")
+        : titleTerms;
 
-      const builtCustomInstructions = [topicsList, entitiesList, questionsList, customInstructions]
-        .filter(Boolean)
-        .join(" ");
+      // Structured template with [[PLACEHOLDER]] references
+      const template = `Write a ${wordCount}-word blog post on the topic defined by [[TITLETERMS]].
+
+Start with a catchy H1 using keywords from the [[H1TERMS]] list, and under the H1 add a short summary of the subject and explain why the article is worth reading.
+
+Secondly, prepare an article outline with around 10 H2 subheaders enriched with keywords from the [[H2TERMS]] list. Many of them should be questions.
+
+Thirdly, for each H2 subheader, add two or three paragraphs with a detailed explanation for that specific subheader. Paragraphs must include terms from the [[TERMS]] list.
+
+Close the article with a bullet point summary of the most important things to remember.
+
+Use markdown formatting: # for H1, ## for H2. Do not use HTML tags.
+
+[[TITLETERMS]]: ${titleTerms}
+[[H1TERMS]]: ${h1Terms}
+[[H2TERMS]]: ${h2Terms}
+[[TERMS]]: ${terms}`;
 
       const response = await api.post(
         `/seo/generate-article/${postId}`,
         {
           template: template,
-          custom_instructions: builtCustomInstructions,
-          target_word_count: optimizationGuide?.target_word_count || 2000,
-          model: "gpt-4-turbo",
-          temperature: 0.7,
-        },
-        {
-          timeout: 0, // Disable timeout - wait indefinitely for article generation
+          custom_instructions: customInstructions || "",
+          target_word_count: wordCount
         }
       );
 
       console.log("Generate article response:", response.data);
 
-      if (response.data?.status === "success" && editor) {
-        // Convert markdown to HTML and set in editor
+      if (response.data?.status === "generating") {
+        // Backend accepted the request, start polling
+        pollGenerationStatus(postId);
+      } else if (response.data?.message === "Article generation is already in progress") {
+        // Already generating, start polling to track it
+        pollGenerationStatus(postId);
+      } else if (response.data?.status === "success" && editor) {
+        // Fallback: if backend returns article directly
         const htmlContent = markdownToHtml(response.data.article || "");
         editor.commands.setContent(htmlContent);
+        setIsGenerated(true);
+        setIsGenerating(false);
+        setActiveMainTab("Terms");
+        setActiveSubTab("Keywords");
       }
-
-      setIsGenerated(true);
-      // Switch to Terms tab and Keywords subtab
-      setActiveMainTab("Terms");
-      setActiveSubTab("Keywords");
     } catch (err) {
       console.error("Error generating article:", err);
-    } finally {
       setIsGenerating(false);
+      setElapsedTime(0);
     }
   };
 
@@ -818,9 +926,15 @@ const ContentEditor = ({
                   <div className="absolute inset-0 bg-white/90 flex items-center justify-center z-10">
                     <div className="text-center">
                       <Sparkles className="w-12 h-12 text-purple-600 animate-pulse mx-auto mb-4" />
-                      <p className="text-lg font-semibold text-gray-900">
-                        Generating your article...
+                      <p className="text-lg font-semibold text-gray-900 transition-opacity duration-500">
+                        {friendlyMessages[messageIndex]}
                       </p>
+                      <div className="flex items-center justify-center gap-2 mt-3 text-gray-500">
+                        <Clock className="w-5 h-5 animate-spin" style={{ animationDuration: '3s' }} />
+                        <span className="text-sm font-medium">
+                          {Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')} elapsed
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1416,6 +1530,19 @@ const ContentEditor = ({
                         ? "Generating..."
                         : "Generate Article with AI"}
                     </button>
+                    {isGenerating && (
+                      <div className="mt-3 space-y-1">
+                        <p className="text-sm text-purple-700 font-medium transition-opacity duration-500">
+                          {friendlyMessages[messageIndex]}
+                        </p>
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Clock className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} />
+                          <span className="text-xs">
+                            {Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')} elapsed
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
