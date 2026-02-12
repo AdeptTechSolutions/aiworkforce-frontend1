@@ -80,83 +80,82 @@ export const ProfileCard = ({
       }`}
     >
       {/* Main Row - Clickable */}
-      <div className="p-3 cursor-pointer" onClick={handleRowClick}>
-        <div className="flex items-center gap-4">
-          {/* Checkbox */}
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onSelect(profile.id)}
-            className="
-              appearance-none
-              w-[18px] h-[18px]
-              rounded-[6px]
-              border border-gray-300
-              bg-white
-              hover:border-blue-600
-              focus:outline-none focus:ring-2 focus:ring-blue-500/30
-              cursor-pointer
-              checked:bg-blue-600 checked:border-blue-600
-              checked:after:content-['']
-              checked:after:block
-              checked:after:w-[6px] checked:after:h-[10px]
-              checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
-              checked:after:rotate-45
-              checked:after:translate-x-[5px] checked:after:translate-y-[1px]
-              flex-shrink-0
-            "
-            onClick={(e) => e.stopPropagation()}
-          />
+      <div className="p-2 cursor-pointer" onClick={handleRowClick}>
+        <div className="flex items-center justify-between gap-4">
+          
+          {/* LEFT GROUP: Checkbox + Avatar + Info + Contact Details */}
+          <div className="flex items-center gap-4">
+            {/* Checkbox */}
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onSelect(profile.id)}
+              className="
+                appearance-none
+                w-[18px] h-[18px]
+                rounded-[6px]
+                border border-gray-300
+                bg-white
+                hover:border-blue-600
+                focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                cursor-pointer
+                checked:bg-blue-600 checked:border-blue-600
+                checked:after:content-['']
+                checked:after:block
+                checked:after:w-[6px] checked:after:h-[10px]
+                checked:after:border-r-2 checked:after:border-b-2 checked:after:border-white
+                checked:after:rotate-45
+                checked:after:translate-x-[5px] checked:after:translate-y-[1px]
+                flex-shrink-0
+              "
+              onClick={(e) => e.stopPropagation()}
+            />
 
-          {/* Avatar */}
-          <img
-            src={profile.avatar}
-            alt={profile.name}
-            className="w-[50px] h-[50px] rounded-full object-cover border-2 border-gray-100 flex-shrink-0"
-          />
+            {/* Avatar */}
+            <img
+              src={profile.avatar}
+              alt={profile.name}
+              className="w-[70px] h-[70px] rounded-full object-cover border-2 border-gray-100 flex-shrink-0"
+            />
 
-          {/* Info Section - Name, Title, Location + Contact Details */}
-          <div className="flex-1 min-w-0">
-            {/* Name */}
-            <h3 className="font-bold text-[#000000] text-base">{profile.name}</h3>
-            
-            {/* Title */}
-            <p className="text-[#000000] font-medium text-sm">{profile.title}</p>
-            
-            {/* Location & Industry */}
-            <p className="text-[#666666] text-sm">
-              {profile.location} • {profile.industry}
-            </p>
+            {/* Name, Title, Location */}
+            <div className="min-w-[200px]">
+              <h3 className="font-bold text-[#000000] text-lg">{profile.name}</h3>
+              <p className="text-[#000000] font-semibold text-sm">{profile.title}</p>
+              <p className="text-[#000000] text-sm">
+                {profile.location} • {profile.industry}
+              </p>
+            </div>
 
-            {/* Contact Details - Now under the name */}
-            <div className="flex items-center gap-6 mt-2 flex-wrap">
+            {/* Contact Details - Website, Phone, Email */}
+            <div className="flex flex-col gap-1">
               {/* Website */}
-              <div className="flex items-center gap-1.5">
-                <img src={companyicon} alt="company" className="w-4 h-4 flex-shrink-0" />
-                <span className="text-gray-700 text-sm">
-                  @ {profile.website || "company.com"}
+              <div className="flex items-center gap-2">
+                <img src={companyicon} alt="company" className="w-4 h-4" />
+                <span className="text-gray-800 text-sm">
+                  @ {profile.website || "chchelicopter.com"}
                 </span>
               </div>
 
               {/* Phone */}
-              <div className="flex items-center gap-1.5">
-                <img src={phonenumbericon} alt="phone" className="w-4 h-4 flex-shrink-0" />
+              <div className="flex items-center gap-2">
+                <img src={phonenumbericon} alt="phone" className="w-4 h-4" />
                 {profile.isEnriched ? (
-                  <span className="text-gray-700 text-sm flex items-center gap-1">
-                    {(profile.phones || []).slice(0, 1).join(", ")}
-                    {(profile.phones?.length || 0) > 1 && (
-                      <span className="text-[#3C49F7] bg-[#F2F2FF] rounded px-1.5 py-0.5 text-xs">
-                        + {profile.phones.length - 1} more
+                  <span className="text-gray-800 text-sm flex items-center gap-1">
+                    {(profile.phones || []).slice(0, 2).join(" , ")}
+                    {(profile.phones?.length || 0) > 2 && (
+                      <span className="text-[#000000] bg-[#F2F2FF] rounded px-1 py-0.5 text-xs">
+                        + {profile.phones.length - 2} more
                       </span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-gray-700 text-sm flex items-center gap-1">
-                    +44 -
+                  <span className="text-gray-800 text-sm flex items-center gap-1">
+                    +44 -{" "}
                     <span className="bg-[#F2F2FF] text-[#F2F2FF] rounded px-4 py-0.5">
                       hidden
                     </span>
-                    <span className="text-[#3C49F7] bg-[#F2F2FF] rounded px-1.5 py-0.5 text-xs">
+                    <span className="text-[#000000] bg-[#F2F2FF] rounded px-1 py-0.5 text-xs">
                       + 2 more
                     </span>
                   </span>
@@ -164,33 +163,34 @@ export const ProfileCard = ({
               </div>
 
               {/* Email */}
-              <div className="flex items-center gap-1.5">
-                <img src={emailicon} alt="email" className="w-4 h-4 flex-shrink-0" />
+              <div className="flex items-center gap-2">
+                <img src={emailicon} alt="email" className="w-4 h-4" />
                 {profile.isEnriched ? (
-                  <div className="flex items-center gap-1">
-                    {(profile.emails || []).slice(0, 1).map((email, idx) => (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {(profile.emails || []).slice(0, 2).map((email, idx, arr) => (
                       <a
                         key={idx}
                         href={`mailto:${email}`}
-                        className="text-gray-700 text-sm hover:text-blue-600"
+                        className="text-blue-600 hover:underline text-sm"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {email}
+                        {idx < arr.length - 1 ? "," : ""}
                       </a>
                     ))}
-                    {(profile.emails?.length || 0) > 1 && (
-                      <span className="text-[#3C49F7] bg-[#F2F2FF] rounded px-1.5 py-0.5 text-xs">
-                        + {profile.emails.length - 1} more
+                    {(profile.emails?.length || 0) > 2 && (
+                      <span className="text-[#000000] bg-[#F2F2FF] rounded px-1 py-0.5 text-xs">
+                        + {profile.emails.length - 2} more
                       </span>
                     )}
                   </div>
                 ) : (
-                  <span className="text-gray-700 text-sm flex items-center gap-1">
+                  <span className="text-gray-800 text-sm flex items-center gap-1">
                     xxx@
-                    <span className="bg-[#F2F2FF] text-[#F2F2FF] rounded px-4 py-0.5">
+                    <span className="bg-[#F2F2FF] text-[#F2F2FF] rounded px-6 py-0.5">
                       hidden
                     </span>
-                    <span className="text-[#3C49F7] bg-[#F2F2FF] rounded px-1.5 py-0.5 text-xs">
+                    <span className="text-[#000000] bg-[#F2F2FF] rounded px-1 py-0.5 text-xs">
                       + 1 more
                     </span>
                   </span>
@@ -199,7 +199,7 @@ export const ProfileCard = ({
             </div>
           </div>
 
-          {/* Actions - Right Side */}
+          {/* RIGHT GROUP: LinkedIn + Enrich + Add to Project */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {/* LinkedIn Icon */}
             <a
@@ -230,12 +230,12 @@ export const ProfileCard = ({
               </button>
             ) : (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F2F2FF] rounded text-[#0028B6]">
-                <img src={VerifiedIcon} alt="verified" className="w-5 h-5" />
-                <span className="text-[12px] font-semibold">Enriched</span>
+                <img src={VerifiedIcon} alt="verified" className="w-7 h-7" />
+                <span className="text-[12px] font-semibold">Enriched Contact</span>
               </div>
             )}
 
-            {/* Add to Project OR 3-dot menu based on context */}
+            {/* Add to Project OR 3-dot menu */}
             {context === "campaign" ? (
               <div className="relative">
                 <button
@@ -271,7 +271,7 @@ export const ProfileCard = ({
                   e.stopPropagation();
                   onAddToProject(profile);
                 }}
-                className="px-4 py-1.5 border-2 border-[#3C49F7] text-[#3C49F7] text-[14px] font-medium rounded-full hover:bg-[#F2F2FF] transition-colors"
+                className="px-4 py-1.5 border-2 border-[#3C49F7] text-[#3C49F7] text-[14px] font-medium rounded-full hover:bg-[#F2F2FF]"
               >
                 Add to Project
               </button>
@@ -280,7 +280,7 @@ export const ProfileCard = ({
         </div>
       </div>
 
-      {/* Expanded Details - Keep as is */}
+      {/* Expanded Details */}
       {isExpanded && (
         <div className="px-4 pb-4">
           <div className="mt-2 ml-4 space-y-2">
