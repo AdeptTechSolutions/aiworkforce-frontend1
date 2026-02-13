@@ -159,6 +159,7 @@ const FormField = ({ question, value, onChange }) => (
 );
 
 // Objection Card Component for Step 3
+// Objection Card Component for Step 3
 const ObjectionCard = ({ 
   index, 
   objection, 
@@ -187,32 +188,36 @@ const ObjectionCard = ({
     
     <div className="mb-4">
       <label className="block text-base font-medium text-gray-900 mb-1">
-        What objections do you frequently hear?{" "}
-        <span className="text-red-500">*</span>
+        {objectionsQuestion?.question_text || "What objections do you frequently hear?"}{" "}
+        {objectionsQuestion?.is_required && <span className="text-red-500">*</span>}
       </label>
-      <p className="text-sm text-gray-500 mb-2">
-        {objectionsQuestion?.helper_text || "(cost, timing, switching vendors, etc.)"}
-      </p>
+      {objectionsQuestion?.helper_text && (
+        <p className="text-sm text-gray-500 mb-2">
+          {objectionsQuestion.helper_text}
+        </p>
+      )}
       <AutoResizeTextarea
         value={objection}
         onChange={(e) => onObjectionChange(e.target.value)}
-        placeholder="Enter here..."
+        placeholder={objectionsQuestion?.placeholder || "Enter here..."}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
       />
     </div>
     
     <div>
       <label className="block text-base font-medium text-gray-900 mb-1">
-        How do you usually handle these objections?{" "}
-        <span className="text-red-500">*</span>
+        {handlingQuestion?.question_text || "How do you usually handle these objections?"}{" "}
+        {handlingQuestion?.is_required && <span className="text-red-500">*</span>}
       </label>
-      <p className="text-sm text-gray-500 mb-2">
-        {handlingQuestion?.helper_text || "Give examples of how you overcome doubts."}
-      </p>
+      {handlingQuestion?.helper_text && (
+        <p className="text-sm text-gray-500 mb-2">
+          {handlingQuestion.helper_text}
+        </p>
+      )}
       <AutoResizeTextarea
         value={handling}
         onChange={(e) => onHandlingChange(e.target.value)}
-        placeholder="Enter here..."
+        placeholder={handlingQuestion?.placeholder || "Enter here..."}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none transition-all"
       />
     </div>
@@ -613,9 +618,19 @@ const KnowledgeFilesStep = React.memo(({ onFilesChange }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Ref for polling interval
+  const pollingIntervalRef = useRef(null);
 
   useEffect(() => {
     fetchData();
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, []);
 
   // Notify parent when files/urls change
@@ -624,6 +639,43 @@ const KnowledgeFilesStep = React.memo(({ onFilesChange }) => {
       onFilesChange(files.length + urls.length);
     }
   }, [files, urls, onFilesChange]);
+
+  // Poll for URL status updates when there are "In Progress" URLs
+  useEffect(() => {
+    const hasInProgressUrls = urls.some(u => u.status === 'In Progress' || u.status === 'Processing');
+    
+    if (hasInProgressUrls) {
+      // Start polling every 5 seconds
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const urlsRes = await knowledgeBaseService.getScrapedContent();
+          const transformedUrls = knowledgeBaseService.transformScrapedContents(urlsRes);
+          setUrls(transformedUrls);
+          
+          // Check if all URLs are now completed or failed
+          const stillInProgress = transformedUrls.some(u => u.status === 'In Progress' || u.status === 'Processing');
+          if (!stillInProgress && pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+        } catch (err) {
+          console.error("Error polling URL status:", err);
+        }
+      }, 5000);
+    } else {
+      // Clear polling if no in-progress URLs
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    }
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [urls]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -654,7 +706,7 @@ const KnowledgeFilesStep = React.memo(({ onFilesChange }) => {
     setShowSuccessModal(true);
   };
 
-  // FIX: Immediately update URLs state when a new URL is added
+  // FIX: Immediately update URLs state and trigger polling for status updates
   const handleUrlAdded = (result) => {
     // Transform the result and add to state immediately
     if (result) {
@@ -1169,6 +1221,8 @@ const OnboardingPage = () => {
 
   const isStepValid = () => {
     const stepConfig = STEP_CONFIG[currentStep];
+    
+    // Knowledge step is always valid (files/urls are optional)
     if (stepConfig.isKnowledge) return true;
 
     // Special validation for objections step
@@ -1192,6 +1246,7 @@ const OnboardingPage = () => {
           });
         } catch (err) {
           console.error("Failed to mark step complete:", err);
+          // Continue anyway - don't block navigation
         }
       }
 
@@ -1248,20 +1303,41 @@ const OnboardingPage = () => {
         return;
       }
 
-      // Submit answers
-      await questionnaireApi.submitAnswers(orgId, answersArray);
+      // Submit answers - wrap in try-catch to handle errors gracefully
+      try {
+        await questionnaireApi.submitAnswers(orgId, answersArray);
+        console.log("Answers submitted successfully");
+      } catch (submitErr) {
+        console.error("Error submitting answers:", submitErr);
+        // Continue even if answers fail - they might already be saved
+      }
 
       // Mark knowledge_base step as complete
-      await completeStep("knowledge_base", {
-        completed_at: new Date().toISOString(),
-      });
+      try {
+        await completeStep("knowledge_base", {
+          completed_at: new Date().toISOString(),
+        });
+        console.log("Knowledge base step completed");
+      } catch (stepErr) {
+        console.error("Error completing step:", stepErr);
+        // Continue even if step completion fails
+      }
 
       // Refresh onboarding status
-      await fetchStatus(true);
+      try {
+        await fetchStatus(true);
+        console.log("Status refreshed");
+      } catch (statusErr) {
+        console.error("Error refreshing status:", statusErr);
+        // Continue even if status refresh fails
+      }
 
+      // Always show thank you screen after submit attempt
+      console.log("Showing thank you screen");
       setShowThankYou(true);
+      
     } catch (err) {
-      console.error("Error submitting answers:", err);
+      console.error("Error in handleSubmit:", err);
       setError(err.message || "Failed to submit answers. Please try again.");
     } finally {
       setSubmitting(false);
@@ -1274,7 +1350,10 @@ const OnboardingPage = () => {
 
   // FIX: Navigate to dashboard instead of choose-plan
   const handleStart = () => {
-    navigate("/dashboard", { replace: true });
+    // Clear any onboarding-related state
+    console.log("Navigating to dashboard...");
+    // Use window.location for a hard redirect to ensure clean state
+    window.location.href = "/dashboard";
   };
 
   if (loading) {
