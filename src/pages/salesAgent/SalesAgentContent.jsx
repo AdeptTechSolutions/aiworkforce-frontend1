@@ -83,7 +83,8 @@ export default function SalesAgentContent({ mode = "b2c", setActivePage, credits
     } else {
       setLocalSearchType(config.searchTypes[0].key);
     }
-  }, [mode, config.searchTypes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   // Modal states
   const [saveSearchModal, setSaveSearchModal] = useState(false);
